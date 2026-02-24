@@ -59,16 +59,16 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         @keyframes countUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-        .anim-fade-up     { animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
-        .anim-fade-in     { animation: fadeIn 0.5s ease both; }
-        .anim-slide-left  { animation: slideInLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
-        .anim-slide-right { animation: slideInRight 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
-        .anim-scale-in    { animation: scaleIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .anim-fade-up     { animation: none; }
+        .anim-fade-in     { animation: none; }
+        .anim-slide-left  { animation: none; }
+        .anim-slide-right { animation: none; }
+        .anim-scale-in    { animation: none; }
         .anim-float       { animation: float 3s ease-in-out infinite; }
-        .anim-count       { animation: countUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .anim-count       { animation: none; }
 
-        .delay-1 { animation-delay: 0.1s; } .delay-2 { animation-delay: 0.2s; } .delay-3 { animation-delay: 0.3s; }
-        .delay-4 { animation-delay: 0.4s; } .delay-5 { animation-delay: 0.5s; } .delay-6 { animation-delay: 0.6s; }
+        .delay-1 { animation-delay: 0s; } .delay-2 { animation-delay: 0s; } .delay-3 { animation-delay: 0s; }
+        .delay-4 { animation-delay: 0s; } .delay-5 { animation-delay: 0s; } .delay-6 { animation-delay: 0s; }
 
         /*  Hover Effects  */
         .hover-lift { transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease; }
@@ -81,8 +81,8 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         .sidebar-link:hover, .sidebar-link.active { background: rgba(99,102,241,0.12); color: #a5b4fc; }
         .sidebar-link.active::before, .sidebar-link:hover::before { transform: scaleY(1); }
 
-        .table-row-anim { animation: fadeInUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
-        .page-content { animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .table-row-anim { animation: none; }
+        .page-content { animation: none; }
         .metric-value { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .metric-value:hover { transform: scale(1.08); }
         .btn-press { transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
@@ -159,3 +159,4 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </div>
         </header>
         <div class="p-8 page-content">
+
