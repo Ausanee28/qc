@@ -3,8 +3,8 @@
 -- Run this script in phpMyAdmin or MySQL CLI
 -- ============================================
 
-CREATE DATABASE IF NOT EXISTS qclab CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE qclab;
+CREATE DATABASE IF NOT EXISTS qc CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE qc;
 
 -- Departments
 CREATE TABLE IF NOT EXISTS Departments (

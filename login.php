@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .field-anim-1 { animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.45s both; }
         .field-anim-2 { animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.55s both; }
         .btn-anim { animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.65s both; }
-        .hint-anim { animation: fadeIn 0.5s ease 0.8s both; }
+        .links-anim { animation: fadeIn 0.5s ease 0.8s both; }
         .orb-1 { animation: orb1 8s ease-in-out infinite; }
         .orb-2 { animation: orb2 10s ease-in-out infinite; }
         .bg-shift { background-size: 300% 300%; animation: gradientShift 8s ease infinite; }
@@ -59,7 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 bg-shift relative overflow-hidden">
-    <!-- Animated orbs -->
     <div class="absolute top-[-10%] left-[-5%] w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl orb-1"></div>
     <div class="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-purple-500/20 rounded-full blur-3xl orb-2"></div>
     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/8 rounded-full blur-3xl"></div>
@@ -88,9 +87,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="password" class="block text-sm font-medium text-indigo-200 mb-2">Password</label>
                     <input type="password" id="password" name="password" required class="input-focus w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-indigo-300/30 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300" placeholder="Enter your password">
                 </div>
+                <div class="field-anim-2 flex justify-end">
+                    <a href="forgot_password.php" class="text-xs text-indigo-400/70 hover:text-indigo-300 transition-colors">Forgot password?</a>
+                </div>
                 <button type="submit" class="btn-anim btn-press w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all duration-300 transform hover:-translate-y-0.5">Sign In</button>
             </form>
-            <p class="hint-anim text-center text-indigo-300/40 text-xs mt-6">Default: admin / password</p>
+            <div class="links-anim mt-6 pt-5 border-t border-white/5 text-center">
+                <p class="text-indigo-300/40 text-sm">Don't have an account? <a href="register.php" class="text-indigo-400 hover:text-indigo-300 transition-colors underline">Sign Up</a></p>
+            </div>
         </div>
     </div>
 </body>
