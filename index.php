@@ -56,7 +56,7 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
 
 <!-- Metric Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
-    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-indigo-500/30 transition-all duration-300 hover-lift hover-glow anim-fade-up delay-1">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 tilt-card shimmer-border hover:border-indigo-500/30 transition-all duration-300 hover-lift hover-glow anim-fade-up delay-1">
         <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Today</span>
             <div class="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center"><svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
@@ -64,7 +64,7 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
         <p class="text-3xl font-extrabold text-gradient-blue metric-value font-mono anim-count delay-2"><?= $todayCount ?></p>
         <p class="text-xs text-slate-500 mt-1 font-medium">Items received today</p>
     </div>
-    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-purple-500/30 transition-all duration-300 hover-lift hover-glow anim-fade-up delay-2">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 tilt-card shimmer-border hover:border-purple-500/30 transition-all duration-300 hover-lift hover-glow anim-fade-up delay-2">
         <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">This Month</span>
             <div class="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center"><svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
@@ -72,7 +72,7 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
         <p class="text-3xl font-extrabold text-gradient metric-value font-mono anim-count delay-2"><?= $monthCount ?></p>
         <p class="text-xs text-slate-500 mt-1 font-medium">Items this month</p>
     </div>
-    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-emerald-500/30 transition-all duration-300 hover-lift hover-glow anim-fade-up delay-3">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 tilt-card shimmer-border hover:border-emerald-500/30 transition-all duration-300 hover-lift hover-glow anim-fade-up delay-3">
         <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">OK</span>
             <div class="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center"><svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
@@ -80,7 +80,7 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
         <p class="text-3xl font-extrabold text-gradient-emerald metric-value font-mono anim-count delay-3"><?= $okCount ?></p>
         <p class="text-xs text-slate-500 mt-1 font-medium">Passed judgements</p>
     </div>
-    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-red-500/30 transition-all duration-300 hover-lift hover-glow anim-fade-up delay-4">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 tilt-card shimmer-border hover:border-red-500/30 transition-all duration-300 hover-lift hover-glow anim-fade-up delay-4">
         <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">NG</span>
             <div class="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center"><svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
@@ -88,7 +88,7 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
         <p class="text-3xl font-extrabold text-gradient-red metric-value font-mono anim-count delay-3"><?= $ngCount ?></p>
         <p class="text-xs text-slate-500 mt-1 font-medium">Failed judgements</p>
     </div>
-    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-amber-500/30 transition-all duration-300 hover-lift hover-glow anim-fade-up delay-5">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 tilt-card shimmer-border hover:border-amber-500/30 transition-all duration-300 hover-lift hover-glow anim-fade-up delay-5">
         <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending</span>
             <div class="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center"><svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
@@ -100,7 +100,7 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
 
 <!-- Charts -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
-    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 anim-fade-up delay-3 hover-lift">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 tilt-card shimmer-border anim-fade-up delay-3 hover-lift">
         <h3 class="text-sm font-bold text-white mb-0.5">Today's Results</h3>
         <p class="text-xs text-slate-500 mb-4 font-medium"><?= date('d M Y') ?>  <?= $todayOK + $todayNG ?> tests</p>
         <div class="flex items-center justify-center" style="height: 200px;">
@@ -115,12 +115,12 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
             <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-400"></span><span class="text-xs text-slate-400 font-medium">NG: <strong class="text-red-400"><?= $todayNG ?></strong></span></div>
         </div>
     </div>
-    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 anim-fade-up delay-4 hover-lift">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 tilt-card shimmer-border anim-fade-up delay-4 hover-lift">
         <h3 class="text-sm font-bold text-white mb-0.5">Weekly Trend</h3>
         <p class="text-xs text-slate-500 mb-4 font-medium">Last 7 days OK vs NG</p>
         <div style="height: 230px;"><canvas id="weeklyChart"></canvas></div>
     </div>
-    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 anim-fade-up delay-5 hover-lift">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 tilt-card shimmer-border anim-fade-up delay-5 hover-lift">
         <h3 class="text-sm font-bold text-white mb-0.5">Monthly Trend</h3>
         <p class="text-xs text-slate-500 mb-4 font-medium">Last 6 months overview</p>
         <div style="height: 230px;"><canvas id="monthlyChart"></canvas></div>
@@ -129,7 +129,7 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
 
 <!-- Analytics -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
-    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 anim-fade-up delay-4 hover-lift">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 tilt-card shimmer-border anim-fade-up delay-4 hover-lift">
         <div class="flex items-center gap-2 mb-5">
             <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             <h3 class="text-sm font-bold text-white">Equipment Usage Ranking</h3>
@@ -155,7 +155,7 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
     </div>
 
     <!-- Inspector Performance (no avg) -->
-    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 anim-fade-up delay-5 hover-lift">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 tilt-card shimmer-border anim-fade-up delay-5 hover-lift">
         <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-2">
                 <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
@@ -256,3 +256,4 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
     });
 </script>
 <?php require_once 'footer.php'; ?>
+
