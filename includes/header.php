@@ -70,26 +70,26 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </div>
         </div>
     </aside>
-    <main class="flex-1 ml-64 max-w-[calc(100vw-16rem)]">
+    <main class="flex-1 ml-64">
         <header class="sticky top-0 z-20 bg-slate-950/80 backdrop-blur-lg border-b border-slate-800 px-6 py-4">
-            <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center justify-between">
                 <div class="min-w-0">
                     <h2 class="text-xl font-extrabold text-gradient truncate"><?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></h2>
                     <p class="text-sm text-slate-500 mt-0.5 font-medium truncate"><?= htmlspecialchars($pageSubtitle ?? '') ?></p>
                 </div>
-                <div class="flex items-center gap-3 flex-shrink-0">
-                    <span class="text-xs text-slate-500 font-medium"><?= date('d M Y') ?></span>
+                <div class="flex items-center gap-4 flex-shrink-0">
                     <button id="themeToggle" class="theme-toggle p-2 rounded-xl bg-slate-800/60 border border-slate-700 hover:border-slate-600 transition-all duration-300" title="Toggle Light/Dark Mode">
                         <svg id="themeIconDark" class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                         <svg id="themeIconLight" class="w-5 h-5 text-indigo-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
                     </button>
                     <div class="relative" id="dmcSearchWrap">
-                        <input type="text" id="dmcSearch" placeholder="DMC..." class="w-24 pl-7 pr-2 py-2 bg-slate-800/60 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300">
-                        <svg class="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        <div id="dmcSpinner" class="absolute right-2 top-1/2 -translate-y-1/2 hidden">
-                            <svg class="w-3 h-3 text-indigo-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        <input type="text" id="dmcSearch" placeholder="Search DMC..." class="w-36 pl-9 pr-4 py-2 bg-slate-800/60 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300 hover:border-slate-600">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <div id="dmcSpinner" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+                            <svg class="w-4 h-4 text-indigo-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                         </div>
                     </div>
+                    <span class="text-sm text-slate-500 font-medium whitespace-nowrap"><?= date('D, d M Y') ?></span>
                 </div>
             </div>
         </header>

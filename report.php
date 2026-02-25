@@ -31,7 +31,15 @@ $stmt->execute($params);
 $results = $stmt->fetchAll();
 ?>
 
-<style>input[type="date"] { color-scheme: dark; cursor: pointer; } input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; } .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #4f46e5 #1e293b; } .table-scroll::-webkit-scrollbar { height: 8px; } .table-scroll::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; } .table-scroll::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 4px; } .table-scroll::-webkit-scrollbar-thumb:hover { background: #6366f1; }</style>
+<style>
+input[type="date"] { color-scheme: dark; cursor: pointer; }
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+.report-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; }
+.report-table th { padding: 10px 8px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 1px solid #1e293b; background: rgba(15,23,42,0.4); }
+.report-table td { padding: 8px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-table tbody tr:hover { background: rgba(30,41,59,0.3); }
+.report-table tbody tr { border-bottom: 1px solid rgba(30,41,59,0.6); }
+</style>
 
 <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 mb-6 anim-fade-up delay-1">
     <form method="GET" action="report.php" class="flex flex-wrap items-end gap-4">
@@ -57,47 +65,70 @@ $results = $stmt->fetchAll();
 </div>
 
 <div class="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden anim-fade-up delay-3">
-    <div class="table-scroll">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-800 bg-slate-900/40">
-                    <th class="px-5 py-3">Line</th><th class="px-5 py-3">Date</th><th class="px-5 py-3">Sender</th><th class="px-5 py-3">DMC</th><th class="px-5 py-3">Detail</th><th class="px-5 py-3">Inspection Process</th><th class="px-5 py-3">Inspector</th><th class="px-5 py-3">Start</th><th class="px-5 py-3">End</th><th class="px-5 py-3">Judgement</th><th class="px-5 py-3">Remark</th><th class="px-5 py-3 text-center">Action</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-800/60">
-                <?php if (empty($results)): ?>
-                    <tr><td colspan="12" class="px-5 py-10 text-center text-slate-600 anim-fade-in">No test results found for the selected date range.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($results as $i => $row): ?>
-                        <tr class="hover:bg-slate-800/30 transition-all duration-200 table-row-anim" style="animation-delay: <?= 0.4 + ($i * 0.06) ?>s">
-                            <td class="px-5 py-3 text-white"><?= htmlspecialchars($row['line'] ?? '') ?></td>
-                            <td class="px-5 py-3 text-slate-400 text-xs whitespace-nowrap"><?= $row['receive_date'] ? date('d/m/Y H:i', strtotime($row['receive_date'])) : '' ?></td>
-                            <td class="px-5 py-3 text-slate-300"><?= htmlspecialchars($row['external_name']) ?></td>
-                            <td class="px-5 py-3 text-slate-300"><?= htmlspecialchars($row['dmc'] ?? '') ?></td>
-                            <td class="px-5 py-3 text-slate-300"><?= htmlspecialchars($row['equipment_name']) ?></td>
-                            <td class="px-5 py-3 text-slate-300"><?= htmlspecialchars($row['method_name']) ?></td>
-                            <td class="px-5 py-3 text-slate-300"><?= htmlspecialchars($row['inspector_name']) ?></td>
-                            <td class="px-5 py-3 text-slate-400 text-xs whitespace-nowrap"><?= $row['start_time'] ? date('d/m/Y H:i', strtotime($row['start_time'])) : '' ?></td>
-                            <td class="px-5 py-3 text-slate-400 text-xs whitespace-nowrap"><?= $row['end_time'] ? date('d/m/Y H:i', strtotime($row['end_time'])) : '' ?></td>
-                            <td class="px-5 py-3">
-                                <?php if ($row['judgement'] === 'OK'): ?>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">OK</span>
-                                <?php elseif ($row['judgement'] === 'NG'): ?>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">NG</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="px-5 py-3 text-slate-400 max-w-[200px] truncate"><?= htmlspecialchars($row['remark'] ?? '') ?></td>
-                            <td class="px-5 py-3">
-                                <a href="generate_pdf.php?id=<?= $row['transaction_id'] ?? '' ?>" target="_blank" class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-lg text-indigo-400 text-xs font-bold transition-all" title="Download PDF">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                    PDF
-                                </a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+    <table class="report-table">
+        <colgroup>
+            <col style="width:4%">
+            <col style="width:11%">
+            <col style="width:8%">
+            <col style="width:6%">
+            <col style="width:8%">
+            <col style="width:10%">
+            <col style="width:8%">
+            <col style="width:11%">
+            <col style="width:11%">
+            <col style="width:5%">
+            <col style="width:12%">
+            <col style="width:6%">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>Line</th>
+                <th>Date</th>
+                <th>Sender</th>
+                <th>DMC</th>
+                <th>Detail</th>
+                <th>Process</th>
+                <th>Inspector</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Result</th>
+                <th>Remark</th>
+                <th style="text-align:center">PDF</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($results)): ?>
+                <tr><td colspan="12" style="text-align:center;padding:40px 8px;color:#475569;font-size:13px;">No test results found for the selected date range.</td></tr>
+            <?php else: ?>
+                <?php foreach ($results as $i => $row): ?>
+                    <tr class="table-row-anim" style="animation-delay: <?= 0.4 + ($i * 0.06) ?>s">
+                        <td class="text-white"><?= htmlspecialchars($row['line'] ?? '') ?></td>
+                        <td class="text-slate-400"><?= $row['receive_date'] ? date('d/m/Y H:i', strtotime($row['receive_date'])) : '' ?></td>
+                        <td class="text-slate-300"><?= htmlspecialchars($row['external_name']) ?></td>
+                        <td class="text-slate-300"><?= htmlspecialchars($row['dmc'] ?? '') ?></td>
+                        <td class="text-slate-300"><?= htmlspecialchars($row['equipment_name']) ?></td>
+                        <td class="text-slate-300"><?= htmlspecialchars($row['method_name']) ?></td>
+                        <td class="text-slate-300"><?= htmlspecialchars($row['inspector_name']) ?></td>
+                        <td class="text-slate-400"><?= $row['start_time'] ? date('d/m/Y H:i', strtotime($row['start_time'])) : '' ?></td>
+                        <td class="text-slate-400"><?= $row['end_time'] ? date('d/m/Y H:i', strtotime($row['end_time'])) : '' ?></td>
+                        <td>
+                            <?php if ($row['judgement'] === 'OK'): ?>
+                                <span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:600;background:rgba(16,185,129,0.1);color:#34d399;border:1px solid rgba(16,185,129,0.2);">OK</span>
+                            <?php elseif ($row['judgement'] === 'NG'): ?>
+                                <span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:600;background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.2);">NG</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="text-slate-400"><?= htmlspecialchars($row['remark'] ?? '') ?></td>
+                        <td style="text-align:center">
+                            <a href="generate_pdf.php?id=<?= $row['transaction_id'] ?? '' ?>" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:8px;color:#818cf8;font-size:10px;font-weight:700;text-decoration:none;transition:all 0.2s;" onmouseover="this.style.background='rgba(99,102,241,0.2)'" onmouseout="this.style.background='rgba(99,102,241,0.1)'">
+                                <svg style="width:12px;height:12px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                PDF
+                            </a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </tbody>
+    </table>
 </div>
 <?php require_once 'includes/footer.php'; ?>
