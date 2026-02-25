@@ -46,6 +46,23 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
+<?php if ($todayNG > 0): ?>
+<div class="mb-6 bg-gradient-to-r from-red-600/20 to-red-500/10 border border-red-500/40 rounded-2xl px-6 py-4 flex items-center gap-4 anim-fade-up" id="ngAlertBanner">
+    <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
+        <svg class="w-7 h-7 text-red-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+    </div>
+    <div class="flex-1">
+        <h4 class="text-red-300 font-bold text-sm">NG Alert — พบชิ้นงานไม่ผ่าน <?= $todayNG ?> รายการวันนี้</h4>
+        <p class="text-red-400/70 text-xs mt-0.5">กรุณาตรวจสอบและดำเนินการแก้ไขโดยเร็ว</p>
+    </div>
+    <a href="report.php?date_from=<?= date('Y-m-d') ?>&date_to=<?= date('Y-m-d') ?>&judgement=NG" class="flex-shrink-0 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-red-300 text-xs font-bold transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10">
+        View NG Report 
+    </a>
+    <button onclick="document.getElementById('ngAlertBanner').style.display='none'" class="flex-shrink-0 p-1.5 rounded-lg hover:bg-red-500/20 text-red-400/50 hover:text-red-300 transition-all cursor-pointer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+</div>
+<?php endif; ?>
 <!-- Greeting -->
 <div class="mb-8 anim-fade-up">
     <h2 class="text-2xl font-extrabold text-white">
@@ -210,7 +227,7 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
                             <td class="px-6 py-3 text-slate-300"><?= htmlspecialchars($item['equipment_name']) ?></td>
                             <td class="px-6 py-3 text-slate-300"><?= htmlspecialchars($item['sender']) ?></td>
                             <td class="px-6 py-3 text-slate-300"><?= htmlspecialchars($item['receiver']) ?></td>
-                            <td class="px-6 py-3 text-slate-400 text-xs font-mono"><?= date('d M Y H:i', strtotime($item['receive_date'])) ?></td>
+                            <td class="px-6 py-3 text-slate-400 text-xs font-mono"><span class="relative-time" data-time="<?= date('c', strtotime($item['receive_date'])) ?>"><?= date('d M Y H:i', strtotime($item['receive_date'])) ?></span></td>
                             <td class="px-6 py-3">
                                 <?php $sc = match($item['status']) { 'Pending' => 'bg-amber-500/10 text-amber-400 border-amber-500/20', 'Completed' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', default => 'bg-slate-500/10 text-slate-400 border-slate-500/20' }; ?>
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border <?= $sc ?>"><?= htmlspecialchars($item['status']) ?></span>
@@ -254,6 +271,33 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
         ]},
         options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { font: { size: 10, weight: '600' } } }, y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { stepSize: 1, font: { size: 10 } } } }, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11, weight: '600' } } }, tooltip: tooltipStyle }, animation: { duration: 1200, easing: 'easeOutQuart' }, onClick: (e, els) => { if(els.length){ const ds = monthlyChart.data.datasets[els[0].datasetIndex]; const label = ds.label; window.location.href='report.php?judgement='+label; } } }
     });
+
+    // Relative Time for Recent Activities
+    (function() {
+        function timeAgo(dateStr) {
+            const now = new Date();
+            const past = new Date(dateStr);
+            const diffMs = now - past;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHr = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHr / 24);
+
+            if (diffSec < 60) return 'just now';
+            if (diffMin < 60) return diffMin + ' min' + (diffMin > 1 ? 's' : '') + ' ago';
+            if (diffHr < 24) return diffHr + ' hr' + (diffHr > 1 ? 's' : '') + ' ago';
+            if (diffDay < 7) return diffDay + ' day' + (diffDay > 1 ? 's' : '') + ' ago';
+            return past.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+        }
+
+        document.querySelectorAll('.relative-time').forEach(el => {
+            const t = el.getAttribute('data-time');
+            if (t) {
+                el.textContent = timeAgo(t);
+                el.title = new Date(t).toLocaleString('th-TH');
+            }
+        });
+    })();
 </script>
 <?php require_once 'footer.php'; ?>
 
