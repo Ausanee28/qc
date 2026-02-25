@@ -1,14 +1,18 @@
 <?php
 /**
  * QC Lab Tracking System — Database Connection
- * Secure PDO connection with error handling.
+ * โหลดค่าจาก config.php (ไม่อยู่ใน git) ถ้าไม่มีใช้ค่า default
  */
 
-$host = '10.22.0.101';
-$port = 3307;
-$db = 'qc';
-$user = 'std01';
-$pass = '9F1e-VE3Fhbq';
+if (file_exists(__DIR__ . '/config.php')) {
+    require_once __DIR__ . '/config.php';
+}
+
+$host = $host ?? 'localhost';
+$port = $port ?? 3306;
+$db = $db ?? 'qc';
+$user = $user ?? 'root';
+$pass = $pass ?? '';
 
 $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
 

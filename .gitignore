@@ -1,0 +1,5 @@
+# Local config (each machine has its own)
+config.php
+
+# IDE
+.vscode/
