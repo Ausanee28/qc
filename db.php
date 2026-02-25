@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Bangkok');
 /**
  * QC Lab Tracking System — Database Connection
  * โหลดค่าจาก config.php (ไม่อยู่ใน git) ถ้าไม่มีใช้ค่า default
