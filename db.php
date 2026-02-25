@@ -4,11 +4,11 @@
  * Secure PDO connection with error handling.
  */
 
-$host = 'localhost';
-$port = 3306;
+$host = '10.22.0.101';
+$port = 3307;
 $db = 'qc';
-$user = 'root';
-$pass = '';
+$user = 'std01';
+$pass = '9F1e-VE3Fhbq';
 
 $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
 
