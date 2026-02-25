@@ -85,7 +85,7 @@ $equipments = $pdo->query("SELECT equipment_id, equipment_name FROM Equipments O
                 </div>
                 <div class="anim-fade-up delay-5">
                     <label for="line" class="block text-sm font-medium text-slate-300 mb-2">Line</label>
-                    <input type="text" id="line" name="line" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 hover:border-slate-600" placeholder="Enter production line">
+                    <select id="line" name="line" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 appearance-none hover:border-slate-600"><option value="">-- Select Line --</option><option value="Line 1">Line 1</option><option value="Line 2">Line 2</option><option value="Line 3">Line 3</option><option value="Line 4">Line 4</option><option value="Line 5">Line 5</option><option value="Line 6">Line 6</option><option value="Line 7">Line 7</option><option value="Line 8">Line 8</option><option value="Line 9">Line 9</option><option value="Line 10">Line 10</option></select>
                 </div>
             </div>
             <div class="flex items-center gap-4 pt-2 anim-fade-up delay-5">

@@ -49,7 +49,7 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
 <!-- Greeting -->
 <div class="mb-8 anim-fade-up">
     <h2 class="text-2xl font-extrabold text-white">
-        <?php $h=(int)date('G'); if($h<12) echo 'Good Morning'; elseif($h<17) echo 'Good Afternoon'; else echo 'Good Evening'; ?>, <span class="text-gradient"><?= htmlspecialchars($_SESSION['name'] ?? 'User') ?></span> 
+        <?php date_default_timezone_set('Asia/Bangkok'); $h=(int)date('G'); if($h<12) echo 'Good Morning'; elseif($h<17) echo 'Good Afternoon'; else echo 'Good Evening'; ?>, <span class="text-gradient"><?= htmlspecialchars($_SESSION['name'] ?? 'User') ?></span> 
     </h2>
     <p class="text-slate-500 mt-1 font-medium">Here's what's happening in your lab today.</p>
 </div>
