@@ -31,7 +31,7 @@ $stmt->execute($params);
 $results = $stmt->fetchAll();
 ?>
 
-<style>input[type="date"] { color-scheme: dark; cursor: pointer; } input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }</style>
+<style>input[type="date"] { color-scheme: dark; cursor: pointer; } input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; } .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #4f46e5 #1e293b; } .table-scroll::-webkit-scrollbar { height: 8px; } .table-scroll::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; } .table-scroll::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 4px; } .table-scroll::-webkit-scrollbar-thumb:hover { background: #6366f1; }</style>
 
 <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 mb-6 anim-fade-up delay-1">
     <form method="GET" action="report.php" class="flex flex-wrap items-end gap-4">
@@ -57,11 +57,11 @@ $results = $stmt->fetchAll();
 </div>
 
 <div class="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden anim-fade-up delay-3">
-    <div class="overflow-x-auto">
+    <div class="table-scroll">
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-800 bg-slate-900/40">
-                    <th class="px-5 py-3">Line</th><th class="px-5 py-3">Date</th><th class="px-5 py-3">Sender</th><th class="px-5 py-3">DMC</th><th class="px-5 py-3">Detail</th><th class="px-5 py-3">Inspection Process</th><th class="px-5 py-3">Inspector</th><th class="px-5 py-3">Start</th><th class="px-5 py-3">End</th><th class="px-5 py-3">Judgement</th><th class="px-5 py-3">Remark</th><th class="px-5 py-3">Action</th>
+                    <th class="px-5 py-3">Line</th><th class="px-5 py-3">Date</th><th class="px-5 py-3">Sender</th><th class="px-5 py-3">DMC</th><th class="px-5 py-3">Detail</th><th class="px-5 py-3">Inspection Process</th><th class="px-5 py-3">Inspector</th><th class="px-5 py-3">Start</th><th class="px-5 py-3">End</th><th class="px-5 py-3">Judgement</th><th class="px-5 py-3">Remark</th><th class="px-5 py-3 text-center">Action</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-800/60">
