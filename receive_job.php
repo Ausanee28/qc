@@ -40,7 +40,7 @@ $equipments = $pdo->query("SELECT equipment_id, equipment_name FROM Equipments O
             <?= htmlspecialchars($success) ?>
             <?php if (isset($newJobId)): ?>
                 <a href="print_tag.php?id=<?= $newJobId ?>" target="_blank" class="ml-auto flex-shrink-0 px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-lg text-emerald-300 text-xs font-bold transition-all">
-                    ??? Print Tag
+                    Print Tag
                 </a>
             <?php endif; ?>
         </div>
