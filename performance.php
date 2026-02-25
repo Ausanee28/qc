@@ -1,8 +1,8 @@
-﻿<?php
+<?php
 $pageTitle    = 'Performance';
 $pageSubtitle = 'Inspector test duration analysis (end time - start time)';
-require_once 'db.php';
-require_once 'header.php';
+require_once 'includes/db.php';
+require_once 'includes/header.php';
 
 // All inspectors summary
 $inspectors = $pdo->query("
@@ -255,4 +255,4 @@ function fmtDuration($sec) {
 </script>
 
 <?php endif; ?>
-<?php require_once 'footer.php'; ?>
+<?php require_once 'includes/footer.php'; ?>

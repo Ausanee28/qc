@@ -1,8 +1,8 @@
 <?php
 $pageTitle    = 'Report';
 $pageSubtitle = 'View and export completed test results';
-require_once 'db.php';
-require_once 'header.php';
+require_once 'includes/db.php';
+require_once 'includes/header.php';
 
 $dateFrom = $_GET['date_from'] ?? date('Y-m-01');
 $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
@@ -100,4 +100,4 @@ $results = $stmt->fetchAll();
         </table>
     </div>
 </div>
-<?php require_once 'footer.php'; ?>
+<?php require_once 'includes/footer.php'; ?>

@@ -1,8 +1,8 @@
 <?php
 $pageTitle    = 'Dashboard';
 $pageSubtitle = 'Overview of lab activity and status metrics';
-require_once 'db.php';
-require_once 'header.php';
+require_once 'includes/db.php';
+require_once 'includes/header.php';
 
 // Core Metrics
 $todayCount   = $pdo->query("SELECT COUNT(*) FROM Transaction_Header WHERE DATE(receive_date) = CURDATE()")->fetchColumn();
@@ -230,63 +230,37 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
 </div>
 
 <script>
-    Chart.defaults.font.family = 'Outfit, sans-serif';
-    Chart.defaults.font.weight = '500';
-    Chart.defaults.color = '#94a3b8';
-    const tooltipStyle = { backgroundColor: 'rgba(15,23,42,0.95)', borderColor: 'rgba(99,102,241,0.2)', borderWidth: 1, cornerRadius: 12, padding: 14, titleFont: { weight: '700', size: 13 }, bodyFont: { size: 12 } };
+Chart.defaults.font.family = 'Outfit, sans-serif';
+Chart.defaults.font.weight = '500';
+Chart.defaults.color = '#94a3b8';
+const tooltipStyle = { backgroundColor: 'rgba(15,23,42,0.95)', borderColor: 'rgba(99,102,241,0.2)', borderWidth: 1, cornerRadius: 12, padding: 14, titleFont: { weight: '700', size: 13 }, bodyFont: { size: 12 } };
 
-    <?php if ($todayOK > 0 || $todayNG > 0): ?>
-    const donutChart = new Chart(document.getElementById('donutChart'), {
-        type: 'doughnut',
-        data: { labels: ['OK','NG'], datasets: [{ data: [<?=$todayOK?>,<?=$todayNG?>], backgroundColor: ['rgba(52,211,153,0.85)','rgba(248,113,113,0.85)'], borderColor: ['rgba(52,211,153,1)','rgba(248,113,113,1)'], borderWidth: 2, hoverOffset: 10, spacing: 3 }] },
-        options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false }, tooltip: tooltipStyle }, animation: { animateRotate: true, duration: 1200, easing: 'easeOutQuart' }, onClick: (e, els) => { if(els.length){ const label = ['OK','NG'][els[0].index]; window.location.href='report.php?date_from='+new Date().toISOString().slice(0,10)+'&date_to='+new Date().toISOString().slice(0,10)+'&judgement='+label; } } }
-    });
-    <?php endif; ?>
+<?php if ($todayOK > 0 || $todayNG > 0): ?>
+const donutChart = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: { labels: ['OK','NG'], datasets: [{ data: [<?=$todayOK?>,<?=$todayNG?>], backgroundColor: ['rgba(52,211,153,0.85)','rgba(248,113,113,0.85)'], borderColor: ['rgba(52,211,153,1)','rgba(248,113,113,1)'], borderWidth: 2, hoverOffset: 10, spacing: 3 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false }, tooltip: tooltipStyle }, animation: { animateRotate: true, duration: 1200, easing: 'easeOutQuart' }, onClick: (e, els) => { if(els.length){ const label = ['OK','NG'][els[0].index]; window.location.href='report.php?date_from='+new Date().toISOString().slice(0,10)+'&date_to='+new Date().toISOString().slice(0,10)+'&judgement='+label; } } }
+});
+<?php endif; ?>
 
-    const weeklyChart = new Chart(document.getElementById('weeklyChart'), {
-        type: 'bar',
-        data: { labels: [<?=implode(',',array_map(fn($d)=>"'{$d['label']}'", $weeklyData))?>], datasets: [
-            { label: 'OK', data: [<?=implode(',',array_column($weeklyData,'ok'))?>], backgroundColor: 'rgba(52,211,153,0.75)', borderColor: 'rgba(52,211,153,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false },
-            { label: 'NG', data: [<?=implode(',',array_column($weeklyData,'ng'))?>], backgroundColor: 'rgba(248,113,113,0.75)', borderColor: 'rgba(248,113,113,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false }
-        ]},
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { font: { size: 10, weight: '600' } } }, y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { stepSize: 1, font: { size: 10 } } } }, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11, weight: '600' } } }, tooltip: tooltipStyle }, animation: { duration: 1000, easing: 'easeOutQuart' }, onClick: (e, els) => { if(els.length){ const ds = weeklyChart.data.datasets[els[0].datasetIndex]; const label = ds.label; window.location.href='report.php?judgement='+label; } } }
-    });
+const weeklyChart = new Chart(document.getElementById('weeklyChart'), {
+    type: 'bar',
+    data: { labels: [<?=implode(',',array_map(fn($d)=>"'{$d['label']}'", $weeklyData))?>], datasets: [
+        { label: 'OK', data: [<?=implode(',',array_column($weeklyData,'ok'))?>], backgroundColor: 'rgba(52,211,153,0.75)', borderColor: 'rgba(52,211,153,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false },
+        { label: 'NG', data: [<?=implode(',',array_column($weeklyData,'ng'))?>], backgroundColor: 'rgba(248,113,113,0.75)', borderColor: 'rgba(248,113,113,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { font: { size: 10, weight: '600' } } }, y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { stepSize: 1, font: { size: 10 } } } }, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11, weight: '600' } } }, tooltip: tooltipStyle }, animation: { duration: 1000, easing: 'easeOutQuart' }, onClick: (e, els) => { if(els.length){ const ds = weeklyChart.data.datasets[els[0].datasetIndex]; const label = ds.label; window.location.href='report.php?judgement='+label; } } }
+});
 
-    const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
-        type: 'bar',
-        data: { labels: [<?=implode(',',array_map(fn($d)=>"'{$d['label']}'", $monthlyData))?>], datasets: [
-            { label: 'OK', data: [<?=implode(',',array_column($monthlyData,'ok'))?>], backgroundColor: 'rgba(129,140,248,0.75)', borderColor: 'rgba(129,140,248,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false },
-            { label: 'NG', data: [<?=implode(',',array_column($monthlyData,'ng'))?>], backgroundColor: 'rgba(251,146,60,0.75)', borderColor: 'rgba(251,146,60,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false }
-        ]},
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { font: { size: 10, weight: '600' } } }, y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { stepSize: 1, font: { size: 10 } } } }, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11, weight: '600' } } }, tooltip: tooltipStyle }, animation: { duration: 1200, easing: 'easeOutQuart' }, onClick: (e, els) => { if(els.length){ const ds = monthlyChart.data.datasets[els[0].datasetIndex]; const label = ds.label; window.location.href='report.php?judgement='+label; } } }
-    });
-
-    // Relative Time for Recent Activities
-    (function() {
-        function timeAgo(dateStr) {
-            const now = new Date();
-            const past = new Date(dateStr);
-            const diffMs = now - past;
-            const diffSec = Math.floor(diffMs / 1000);
-            const diffMin = Math.floor(diffSec / 60);
-            const diffHr = Math.floor(diffMin / 60);
-            const diffDay = Math.floor(diffHr / 24);
-
-            if (diffSec < 60) return 'just now';
-            if (diffMin < 60) return diffMin + ' min' + (diffMin > 1 ? 's' : '') + ' ago';
-            if (diffHr < 24) return diffHr + ' hr' + (diffHr > 1 ? 's' : '') + ' ago';
-            if (diffDay < 7) return diffDay + ' day' + (diffDay > 1 ? 's' : '') + ' ago';
-            return past.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-        }
-
-        document.querySelectorAll('.relative-time').forEach(el => {
-            const t = el.getAttribute('data-time');
-            if (t) {
-                el.textContent = timeAgo(t);
-                el.title = new Date(t).toLocaleString('th-TH');
-            }
-        });
-    })();
+const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: { labels: [<?=implode(',',array_map(fn($d)=>"'{$d['label']}'", $monthlyData))?>], datasets: [
+        { label: 'OK', data: [<?=implode(',',array_column($monthlyData,'ok'))?>], backgroundColor: 'rgba(129,140,248,0.75)', borderColor: 'rgba(129,140,248,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false },
+        { label: 'NG', data: [<?=implode(',',array_column($monthlyData,'ng'))?>], backgroundColor: 'rgba(251,146,60,0.75)', borderColor: 'rgba(251,146,60,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { font: { size: 10, weight: '600' } } }, y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { stepSize: 1, font: { size: 10 } } } }, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11, weight: '600' } } }, tooltip: tooltipStyle }, animation: { duration: 1200, easing: 'easeOutQuart' }, onClick: (e, els) => { if(els.length){ const ds = monthlyChart.data.datasets[els[0].datasetIndex]; const label = ds.label; window.location.href='report.php?judgement='+label; } } }
+});
 </script>
-<?php require_once 'footer.php'; ?>
+<script src="assets/js/dashboard.js"></script>
+<?php require_once 'includes/footer.php'; ?>
 

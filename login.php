@@ -1,7 +1,7 @@
-﻿<?php
+<?php
 session_start();
 if (isset($_SESSION['user_id'])) { header('Location: index.php'); exit; }
-require_once 'db.php';
+require_once 'includes/db.php';
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');

@@ -1,8 +1,8 @@
 <?php
 $pageTitle    = 'Receive Job';
 $pageSubtitle = 'Record a new incoming inspection job';
-require_once 'db.php';
-require_once 'header.php';
+require_once 'includes/db.php';
+require_once 'includes/header.php';
 
 $success = '';
 $error   = '';
@@ -102,4 +102,4 @@ $equipments = $pdo->query("SELECT equipment_id, equipment_name FROM Equipments O
         </form>
     </div>
 </div>
-<?php require_once 'footer.php'; ?>
+<?php require_once 'includes/footer.php'; ?>

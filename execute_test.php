@@ -1,8 +1,8 @@
-﻿<?php
+<?php
 $pageTitle    = 'Execute Test';
 $pageSubtitle = 'Record test results for a pending job';
-require_once 'db.php';
-require_once 'header.php';
+require_once 'includes/db.php';
+require_once 'includes/header.php';
 
 $success = '';
 $error   = '';
@@ -124,4 +124,4 @@ $internals = $pdo->query("SELECT user_id, name FROM Internal_Users ORDER BY name
         <?php endif; ?>
     </div>
 </div>
-<?php require_once 'footer.php'; ?>
+<?php require_once 'includes/footer.php'; ?>

@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once 'db.php';
+require_once '../includes/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $dmc = trim($_GET['dmc'] ?? '');

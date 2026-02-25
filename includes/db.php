@@ -5,8 +5,8 @@ date_default_timezone_set('Asia/Bangkok');
  * โหลดค่าจาก config.php (ไม่อยู่ใน git) ถ้าไม่มีใช้ค่า default
  */
 
-if (file_exists(__DIR__ . '/config.php')) {
-    require_once __DIR__ . '/config.php';
+if (file_exists(__DIR__ . '/../config.php')) {
+    require_once __DIR__ . '/../config.php';
 }
 
 $host = $host ?? 'localhost';

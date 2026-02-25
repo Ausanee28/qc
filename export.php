@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once 'db.php';
+require_once 'includes/db.php';
 
 // Date range
 $dateFrom = $_GET['date_from'] ?? date('Y-m-01');

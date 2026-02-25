@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once 'db.php';
+require_once 'includes/db.php';
 require_once 'vendor/autoload.php';
 
 use Dompdf\Dompdf;
