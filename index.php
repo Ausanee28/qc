@@ -46,23 +46,6 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
-<?php if ($todayNG > 0): ?>
-<div class="mb-6 bg-gradient-to-r from-red-600/20 to-red-500/10 border border-red-500/40 rounded-2xl px-6 py-4 flex items-center gap-4 anim-fade-up" id="ngAlertBanner">
-    <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
-        <svg class="w-7 h-7 text-red-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-    </div>
-    <div class="flex-1">
-        <h4 class="text-red-300 font-bold text-sm">NG Alert — พบชิ้นงานไม่ผ่าน <?= $todayNG ?> รายการวันนี้</h4>
-        <p class="text-red-400/70 text-xs mt-0.5">กรุณาตรวจสอบและดำเนินการแก้ไขโดยเร็ว</p>
-    </div>
-    <a href="report.php?date_from=<?= date('Y-m-d') ?>&date_to=<?= date('Y-m-d') ?>&judgement=NG" class="flex-shrink-0 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-red-300 text-xs font-bold transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10">
-        View NG Report 
-    </a>
-    <button onclick="document.getElementById('ngAlertBanner').style.display='none'" class="flex-shrink-0 p-1.5 rounded-lg hover:bg-red-500/20 text-red-400/50 hover:text-red-300 transition-all cursor-pointer">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-    </button>
-</div>
-<?php endif; ?>
 <!-- Greeting -->
 <div class="mb-8 anim-fade-up">
     <h2 class="text-2xl font-extrabold text-white">
