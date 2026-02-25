@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 $pageTitle    = 'Report';
 $pageSubtitle = 'View and export completed test results';
 require_once 'db.php';
@@ -6,6 +6,7 @@ require_once 'header.php';
 
 $dateFrom = $_GET['date_from'] ?? date('Y-m-01');
 $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
+$judgement = $_GET['judgement']   ?? '';
 
 $sql = "SELECT TH.line, TH.receive_date, EU.external_name, TH.dmc, E.equipment_name, TM.method_name, IU.name AS inspector_name, TD.start_time, TD.end_time, TD.judgement, TD.remark
     FROM Transaction_Detail TD
@@ -14,11 +15,19 @@ $sql = "SELECT TH.line, TH.receive_date, EU.external_name, TH.dmc, E.equipment_n
     JOIN Equipments E ON TH.equipment_id = E.equipment_id
     JOIN Test_Methods TM ON TD.method_id = TM.method_id
     JOIN Internal_Users IU ON TD.internal_id = IU.user_id
-    WHERE DATE(TH.receive_date) BETWEEN :df AND :dt
-    ORDER BY TH.receive_date DESC, TD.start_time DESC";
+    WHERE DATE(TH.receive_date) BETWEEN :df AND :dt";
+
+$params = [':df' => $dateFrom, ':dt' => $dateTo];
+
+if ($judgement === 'OK' || $judgement === 'NG') {
+    $sql .= " AND TD.judgement = :jg";
+    $params[':jg'] = $judgement;
+}
+
+$sql .= " ORDER BY TH.receive_date DESC, TD.start_time DESC";
 
 $stmt = $pdo->prepare($sql);
-$stmt->execute([':df' => $dateFrom, ':dt' => $dateTo]);
+$stmt->execute($params);
 $results = $stmt->fetchAll();
 ?>
 

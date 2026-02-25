@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 $pageTitle    = 'Dashboard';
 $pageSubtitle = 'Overview of lab activity and status metrics';
 require_once 'db.php';
@@ -107,7 +107,7 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
             <?php if ($todayOK == 0 && $todayNG == 0): ?>
                 <div class="text-center"><p class="text-slate-600 text-sm">No test results today</p></div>
             <?php else: ?>
-                <canvas id="donutChart"></canvas>
+                <canvas id="donutChart" style="cursor:pointer;"></canvas>
             <?php endif; ?>
         </div>
         <div class="flex justify-center gap-6 mt-4">
@@ -118,12 +118,12 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
     <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 tilt-card shimmer-border anim-fade-up delay-4 hover-lift">
         <h3 class="text-sm font-bold text-white mb-0.5">Weekly Trend</h3>
         <p class="text-xs text-slate-500 mb-4 font-medium">Last 7 days OK vs NG</p>
-        <div style="height: 230px;"><canvas id="weeklyChart"></canvas></div>
+        <div style="height: 230px;"><canvas id="weeklyChart" style="cursor:pointer;"></canvas></div>
     </div>
     <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 tilt-card shimmer-border anim-fade-up delay-5 hover-lift">
         <h3 class="text-sm font-bold text-white mb-0.5">Monthly Trend</h3>
         <p class="text-xs text-slate-500 mb-4 font-medium">Last 6 months overview</p>
-        <div style="height: 230px;"><canvas id="monthlyChart"></canvas></div>
+        <div style="height: 230px;"><canvas id="monthlyChart" style="cursor:pointer;"></canvas></div>
     </div>
 </div>
 
@@ -230,29 +230,29 @@ $recentItems = $pdo->query("SELECT TH.transaction_id, TH.dmc, TH.line, TH.receiv
     const tooltipStyle = { backgroundColor: 'rgba(15,23,42,0.95)', borderColor: 'rgba(99,102,241,0.2)', borderWidth: 1, cornerRadius: 12, padding: 14, titleFont: { weight: '700', size: 13 }, bodyFont: { size: 12 } };
 
     <?php if ($todayOK > 0 || $todayNG > 0): ?>
-    new Chart(document.getElementById('donutChart'), {
+    const donutChart = new Chart(document.getElementById('donutChart'), {
         type: 'doughnut',
         data: { labels: ['OK','NG'], datasets: [{ data: [<?=$todayOK?>,<?=$todayNG?>], backgroundColor: ['rgba(52,211,153,0.85)','rgba(248,113,113,0.85)'], borderColor: ['rgba(52,211,153,1)','rgba(248,113,113,1)'], borderWidth: 2, hoverOffset: 10, spacing: 3 }] },
-        options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false }, tooltip: tooltipStyle }, animation: { animateRotate: true, duration: 1200, easing: 'easeOutQuart' } }
+        options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false }, tooltip: tooltipStyle }, animation: { animateRotate: true, duration: 1200, easing: 'easeOutQuart' }, onClick: (e, els) => { if(els.length){ const label = ['OK','NG'][els[0].index]; window.location.href='report.php?date_from='+new Date().toISOString().slice(0,10)+'&date_to='+new Date().toISOString().slice(0,10)+'&judgement='+label; } } }
     });
     <?php endif; ?>
 
-    new Chart(document.getElementById('weeklyChart'), {
+    const weeklyChart = new Chart(document.getElementById('weeklyChart'), {
         type: 'bar',
         data: { labels: [<?=implode(',',array_map(fn($d)=>"'{$d['label']}'", $weeklyData))?>], datasets: [
             { label: 'OK', data: [<?=implode(',',array_column($weeklyData,'ok'))?>], backgroundColor: 'rgba(52,211,153,0.75)', borderColor: 'rgba(52,211,153,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false },
             { label: 'NG', data: [<?=implode(',',array_column($weeklyData,'ng'))?>], backgroundColor: 'rgba(248,113,113,0.75)', borderColor: 'rgba(248,113,113,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false }
         ]},
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { font: { size: 10, weight: '600' } } }, y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { stepSize: 1, font: { size: 10 } } } }, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11, weight: '600' } } }, tooltip: tooltipStyle }, animation: { duration: 1000, easing: 'easeOutQuart' } }
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { font: { size: 10, weight: '600' } } }, y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { stepSize: 1, font: { size: 10 } } } }, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11, weight: '600' } } }, tooltip: tooltipStyle }, animation: { duration: 1000, easing: 'easeOutQuart' }, onClick: (e, els) => { if(els.length){ const ds = weeklyChart.data.datasets[els[0].datasetIndex]; const label = ds.label; window.location.href='report.php?judgement='+label; } } }
     });
 
-    new Chart(document.getElementById('monthlyChart'), {
+    const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
         type: 'bar',
         data: { labels: [<?=implode(',',array_map(fn($d)=>"'{$d['label']}'", $monthlyData))?>], datasets: [
             { label: 'OK', data: [<?=implode(',',array_column($monthlyData,'ok'))?>], backgroundColor: 'rgba(129,140,248,0.75)', borderColor: 'rgba(129,140,248,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false },
             { label: 'NG', data: [<?=implode(',',array_column($monthlyData,'ng'))?>], backgroundColor: 'rgba(251,146,60,0.75)', borderColor: 'rgba(251,146,60,1)', borderWidth: 1, borderRadius: 8, borderSkipped: false }
         ]},
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { font: { size: 10, weight: '600' } } }, y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { stepSize: 1, font: { size: 10 } } } }, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11, weight: '600' } } }, tooltip: tooltipStyle }, animation: { duration: 1200, easing: 'easeOutQuart' } }
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { font: { size: 10, weight: '600' } } }, y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,0.3)' }, ticks: { stepSize: 1, font: { size: 10 } } } }, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11, weight: '600' } } }, tooltip: tooltipStyle }, animation: { duration: 1200, easing: 'easeOutQuart' }, onClick: (e, els) => { if(els.length){ const ds = monthlyChart.data.datasets[els[0].datasetIndex]; const label = ds.label; window.location.href='report.php?judgement='+label; } } }
     });
 </script>
 <?php require_once 'footer.php'; ?>
