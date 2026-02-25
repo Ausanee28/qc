@@ -3,3 +3,7 @@ config.php
 
 # IDE
 .vscode/
+
+# Composer
+vendor/
+composer.lock

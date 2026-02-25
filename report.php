@@ -8,7 +8,7 @@ $dateFrom = $_GET['date_from'] ?? date('Y-m-01');
 $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
 $judgement = $_GET['judgement']   ?? '';
 
-$sql = "SELECT TH.line, TH.receive_date, EU.external_name, TH.dmc, E.equipment_name, TM.method_name, IU.name AS inspector_name, TD.start_time, TD.end_time, TD.judgement, TD.remark
+$sql = "SELECT TH.transaction_id, TH.line, TH.receive_date, EU.external_name, TH.dmc, E.equipment_name, TM.method_name, IU.name AS inspector_name, TD.start_time, TD.end_time, TD.judgement, TD.remark
     FROM Transaction_Detail TD
     JOIN Transaction_Header TH ON TD.transaction_id = TH.transaction_id
     JOIN External_Users EU ON TH.external_id = EU.external_id
@@ -61,12 +61,12 @@ $results = $stmt->fetchAll();
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-800 bg-slate-900/40">
-                    <th class="px-5 py-3">Line</th><th class="px-5 py-3">Date</th><th class="px-5 py-3">Sender</th><th class="px-5 py-3">DMC</th><th class="px-5 py-3">Detail</th><th class="px-5 py-3">Inspection Process</th><th class="px-5 py-3">Inspector</th><th class="px-5 py-3">Start</th><th class="px-5 py-3">End</th><th class="px-5 py-3">Judgement</th><th class="px-5 py-3">Remark</th>
+                    <th class="px-5 py-3">Line</th><th class="px-5 py-3">Date</th><th class="px-5 py-3">Sender</th><th class="px-5 py-3">DMC</th><th class="px-5 py-3">Detail</th><th class="px-5 py-3">Inspection Process</th><th class="px-5 py-3">Inspector</th><th class="px-5 py-3">Start</th><th class="px-5 py-3">End</th><th class="px-5 py-3">Judgement</th><th class="px-5 py-3">Remark</th><th class="px-5 py-3">Action</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-800/60">
                 <?php if (empty($results)): ?>
-                    <tr><td colspan="11" class="px-5 py-10 text-center text-slate-600 anim-fade-in">No test results found for the selected date range.</td></tr>
+                    <tr><td colspan="12" class="px-5 py-10 text-center text-slate-600 anim-fade-in">No test results found for the selected date range.</td></tr>
                 <?php else: ?>
                     <?php foreach ($results as $i => $row): ?>
                         <tr class="hover:bg-slate-800/30 transition-all duration-200 table-row-anim" style="animation-delay: <?= 0.4 + ($i * 0.06) ?>s">
@@ -87,6 +87,12 @@ $results = $stmt->fetchAll();
                                 <?php endif; ?>
                             </td>
                             <td class="px-5 py-3 text-slate-400 max-w-[200px] truncate"><?= htmlspecialchars($row['remark'] ?? '') ?></td>
+                            <td class="px-5 py-3">
+                                <a href="generate_pdf.php?id=<?= $row['transaction_id'] ?? '' ?>" target="_blank" class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-lg text-indigo-400 text-xs font-bold transition-all" title="Download PDF">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    PDF
+                                </a>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>

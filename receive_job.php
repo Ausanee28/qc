@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 $pageTitle    = 'Receive Job';
 $pageSubtitle = 'Record a new incoming inspection job';
 require_once 'db.php';
@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("INSERT INTO Transaction_Header (external_id, internal_id, equipment_id, dmc, line, receive_date, status) VALUES (:ext, :int, :eq, :dmc, :line, NOW(), 'Pending')");
             $stmt->execute([':ext' => $external_id, ':int' => $internal_id, ':eq' => $equipment_id, ':dmc' => $dmc, ':line' => $line]);
             $newId = $pdo->lastInsertId();
-            $success = "Job #{$newId} created successfully!";
+            $success = "Job #{$newId} created successfully!"; $newJobId = $newId;
         } catch (PDOException $e) {
             $error = 'Database error: ' . $e->getMessage();
         }
@@ -38,6 +38,11 @@ $equipments = $pdo->query("SELECT equipment_id, equipment_name FROM Equipments O
         <div class="mb-6 flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-5 py-4 rounded-xl text-sm anim-scale-in">
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <?= htmlspecialchars($success) ?>
+            <?php if (isset($newJobId)): ?>
+                <a href="print_tag.php?id=<?= $newJobId ?>" target="_blank" class="ml-auto flex-shrink-0 px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-lg text-emerald-300 text-xs font-bold transition-all">
+                    ??? Print Tag
+                </a>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
     <?php if ($error): ?>
