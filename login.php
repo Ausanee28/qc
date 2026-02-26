@@ -1,26 +1,37 @@
-<?php
+﻿<?php
 session_start();
-if (isset($_SESSION['user_id'])) { header('Location: index.php'); exit; }
+
+// If user is already logged in (and this isn't a fresh login POST), redirect
+if (isset($_SESSION['user_id']) && $_SERVER['REQUEST_METHOD'] !== 'POST') { 
+    header('Location: index.php'); 
+    exit; 
+}
+
 require_once 'includes/db.php';
 $error = '';
+$loginSuccess = false;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
+    
     if ($username === '' || $password === '') {
         $error = 'Please enter both username and password.';
     } else {
         $stmt = $pdo->prepare('SELECT user_id, user_name, user_password, name, role FROM Internal_Users WHERE user_name = :u LIMIT 1');
         $stmt->execute([':u' => $username]);
         $user = $stmt->fetch();
+        
         if ($user && password_verify($password, $user['user_password'])) {
             session_regenerate_id(true);
             $_SESSION['user_id']   = $user['user_id'];
             $_SESSION['user_name'] = $user['user_name'];
             $_SESSION['name']      = $user['name'];
             $_SESSION['role']      = $user['role'];
-            header('Location: index.php');
-            exit;
-        } else { $error = 'Invalid username or password.'; }
+            $loginSuccess = true;
+        } else { 
+            $error = 'Invalid username or password.'; 
+        }
     }
 }
 ?>
@@ -97,5 +108,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
     </div>
+
+    <!-- Typewriter Success Overlay -->
+    <?php if (isset($loginSuccess) && $loginSuccess): ?>
+    <div id="successOverlay" class="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center transition-opacity duration-500" style="z-index: 9999;">
+        <div class="logo-anim inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 mb-8" style="animation: scaleIn 0.8s cubic-bezier(0.34,1.56,0.64,1) both;">
+            <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <div class="flex items-center justify-center h-16">
+            <h1 id="typewriterText" class="text-3xl md:text-5xl font-bold text-white tracking-tight"></h1>
+            <span class="text-3xl md:text-5xl text-purple-400" id="typewriterCursor" style="animation: blink-caret .75s step-end infinite;">|</span>
+        </div>
+        <p id="loadingText" class="text-indigo-400 mt-6 text-sm font-medium opacity-0 transition-opacity duration-500">Preparing your lab environment...</p>
+    </div>
+    
+    <style>
+        @keyframes blink-caret { 50% { opacity: 0; } }
+    </style>
+
+    <script>
+        const overlay = document.getElementById('successOverlay');
+        const textToType = 'Welcome, <?= addslashes(htmlspecialchars($_SESSION['name'] ?? 'User')) ?>';
+        const typewriterElement = document.getElementById('typewriterText');
+        const loadingText = document.getElementById('loadingText');
+        const cursor = document.getElementById('typewriterCursor');
+        let index = 0;
+        
+        function typeWriter() {
+            if (index < textToType.length) {
+                typewriterElement.innerHTML += textToType.charAt(index);
+                index++;
+                setTimeout(typeWriter, 50 + Math.random() * 50); // random typing speed
+            } else {
+                cursor.style.display = 'none'; // hide cursor when done
+                loadingText.style.opacity = '1';
+                
+                // Keep the success screen visible for 1.5s, then redirect
+                setTimeout(() => {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => {
+                        window.location.href = 'index.php';
+                    }, 500);
+                }, 1500);
+            }
+        }
+        
+        // Wait briefly for CSS paint before starting to type
+        setTimeout(typeWriter, 500); 
+    </script>
+    <?php endif; ?>
+
 </body>
 </html>
