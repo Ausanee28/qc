@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 // If user is already logged in (and this isn't a fresh login POST), redirect
