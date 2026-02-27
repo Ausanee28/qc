@@ -4,7 +4,8 @@ $pageSubtitle = 'Inspector test duration analysis (end time - start time)';
 require_once 'includes/db.php';
 require_once 'includes/header.php';
 
-// All inspectors summary
+try {
+    // All inspectors summary
 $inspectors = $pdo->query("
     SELECT 
         IU.user_id,
@@ -46,6 +47,12 @@ $details = $pdo->query("
     LIMIT 50
 ")->fetchAll();
 
+} catch (PDOException $e) {
+    $dbError = "Failed to load performance data: " . $e->getMessage();
+    $inspectors = [];
+    $details = [];
+}
+
 // Helper: format seconds to readable
 function fmtDuration($sec) {
     if ($sec === null) return '-';
@@ -62,6 +69,12 @@ function fmtDuration($sec) {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
 <!-- Page Header -->
+<?php if (isset($dbError) && $dbError): ?>
+    <div class="mb-6 flex items-center gap-3 bg-red-500/10 border border-red-500/20 text-red-300 px-5 py-4 rounded-xl text-sm blur-in">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <?= htmlspecialchars($dbError) ?>
+    </div>
+<?php endif; ?>
 <div class="mb-8 anim-fade-up">
     <div class="flex items-center gap-3 mb-2">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
@@ -256,3 +269,4 @@ function fmtDuration($sec) {
 
 <?php endif; ?>
 <?php require_once 'includes/footer.php'; ?>
+
