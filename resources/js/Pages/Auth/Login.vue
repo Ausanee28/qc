@@ -1,11 +1,7 @@
 <script setup>
-import Checkbox from '@/Components/Checkbox.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 
 defineProps({
     canResetPassword: { type: Boolean },
@@ -27,56 +23,60 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Log in" />
+        <Head title="Sign in" />
 
-        <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 tracking-tight">Welcome back</h2>
+            <p class="text-sm text-gray-500 mt-1.5">Sign in to your account to continue</p>
+        </div>
+
+        <div v-if="status" class="mb-4 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-lg">
             {{ status }}
         </div>
 
-        <form @submit.prevent="submit">
+        <form @submit.prevent="submit" class="space-y-5">
             <div>
-                <InputLabel for="user_name" value="Username" />
-                <TextInput
+                <label for="user_name" class="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+                <input
                     id="user_name"
                     type="text"
-                    class="mt-1 block w-full"
                     v-model="form.user_name"
                     required
                     autofocus
-                    autocomplete="username"
+                    placeholder="Enter your username"
+                    class="w-full h-11 rounded-lg bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 px-4 text-sm focus:outline-none focus:bg-white focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all"
                 />
-                <InputError class="mt-2" :message="form.errors.user_name" />
+                <InputError class="mt-1.5" :message="form.errors.user_name" />
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-                <TextInput
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                <input
                     id="password"
                     type="password"
-                    class="mt-1 block w-full"
                     v-model="form.password"
                     required
-                    autocomplete="current-password"
+                    placeholder="Enter your password"
+                    class="w-full h-11 rounded-lg bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 px-4 text-sm focus:outline-none focus:bg-white focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all"
                 />
-                <InputError class="mt-2" :message="form.errors.password" />
+                <InputError class="mt-1.5" :message="form.errors.password" />
             </div>
 
-            <div class="mt-4 block">
-                <label class="flex items-center">
-                    <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600">Remember me</span>
+            <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" v-model="form.remember" class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900" />
+                    <span class="text-sm text-gray-500">Remember me</span>
                 </label>
             </div>
 
-            <div class="mt-4 flex items-center justify-end">
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Log in
-                </PrimaryButton>
-            </div>
+            <button
+                type="submit"
+                class="w-full h-11 flex items-center justify-center rounded-lg text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 active:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 transition-all disabled:opacity-50"
+                :disabled="form.processing"
+            >
+                <span v-if="!form.processing">Sign in</span>
+                <svg v-else class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+            </button>
         </form>
     </GuestLayout>
 </template>
