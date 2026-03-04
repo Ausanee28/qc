@@ -61,6 +61,7 @@ const currentDate = computed(() => {
                             v-for="item in group.items"
                             :key="item.route"
                             :href="route(item.route)"
+                            prefetch
                             :class="['nav-item', route().current(item.route) ? 'active' : '']"
                         >
                             <!-- Hardcode icons based on route name directly to perfectly match redesign -->
@@ -150,6 +151,7 @@ const currentDate = computed(() => {
                                  v-for="item in group.items"
                                  :key="item.route"
                                  :href="route(item.route)"
+                                 prefetch
                                  @click="showMobileMenu = false"
                                  :class="['flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1', route().current(item.route) ? 'bg-[#EFF6FF] text-[#4F46E5] font-semibold' : 'text-gray-600 hover:bg-gray-50']"
                              >

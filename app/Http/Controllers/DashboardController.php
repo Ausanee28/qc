@@ -113,26 +113,26 @@ class DashboardController extends Controller
             ];
         });
 
-        // Inspector data (top 5 by test count) — from TransactionDetail.internal_id
-        $inspectorData = TransactionDetail::select('internal_id', DB::raw('COUNT(*) as total'))
+        // Inspector data (top 5 by test count) — Optimized N+1 queries
+        $inspectorData = TransactionDetail::join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id')
+            ->select(
+            'Internal_Users.name',
+            DB::raw('COUNT(*) as total'),
+            DB::raw("SUM(CASE WHEN judgement = 'OK' THEN 1 ELSE 0 END) as ok"),
+            DB::raw("SUM(CASE WHEN judgement = 'NG' THEN 1 ELSE 0 END) as ng")
+        )
             ->whereNotNull('internal_id')
-            ->groupBy('internal_id')
+            ->groupBy('internal_id', 'Internal_Users.name')
             ->orderByDesc('total')
             ->limit(5)
             ->get()
             ->map(function ($row) {
-            $user = User::where('user_id', $row->internal_id)->first();
-            $okCount = TransactionDetail::where('internal_id', $row->internal_id)
-                ->where('judgement', 'OK')->count();
-            $ngCount = TransactionDetail::where('internal_id', $row->internal_id)
-                ->where('judgement', 'NG')->count();
-            $total = $okCount + $ngCount;
             return [
-            'name' => $user->name ?? ('Inspector #' . $row->internal_id),
+            'name' => $row->name,
             'total' => $row->total,
-            'ok' => $okCount,
-            'ng' => $ngCount,
-            'yield' => $total > 0 ? round($okCount / $total * 100, 1) : 0,
+            'ok' => $row->ok,
+            'ng' => $row->ng,
+            'yield' => $row->total > 0 ? round($row->ok / $row->total * 100, 1) : 0,
             ];
         });
 
@@ -147,20 +147,20 @@ class DashboardController extends Controller
             ->get();
 
         // Inspector Efficiency (Average test time per inspector)
-        $inspectorEff = TransactionDetail::select('internal_id', DB::raw('AVG(TIMESTAMPDIFF(SECOND, start_time, end_time)) as avg_seconds'))
+        $inspectorEff = TransactionDetail::join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id')
+            ->select('Internal_Users.name', DB::raw('AVG(TIMESTAMPDIFF(SECOND, start_time, end_time)) as avg_seconds'))
             ->whereNotNull('internal_id')
             ->whereNotNull('start_time')
             ->whereNotNull('end_time')
             ->whereRaw('TIMESTAMPDIFF(SECOND, start_time, end_time) > 0')
             ->whereRaw('TIMESTAMPDIFF(SECOND, start_time, end_time) < 3600') // ignore extreme outliers
-            ->groupBy('internal_id')
+            ->groupBy('internal_id', 'Internal_Users.name')
             ->orderByDesc('avg_seconds')
             ->limit(5)
             ->get()
             ->map(function ($row) {
-            $user = User::where('user_id', $row->internal_id)->first();
             return [
-            'name' => $user->name ?? ('Inspector #' . $row->internal_id),
+            'name' => $row->name,
             'avgMinutes' => round($row->avg_seconds / 60, 2)
             ];
         });
