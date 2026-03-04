@@ -18,88 +18,74 @@ const ngCount = computed(() => props.results.filter(r => r.judgement === 'NG').l
     <Head title="Report" />
     <AuthenticatedLayout>
         <template #title>Report</template>
-
-        <div class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-            <div>
-                <div class="flex items-center gap-3 mb-1">
-                    <div class="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900">Test Report</h2>
-                        <p class="text-sm text-gray-500">Detailed test results filtered by date</p>
-                    </div>
-                </div>
-            </div>
-            <!-- Filters -->
-            <div class="flex items-end gap-2">
+        
+        <div class="pg-header">
                 <div>
-                    <label class="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">From</label>
-                    <input v-model="dateFrom" type="date" class="h-10 rounded-xl bg-white border border-gray-200 text-sm px-3 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all" />
+                    <h1 class="pg-title">Report</h1>
+                    <p class="pg-sub">View and export completed test results</p>
                 </div>
-                <div>
-                    <label class="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">To</label>
-                    <input v-model="dateTo" type="date" class="h-10 rounded-xl bg-white border border-gray-200 text-sm px-3 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all" />
+                <div style="display:flex;gap:8px;align-items:end">
+                    <input v-model="dateFrom" type="date" class="form-inp" style="padding:6px 10px">
+                    <input v-model="dateTo" type="date" class="form-inp" style="padding:6px 10px">
+                    <button @click="search" class="btn" style="padding:6px 14px">Filter</button>
+                    <button class="btn-outline" onclick="window.print()">📊 Export CSV</button>
                 </div>
-                <button @click="search" class="h-10 px-5 rounded-xl text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 transition-all">Search</button>
             </div>
-        </div>
+            
+            <div style="font-size:12px;color:#6B7280;margin-bottom:12px;display:flex;align-items:center;gap:12px">
+                <div>Showing <strong style="color:#111827">{{ results.length }}</strong> result(s)</div>
+                <div v-if="results.length > 0" style="display:flex;gap:8px;font-size:11px;font-weight:600">
+                    <div style="background:#ECFDF5;color:#065F46;padding:2px 8px;border-radius:12px;border:1px solid #A7F3D0">{{ okCount }} OK</div>
+                    <div style="background:#FEF2F2;color:#991B1B;padding:2px 8px;border-radius:12px;border:1px solid #FECACA">{{ ngCount }} NG</div>
+                </div>
+            </div>
 
-        <!-- Stats bar -->
-        <div v-if="results.length" class="flex gap-3 mb-4">
-            <div class="bg-white border border-gray-200/80 rounded-xl px-4 py-2 flex items-center gap-2">
-                <span class="text-xs text-gray-400">Total</span>
-                <span class="text-sm font-bold text-gray-900">{{ results.length }}</span>
-            </div>
-            <div class="bg-emerald-50 border border-emerald-200/60 rounded-xl px-4 py-2 flex items-center gap-2">
-                <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                <span class="text-sm font-bold text-emerald-700">{{ okCount }} OK</span>
-            </div>
-            <div class="bg-red-50 border border-red-200/60 rounded-xl px-4 py-2 flex items-center gap-2">
-                <div class="w-2 h-2 rounded-full bg-red-500"></div>
-                <span class="text-sm font-bold text-red-700">{{ ngCount }} NG</span>
-            </div>
-        </div>
-
-        <!-- Table -->
-        <div class="bg-white border border-gray-200/80 rounded-2xl shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full">
+            <div class="tbl" style="margin-bottom:20px">
+                <table v-if="results.length">
                     <thead>
-                        <tr class="bg-gray-50/80">
-                            <th class="px-4 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">ID</th>
-                            <th class="px-4 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">DMC</th>
-                            <th class="px-4 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Sender</th>
-                            <th class="px-4 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Equipment</th>
-                            <th class="px-4 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Method</th>
-                            <th class="px-4 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Inspector</th>
-                            <th class="px-4 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Received</th>
-                            <th class="px-4 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Result</th>
+                        <tr>
+                            <th>Line</th>
+                            <th>Date</th>
+                            <th>Sender</th>
+                            <th>DMC</th>
+                            <th>Equipment</th>
+                            <th>Method</th>
+                            <th>Inspector</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Result</th>
+                            <th>Remark</th>
+                            <th>PDF</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        <tr v-for="r in results" :key="r.transaction_id" class="hover:bg-gray-50/50 transition-colors">
-                            <td class="px-4 py-3 text-gray-400 font-mono text-xs">#{{ r.transaction_id }}</td>
-                            <td class="px-4 py-3 text-gray-800 font-mono text-xs">{{ r.dmc || '—' }}</td>
-                            <td class="px-4 py-3 text-gray-700 text-sm">{{ r.sender }}</td>
-                            <td class="px-4 py-3 text-gray-700 text-sm">{{ r.equipment_name }}</td>
-                            <td class="px-4 py-3 text-gray-700 text-sm">{{ r.method_name }}</td>
-                            <td class="px-4 py-3 text-gray-700 text-sm">{{ r.inspector }}</td>
-                            <td class="px-4 py-3 text-gray-400 text-xs">{{ formatDate(r.receive_date) }}</td>
-                            <td class="px-4 py-3">
-                                <span :class="r.judgement === 'OK' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold border">
-                                    <div :class="r.judgement === 'OK' ? 'bg-emerald-500' : 'bg-red-500'" class="w-1.5 h-1.5 rounded-full"></div>
-                                    {{ r.judgement }}
-                                </span>
+                    <tbody>
+                        <tr v-for="r in results" :key="r.transaction_id">
+                            <td>{{ r.line || '—' }}</td>
+                            <td style="font-size:11px">{{ formatDate(r.receive_date) }}</td>
+                            <td>{{ r.sender }}</td>
+                            <td style="font-weight:700">{{ r.dmc || '—' }}</td>
+                            <td>{{ r.equipment_name }}</td>
+                            <td>{{ r.method_name }}</td>
+                            <td>{{ r.inspector }}</td>
+                            <td style="font-size:11px">{{ r.start_time ? new Date(r.start_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '—' }}</td>
+                            <td style="font-size:11px">{{ r.end_time ? new Date(r.end_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '—' }}</td>
+                            <td>
+                                <span v-if="r.judgement === 'OK'" class="pill pill-g">OK</span>
+                                <span v-else-if="r.judgement === 'NG'" class="pill pill-r">NG</span>
+                                <span v-else class="pill pill-y">{{ r.judgement }}</span>
+                            </td>
+                            <td style="font-size:11px;color:#9CA3AF">{{ r.remark || '' }}</td>
+                            <td>
+                                <a :href="route('certificates.pdf', r.transaction_id)" target="_blank" class="btn-outline" style="padding:2px 6px;font-size:10px;text-decoration:none">
+                                    📄
+                                </a>
                             </td>
                         </tr>
                     </tbody>
                 </table>
-                <div v-if="!results.length" class="px-6 py-12 text-center">
-                    <svg class="w-10 h-10 text-gray-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    <p class="text-sm text-gray-400">No results found. Try adjusting the date range.</p>
+                <div v-if="!results.length" style="padding:40px;text-align:center;color:#9CA3AF;font-size:13px;background:#fff;border-radius:8px">
+                    No results found. Try adjusting the date range.
                 </div>
             </div>
-        </div>
     </AuthenticatedLayout>
 </template>

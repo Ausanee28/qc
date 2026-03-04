@@ -1,228 +1,453 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
-import { Bar, Doughnut } from 'vue-chartjs';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
+import { Head, Link } from '@inertiajs/vue3';
+import { Bar, Line, Doughnut } from 'vue-chartjs';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, ArcElement } from 'chart.js';
+import { computed } from 'vue';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, ArcElement);
 
 const props = defineProps({
     metrics: Object,
     weeklyData: Array,
     monthlyData: Array,
     equipRank: Array,
+    failByEquip: Array,
+    inspectorEff: Array,
+    recentActivities: Array,
+    inspectorData: Array,
 });
 
-const totalTests = props.metrics.okCount + props.metrics.ngCount;
-const passRate = totalTests > 0 ? Math.round(props.metrics.okCount / totalTests * 100) : 0;
-const todayTotal = props.metrics.todayOK + props.metrics.todayNG;
-const todayRate = todayTotal > 0 ? Math.round(props.metrics.todayOK / todayTotal * 100) : 0;
+const totalTests = computed(() => props.metrics.totalTests || (props.metrics.okCount + props.metrics.ngCount));
+const todayTotal = computed(() => props.metrics.todayOK + props.metrics.todayNG);
+const todayRate = computed(() => todayTotal.value > 0 ? Math.round(props.metrics.todayOK / todayTotal.value * 100) : 0);
+const monthlyTotalOK = computed(() => props.monthlyData.reduce((s, m) => s + m.ok, 0));
+const monthlyTotalNG = computed(() => props.monthlyData.reduce((s, m) => s + m.ng, 0));
 
-// Chart configs
-const donutData = {
-    labels: ['OK', 'NG'],
-    datasets: [{
-        data: totalTests > 0 ? [props.metrics.okCount, props.metrics.ngCount] : [1, 0],
-        backgroundColor: ['#10B981', '#EF4444'],
-        borderWidth: 0, hoverOffset: 4,
-    }]
-};
-const donutOpts = {
-    responsive: true, maintainAspectRatio: false, cutout: '75%',
-    plugins: { legend: { display: false }, tooltip: { bodyFont: { family: 'Inter' } } },
-};
-
-const weeklyChartData = {
-    labels: props.weeklyData.map(d => d.label),
-    datasets: [
-        { label: 'OK', data: props.weeklyData.map(d => d.ok), backgroundColor: '#10B981', borderRadius: 3, maxBarThickness: 16 },
-        { label: 'NG', data: props.weeklyData.map(d => d.ng), backgroundColor: '#EF4444', borderRadius: 3, maxBarThickness: 16 },
-    ]
-};
-const monthlyChartData = {
-    labels: props.monthlyData.map(d => d.label),
-    datasets: [
-        { label: 'OK', data: props.monthlyData.map(d => d.ok), backgroundColor: '#10B981', borderRadius: 3, maxBarThickness: 16 },
-        { label: 'NG', data: props.monthlyData.map(d => d.ng), backgroundColor: '#EF4444', borderRadius: 3, maxBarThickness: 16 },
-    ]
-};
+// Chart config constants matching preview script
 const barOpts = {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: 'top', align: 'end', labels: { color: '#9CA3AF', font: { size: 11, family: 'Inter' }, boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle' } } },
+    plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', font: { family: 'Inter', size: 11, weight: '500' } } } },
     scales: {
-        x: { ticks: { color: '#9CA3AF', font: { size: 10 } }, grid: { display: false } },
-        y: { ticks: { color: '#D1D5DB', font: { size: 10 }, stepSize: 1 }, grid: { color: '#F3F4F6', drawBorder: false }, border: { display: false } },
+        x: { ticks: { font: { size: 11, family: 'Inter' } }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { font: { size: 10, family: 'Inter' } }, grid: { color: '#F3F4F6' } }
     }
 };
+
+const weeklyChartData = computed(() => ({
+    labels: props.weeklyData.map(d => d.label),
+    datasets: [
+        { label: 'OK', data: props.weeklyData.map(d => d.ok), backgroundColor: 'rgba(16,185,129,.75)', borderRadius: 4, borderSkipped: false },
+        { label: 'NG', data: props.weeklyData.map(d => d.ng), backgroundColor: 'rgba(239,68,68,.75)', borderRadius: 4, borderSkipped: false }
+    ]
+}));
+
+const dualLineOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+        x: { ticks: { font: { size: 10, family: 'Inter' }, color: '#6B7280' }, grid: { display: false } },
+        y: { ticks: { font: { size: 10, family: 'Inter' }, color: '#9CA3AF', stepSize: 50 }, border: { display: false }, grid: { color: '#F3F4F6' }, beginAtZero: true }
+    },
+    elements: { line: { tension: 0.4, borderWidth: 2 }, point: { radius: 0, hoverRadius: 6 } },
+    interaction: { mode: 'index', intersect: false }
+};
+
+const dualLineData = computed(() => ({
+    labels: props.monthlyData.map(d => d.label),
+    datasets: [
+        { label: 'OK', data: props.monthlyData.map(d => d.ok), borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, pointBackgroundColor: '#10B981', pointBorderColor: '#fff', pointBorderWidth: 2 },
+        { label: 'NG', data: props.monthlyData.map(d => d.ng), borderColor: '#EF4444', backgroundColor: 'transparent', fill: false, pointBackgroundColor: '#EF4444', pointBorderColor: '#fff', pointBorderWidth: 2 }
+    ]
+}));
+
+const singleLineOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+        x: { ticks: { font: { size: 10, family: 'Inter' }, color: '#6B7280' }, grid: { display: false } },
+        y: { ticks: { font: { size: 10, family: 'Inter' }, color: '#9CA3AF' }, border: { display: false }, grid: { color: '#F3F4F6', drawBorder: false }, beginAtZero: true }
+    },
+    elements: { line: { tension: 0.4 }, point: { radius: 0, hoverRadius: 6 } },
+    interaction: { mode: 'nearest', intersect: false }
+};
+
+const monthlyOKData = computed(() => ({
+    labels: props.monthlyData.map(d => d.label),
+    datasets: [{ data: props.monthlyData.map(d => d.ok), borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.1)', fill: true, borderWidth: 2, pointBackgroundColor: '#059669', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 4 }]
+}));
+
+const monthlyNGData = computed(() => ({
+    labels: props.monthlyData.map(d => d.label),
+    datasets: [{ data: props.monthlyData.map(d => d.ng), borderColor: '#DC2626', backgroundColor: 'rgba(220,38,38,0.1)', fill: true, borderWidth: 2, pointBackgroundColor: '#DC2626', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 4 }]
+}));
+
+const equipBarOpts = {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+        x: { beginAtZero: true, ticks: { font: { size: 10, family: 'Inter' }, color: '#9CA3AF' }, grid: { color: '#F3F4F6' } },
+        y: { ticks: { font: { size: 11, family: 'Inter', weight: '500' }, color: '#374151' }, grid: { display: false } }
+    }
+};
+
+const equipUsageData = computed(() => ({
+    labels: props.equipRank?.map(d => d.name) || ['Caliper 150mm', 'Micrometer 25mm', 'Gauge Block', 'Height Gauge', 'Ring Gauge'],
+    datasets: [{
+        label: 'Jobs',
+        data: props.equipRank?.map(d => d.count) || [120, 95, 72, 45, 30],
+        backgroundColor: ['#4F46E5', '#8B5CF6', '#06B6D4', '#F59E0B', '#10B981'],
+        borderRadius: 6, borderSkipped: false
+    }]
+}));
+
+const doughnutOpts = {
+    responsive: true, maintainAspectRatio: false, animation: false, cutout: '60%',
+    plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 10 }, usePointStyle: true, pointStyle: 'circle', padding: 8 } } }
+};
+
+const failDoughnutData = computed(() => ({
+    labels: props.failByEquip?.map(d => d.name) || ['No Data'],
+    datasets: [{
+        data: props.failByEquip?.map(d => d.count) || [1],
+        backgroundColor: ['#EF4444', '#F59E0B', '#4F46E5', '#8B5CF6', '#06B6D4'],
+        borderWidth: 0, hoverOffset: 0
+    }]
+}));
+
+const inspectorEffData = computed(() => ({
+    labels: props.inspectorEff?.map(d => d.name) || ['No Data'],
+    datasets: [{
+        label: 'Avg (min)',
+        data: props.inspectorEff?.map(d => d.avgMinutes) || [0],
+        backgroundColor: ['rgba(16,185,129,.7)', 'rgba(79,70,229,.7)', 'rgba(245,158,11,.7)', '#F472B6', '#60A5FA'],
+        borderRadius: 6, borderSkipped: false
+    }]
+}));
+
+// Helpers
+const yieldColor = (val) => val >= 95 ? '#059669' : val >= 93 ? '#D97706' : '#DC2626';
+const ngPctColor = (val) => val <= 5 ? '#059669' : val <= 7 ? '#D97706' : '#DC2626';
+const momDisplay = (val) => {
+    if (val === null || val === undefined) return { text: '—', color: '#9CA3AF' };
+    if (val > 0) return { text: `▲ ${val}%`, color: '#059669' };
+    if (val < 0) return { text: `▼ ${Math.abs(val)}%`, color: '#DC2626' };
+    return { text: '—', color: '#9CA3AF' };
+};
+
+const bestMonth = computed(() => props.monthlyData.length ? props.monthlyData.reduce((a, b) => (b.yield > a.yield ? b : a)) : null);
+const worstMonth = computed(() => props.monthlyData.length ? props.monthlyData.filter(m => m.total > 0).reduce((a, b) => (b.yield < a.yield ? b : a)) : null);
+const avgYield = computed(() => {
+    const withData = props.monthlyData.filter(m => m.total > 0);
+    return withData.length ? (withData.reduce((s, m) => s + m.yield, 0) / withData.length).toFixed(1) : 0;
+});
+
+// OK growth: compare first month with data to last month with data
+const okGrowth = computed(() => {
+    const withData = props.monthlyData.filter(m => m.ok > 0);
+    if (withData.length < 2) return null;
+    const first = withData[0].ok, last = withData[withData.length - 1].ok;
+    return first > 0 ? ((last - first) / first * 100).toFixed(1) : null;
+});
+
+const worstNGMonth = computed(() => {
+    const withData = props.monthlyData.filter(m => m.ng > 0);
+    return withData.length ? withData.reduce((a, b) => b.ng > a.ng ? b : a) : null;
+});
+
+const medals = ['🥇', '🥈', '🥉'];
+const medalColors = ['#D97706', '#9CA3AF', '#CD7F32'];
+const avatarBgs = ['#E0E7FF', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#DBEAFE'];
 </script>
 
 <template>
     <Head title="Dashboard" />
     <AuthenticatedLayout>
         <template #title>Dashboard</template>
-
-        <!-- Top Row: Stats + Donut -->
-        <div class="grid grid-cols-12 gap-4 mb-5">
-            <!-- KPI Cards -->
-            <div class="col-span-12 lg:col-span-8">
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <!-- Today -->
-                    <div class="bg-white border border-gray-200/80 rounded-xl p-4 relative overflow-hidden group hover:shadow-md hover:border-gray-300 transition-all duration-200">
-                        <div class="absolute -right-3 -top-3 w-16 h-16 bg-blue-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
-                        <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Today</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-1">{{ metrics.todayCount }}</p>
-                        <p class="text-[11px] text-gray-400 mt-1">Items received</p>
-                    </div>
-                    <!-- Month -->
-                    <div class="bg-white border border-gray-200/80 rounded-xl p-4 relative overflow-hidden group hover:shadow-md hover:border-gray-300 transition-all duration-200">
-                        <div class="absolute -right-3 -top-3 w-16 h-16 bg-indigo-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
-                        <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">This Month</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-1">{{ metrics.monthCount }}</p>
-                        <p class="text-[11px] text-gray-400 mt-1">Monthly total</p>
-                    </div>
-                    <!-- OK -->
-                    <div class="bg-white border border-gray-200/80 rounded-xl p-4 relative overflow-hidden group hover:shadow-md hover:border-gray-300 transition-all duration-200">
-                        <div class="absolute -right-3 -top-3 w-16 h-16 bg-emerald-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
-                        <p class="text-[11px] font-medium text-emerald-500 uppercase tracking-wide">Passed</p>
-                        <p class="text-3xl font-bold text-emerald-600 mt-1">{{ metrics.okCount }}</p>
-                        <p class="text-[11px] text-gray-400 mt-1">OK results</p>
-                    </div>
-                    <!-- NG -->
-                    <div class="bg-white border border-gray-200/80 rounded-xl p-4 relative overflow-hidden group hover:shadow-md hover:border-gray-300 transition-all duration-200">
-                        <div class="absolute -right-3 -top-3 w-16 h-16 bg-red-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
-                        <p class="text-[11px] font-medium text-red-500 uppercase tracking-wide">Failed</p>
-                        <p class="text-3xl font-bold text-red-600 mt-1">{{ metrics.ngCount }}</p>
-                        <p class="text-[11px] text-gray-400 mt-1">NG results</p>
-                    </div>
-                </div>
-
-                <!-- Pending banner -->
-                <div class="mt-3 bg-amber-50 border border-amber-200/60 rounded-xl px-4 py-3 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
-                            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-semibold text-amber-800">{{ metrics.pendingCount }} pending in lab</p>
-                            <p class="text-[11px] text-amber-600/80">Awaiting test execution</p>
-                        </div>
-                    </div>
-                    <a :href="route('execute-test.create')" class="text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors">Execute →</a>
-                </div>
+        
+        <div class="pg-header">
+            <div>
+                <h1 class="pg-title">Dashboard</h1>
+                <p class="pg-sub">Overview of lab activity, quality metrics, and operational insights</p>
             </div>
+            <div style="display:flex;gap:8px">
+                <select class="form-inp" style="padding:6px 10px;width:140px;font-size:12px">
+                    <option>Today</option>
+                    <option selected>This Month</option>
+                    <option>Last 7 Days</option>
+                    <option>Last 30 Days</option>
+                    <option>This Quarter</option>
+                </select>
+            </div>
+        </div>
 
-            <!-- Pass Rate Donut -->
-            <div class="col-span-12 lg:col-span-4">
-                <div class="bg-white border border-gray-200/80 rounded-xl p-5 h-full flex flex-col items-center justify-center hover:shadow-md transition-shadow">
-                    <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-3">Overall Pass Rate</p>
-                    <div class="relative" style="width: 140px; height: 140px;">
-                        <Doughnut :data="donutData" :options="donutOpts" />
-                        <div class="absolute inset-0 flex flex-col items-center justify-center">
-                            <span class="text-3xl font-bold text-gray-900">{{ passRate }}%</span>
-                            <span class="text-[10px] text-gray-400">of {{ totalTests }}</span>
+        <!-- ROW 1: Primary KPIs -->
+        <div class="metric-grid">
+            <div class="card kpi-card">
+                <div class="kpi-icon" style="background:#EFF6FF">📊</div>
+                <div class="kpi-label">Total Volume</div>
+                <div class="kpi-number">{{ metrics.totalTests.toLocaleString() }}</div>
+                <div class="kpi-change" style="background:#ECFDF5;color:#059669">↑ {{ metrics.todayCount }} new today</div>
+            </div>
+            <div class="card kpi-card">
+                <div class="kpi-icon" style="background:#ECFDF5">✅</div>
+                <div class="kpi-label">OK (Pass)</div>
+                <div class="kpi-number" style="color:#059669">{{ metrics.okCount.toLocaleString() }}</div>
+                <div class="kpi-change" style="background:#ECFDF5;color:#059669">{{ metrics.yieldRate }}% yield rate</div>
+            </div>
+            <div class="card kpi-card">
+                <div class="kpi-icon" style="background:#FEF2F2">❌</div>
+                <div class="kpi-label">NG (Fail)</div>
+                <div class="kpi-number" style="color:#DC2626">{{ metrics.ngCount.toLocaleString() }}</div>
+                <div class="kpi-change" style="background:#FEF2F2;color:#DC2626">{{ metrics.defectRate }}% defect rate</div>
+            </div>
+            <div class="card kpi-card">
+                <div class="kpi-icon" style="background:#FFFBEB">⏱️</div>
+                <div class="kpi-label">Avg Test Time (MTTE)</div>
+                <div class="kpi-number" style="color:#D97706">{{ metrics.avgTestTime }}m</div>
+                <div class="kpi-change" style="background:#F3F4F6;color:#6B7280">Per inspection</div>
+            </div>
+            <div class="card kpi-card">
+                <div class="kpi-icon" style="background:#FEF2F2">⚠️</div>
+                <div class="kpi-label">Pending Jobs</div>
+                <div class="kpi-number" style="color:#DC2626">{{ metrics.pendingCount }}</div>
+                <div class="kpi-change" style="background:#FEF2F2;color:#DC2626">Awaiting test</div>
+            </div>
+        </div>
+
+        <!-- SECTION: Quality Overview -->
+        <div class="section-divider">
+            <span class="text">Quality Overview</span>
+            <div class="line"></div>
+        </div>
+
+        <!-- ROW 2: Trend + Donut -->
+        <div class="chart-row chart-row-2">
+            <div class="card">
+                <div class="card-title">Weekly Quality Trend (Pass vs Fail)</div>
+                <div class="card-desc">Daily count of OK and NG judgements over the last 7 days — helps identify quality anomalies</div>
+                <div style="height:280px"><Bar :data="weeklyChartData" :options="barOpts" /></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Today's Test Results</div>
+                <div class="card-desc">Breakdown of today's completed inspections</div>
+                <div style="text-align:center;padding:20px 0 16px">
+                    <div style="font-size:48px;font-weight:700;color:#111827;line-height:1">{{ todayTotal }}</div>
+                    <div style="font-size:12px;color:#9CA3AF;margin-top:4px">tests completed today</div>
+                </div>
+                <!-- Simple stacked bar -->
+                <div style="display:flex;height:28px;border-radius:8px;overflow:hidden;margin-bottom:16px;background:#F3F4F6">
+                    <div v-show="todayTotal > 0" :style="{ width: todayRate + '%', background: '#10B981', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:'12px', fontWeight:'700' }">{{ todayRate }}%</div>
+                    <div v-show="todayTotal > 0 && todayRate < 100" :style="{ width: (100 - todayRate) + '%', background: '#EF4444', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:'12px', fontWeight:'700' }">{{ 100 - todayRate }}%</div>
+                </div>
+                <!-- Numbers -->
+                <div style="display:flex;justify-content:space-between">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:12px;height:12px;border-radius:3px;background:#10B981"></div>
+                        <div>
+                            <div style="font-size:18px;font-weight:700;color:#059669">{{ metrics.todayOK }}</div>
+                            <div style="font-size:11px;color:#6B7280">OK (Pass)</div>
                         </div>
                     </div>
-                    <div class="flex gap-5 mt-4">
-                        <div class="flex items-center gap-1.5">
-                            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                            <span class="text-xs text-gray-500">{{ metrics.okCount }} OK</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <div class="w-2 h-2 rounded-full bg-red-500"></div>
-                            <span class="text-xs text-gray-500">{{ metrics.ngCount }} NG</span>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:12px;height:12px;border-radius:3px;background:#EF4444"></div>
+                        <div style="text-align:right">
+                            <div style="font-size:18px;font-weight:700;color:#DC2626">{{ metrics.todayNG }}</div>
+                            <div style="font-size:11px;color:#6B7280">NG (Fail)</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Charts Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-            <div class="bg-white border border-gray-200/80 rounded-xl p-5 hover:shadow-md transition-shadow">
-                <h3 class="text-sm font-semibold text-gray-900">Weekly Trend</h3>
-                <p class="text-[11px] text-gray-400 mb-3">Last 7 days OK vs NG</p>
-                <div style="height: 200px;"><Bar :data="weeklyChartData" :options="barOpts" /></div>
-            </div>
-            <div class="bg-white border border-gray-200/80 rounded-xl p-5 hover:shadow-md transition-shadow">
-                <h3 class="text-sm font-semibold text-gray-900">Monthly Overview</h3>
-                <p class="text-[11px] text-gray-400 mb-3">Last 6 months</p>
-                <div style="height: 200px;"><Bar :data="monthlyChartData" :options="barOpts" /></div>
+        <!-- ROW 4: Calculated Metrics Summary -->
+        <div class="card" style="margin-bottom:20px">
+            <div class="card-title">Calculated Metrics Summary</div>
+            <div class="card-desc">Key statistical values derived from Transaction_Header & Transaction_Detail</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+                <div class="stat-mini">
+                    <div class="val" style="color:#4F46E5">{{ metrics.totalTests.toLocaleString() }}</div>
+                    <div class="lbl">Total Transactions</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="val" style="color:#059669">{{ metrics.okCount.toLocaleString() }}</div>
+                    <div class="lbl">Total Pass (OK)</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="val" style="color:#DC2626">{{ metrics.ngCount.toLocaleString() }}</div>
+                    <div class="lbl">Total Fail (NG)</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="val" style="color:#D97706">{{ metrics.pendingCount.toLocaleString() }}</div>
+                    <div class="lbl">Pending in Lab</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="val" style="color:#059669">{{ metrics.yieldRate }}%</div>
+                    <div class="lbl">Yield Rate</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="val" style="color:#DC2626">{{ metrics.defectRate }}%</div>
+                    <div class="lbl">Defect Rate</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="val" style="color:#D97706">{{ metrics.avgTestTime }}m</div>
+                    <div class="lbl">MTTE (Avg Test Time)</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="val" style="color:#7C3AED">3.2</div>
+                    <div class="lbl">Tests per Job (Avg)</div>
+                </div>
             </div>
         </div>
 
-        <!-- Bottom Row: Equipment + Today summary -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <!-- Equipment Ranking -->
-            <div class="lg:col-span-2 bg-white border border-gray-200/80 rounded-xl p-5 hover:shadow-md transition-shadow">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-900">Top Equipment</h3>
-                        <p class="text-[11px] text-gray-400">Most tested items</p>
-                    </div>
-                    <span class="text-[10px] text-gray-400 bg-gray-100 px-2 py-1 rounded-md font-medium">Top 5</span>
-                </div>
-                <div class="space-y-3">
-                    <div v-for="(eq, i) in equipRank" :key="i" class="flex items-center gap-3">
-                        <div :class="[
-                            i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-gray-100 text-gray-500' : i === 2 ? 'bg-orange-50 text-orange-500' : 'bg-gray-50 text-gray-400',
-                            'w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold'
-                        ]">{{ i + 1 }}</div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-sm text-gray-700 font-medium truncate">{{ eq.name }}</span>
-                                <span class="text-xs text-gray-400 font-mono ml-2">{{ eq.count }} tests</span>
-                            </div>
-                            <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div class="h-full rounded-full transition-all duration-500"
-                                    :class="i === 0 ? 'bg-gray-900' : i === 1 ? 'bg-gray-600' : 'bg-gray-400'"
-                                    :style="{ width: (equipRank.length ? (eq.count / equipRank[0].count * 100) : 0) + '%' }"></div>
-                            </div>
+        <!-- SECTION: Equipment & Inspector Analysis -->
+        <div class="section-divider"><span class="text">Equipment & Inspector Analysis</span>
+            <div class="line"></div>
+        </div>
+
+        <!-- ROW 4: Equipment Charts -->
+        <div class="chart-row chart-row-3">
+            <div class="card">
+                <div class="card-title">Equipment Usage Ranking</div>
+                <div class="card-desc">Most frequently inspected equipment types</div>
+                <div style="height:240px"><Bar :data="equipUsageData" :options="equipBarOpts" /></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Failure by Equipment</div>
+                <div class="card-desc">Which equipment types generate the most NG results</div>
+                <div style="height:240px;display:flex;justify-content:center"><Doughnut :data="failDoughnutData" :options="doughnutOpts" /></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Inspector Efficiency</div>
+                <div class="card-desc">Average test duration per inspector (minutes)</div>
+                <div style="height:240px"><Bar :data="inspectorEffData" :options="equipBarOpts" /></div>
+            </div>
+        </div>
+
+        <!-- SECTION: Recent Activity -->
+        <div class="section-divider"><span class="text">Recent Activity</span>
+            <div class="line"></div>
+        </div>
+
+        <!-- ROW 5: Inspector Leaderboard + Recent Table -->
+        <div class="chart-row chart-row-2">
+            <div class="card">
+                <div class="card-title">Inspector Leaderboard</div>
+                <div class="card-desc">Pass rate and volume comparison across inspectors</div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                    <div v-for="(insp, idx) in (inspectorData || []).slice(0, 5)" :key="idx" style="display:flex;align-items:center;gap:10px;padding:10px;background:#F9FAFB;border-radius:8px">
+                        <div v-if="idx < 3" style="font-size:16px;font-weight:700;width:24px" :style="{ color: medalColors[idx] }">{{ medals[idx] }}</div>
+                        <div v-else style="font-size:13px;font-weight:700;width:24px;text-align:center;color:#9CA3AF">{{ idx + 1 }}</div>
+                        <div class="avatar" style="width:30px;height:30px;font-size:11px" :style="{ background: avatarBgs[idx % 5] }">{{ insp.name.charAt(0) }}</div>
+                        <div style="flex:1">
+                            <div style="font-size:13px;font-weight:600">{{ insp.name }}</div>
+                            <div style="font-size:11px;color:#6B7280">{{ insp.total }} tests · <span style="color:#059669">{{ insp.ok }} OK</span><span v-if="insp.ng > 0"> · <span style="color:#DC2626">{{ insp.ng }} NG</span></span></div>
                         </div>
+                        <div style="font-size:12px;font-weight:700" :style="{ color: insp.yield >= 95 ? '#059669' : insp.yield >= 90 ? '#D97706' : '#DC2626' }">{{ insp.yield }}%</div>
                     </div>
-                    <p v-if="!equipRank.length" class="text-sm text-gray-400 text-center py-6">No equipment data yet.</p>
+                    <div v-if="!inspectorData || !inspectorData.length" style="padding:20px;text-align:center;color:#9CA3AF;font-size:12px">
+                        No inspector data yet
+                    </div>
                 </div>
             </div>
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <div class="card-title" style="margin:0">Recent Activities</div><span style="font-size:11px;color:#9CA3AF">Last 5 transactions</span>
+                </div>
+                <div class="tbl">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>DMC</th>
+                                <th>Equipment</th>
+                                <th>Status</th>
+                                <th>Tag</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="act in recentActivities.slice(0,5)" :key="act.id">
+                                <td style="font-family:monospace;color:#4F46E5;font-weight:700">#{{ act.id }}</td>
+                                <td style="font-weight:600">{{ act.dmcCode }}</td>
+                                <td>{{ act.equipment }}</td>
+                                <td><span :class="['pill', act.result === 'OK' ? 'pill-g' : 'pill-r']">{{ act.result }}</span></td>
+                                <td><button class="btn-outline" style="padding:2px 6px;font-size:10px">🖨️</button></td>
+                            </tr>
+                            <tr v-if="!recentActivities.length">
+                                <td colspan="5" style="text-align: center; color: #9CA3B8">No recent transactions found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
-            <!-- Today's Quick Stats -->
-            <div class="bg-white border border-gray-200/80 rounded-xl p-5 hover:shadow-md transition-shadow">
-                <h3 class="text-sm font-semibold text-gray-900 mb-1">Today's Snapshot</h3>
-                <p class="text-[11px] text-gray-400 mb-4">{{ new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}</p>
+        <!-- Monthly OK Volume + Monthly NG Volume (Individual Trends) -->
+        <div class="chart-row" style="grid-template-columns:1fr 1fr">
+            <div class="card">
+                <div class="card-title" style="color:#059669">Monthly OK Volume (Pass)</div>
+                <div class="card-desc">6-month trend of passed inspections</div>
+                <div style="height:220px"><Line :data="monthlyOKData" :options="singleLineOpts" /></div>
+            </div>
+            <div class="card">
+                <div class="card-title" style="color:#DC2626">Monthly NG Volume (Fail)</div>
+                <div class="card-desc">6-month trend of failed inspections</div>
+                <div style="height:220px"><Line :data="monthlyNGData" :options="singleLineOpts" /></div>
+            </div>
+        </div>
 
-                <div class="space-y-3">
-                    <div class="bg-blue-50 rounded-lg p-3 flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
-                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
-                        </div>
-                        <div>
-                            <p class="text-lg font-bold text-blue-700">{{ metrics.todayCount }}</p>
-                            <p class="text-[10px] text-blue-500">Received today</p>
-                        </div>
+        <!-- SECTION: Monthly Analysis -->
+        <div class="section-divider"><span class="text">Monthly Analysis</span>
+            <div class="line"></div>
+        </div>
+
+        <!-- OK vs NG Dual Line Chart + Monthly Data Table -->
+        <div class="chart-row" style="grid-template-columns:2fr 1fr">
+            <div class="card">
+                <div class="card-title">📊 OK vs NG — Monthly Trend</div>
+                <div class="card-desc">Dual-line comparison showing passed (green) and failed (red) inspections over 6 months</div>
+                <div style="height:300px"><Line :data="dualLineData" :options="dualLineOpts" /></div>
+            </div>
+            <div class="card">
+                <div class="card-title">📋 Monthly Summary</div>
+                <div class="tbl" style="margin-bottom:12px">
+                    <table style="font-size:11px">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th style="color:#059669">OK</th>
+                                <th style="color:#DC2626">NG</th>
+                                <th>Yield</th>
+                                <th style="color:#DC2626">NG%</th>
+                                <th>MoM</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(m, i) in monthlyData" :key="i" :style="i === monthlyData.length - 1 ? 'background:#F0FDF4' : ''">
+                                <td :style="{ fontWeight: i === monthlyData.length - 1 ? '700' : '600' }">{{ m.label }}</td>
+                                <td :style="{ color: '#059669', fontWeight: i === monthlyData.length - 1 ? '700' : 'normal' }">{{ m.ok }}</td>
+                                <td :style="{ color: m.ng >= 15 ? '#DC2626' : 'inherit', fontWeight: m.ng >= 15 || i === monthlyData.length - 1 ? '700' : 'normal' }">{{ m.ng }}</td>
+                                <td :style="{ color: yieldColor(m.yield), fontWeight: '600' }">{{ m.yield }}%</td>
+                                <td :style="{ color: ngPctColor(m.ngPercent), fontWeight: i === monthlyData.length - 1 ? '700' : 'normal' }">{{ m.ngPercent }}%</td>
+                                <td :style="{ color: momDisplay(m.mom).color, fontWeight: '600' }">{{ momDisplay(m.mom).text }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+                    <div style="text-align:center;background:#F0FDF4;border-radius:6px;padding:8px">
+                        <div style="font-size:16px;font-weight:700;color:#059669">{{ monthlyTotalOK.toLocaleString() }}</div>
+                        <div style="font-size:9px;color:#6B7280;font-weight:600">TOTAL OK</div>
                     </div>
-
-                    <div class="bg-emerald-50 rounded-lg p-3 flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        </div>
-                        <div>
-                            <p class="text-lg font-bold text-emerald-700">{{ metrics.todayOK }}</p>
-                            <p class="text-[10px] text-emerald-500">Passed (OK)</p>
-                        </div>
+                    <div style="text-align:center;background:#FEF2F2;border-radius:6px;padding:8px">
+                        <div style="font-size:16px;font-weight:700;color:#DC2626">{{ monthlyTotalNG.toLocaleString() }}</div>
+                        <div style="font-size:9px;color:#6B7280;font-weight:600">TOTAL NG</div>
                     </div>
-
-                    <div class="bg-red-50 rounded-lg p-3 flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center">
-                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        </div>
-                        <div>
-                            <p class="text-lg font-bold text-red-700">{{ metrics.todayNG }}</p>
-                            <p class="text-[10px] text-red-500">Failed (NG)</p>
-                        </div>
-                    </div>
-
-                    <div class="border border-gray-200 rounded-lg p-3 flex items-center justify-between">
-                        <span class="text-sm text-gray-500">Today's pass rate</span>
-                        <span class="text-lg font-bold" :class="todayRate >= 80 ? 'text-emerald-600' : todayRate >= 50 ? 'text-amber-600' : 'text-red-600'">{{ todayRate }}%</span>
-                    </div>
+                </div>
+                <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px;font-size:10px;color:#374151;line-height:1.7">
+                    <div><b style="color:#059669">📈</b> OK growth <b :style="{ color: okGrowth > 0 ? '#059669' : '#DC2626' }">{{ okGrowth !== null ? (okGrowth > 0 ? '↑' : '↓') + Math.abs(okGrowth) + '%' : '—' }}</b> · Best: <b>{{ bestMonth?.label || '—' }}</b> ({{ bestMonth?.yield || 0 }}%)</div>
+                    <div><b style="color:#DC2626">⚠️</b> NG spike <b style="color:#DC2626">{{ worstNGMonth?.label || '—' }} ({{ worstNGMonth?.ng || 0 }})</b> · Worst: <b>{{ worstMonth?.label || '—' }}</b> ({{ worstMonth?.yield || 0 }}%)</div>
+                    <div><b style="color:#4F46E5">🎯</b> Avg yield <b>{{ avgYield }}%</b> · Target <b>≥ 95%</b></div>
                 </div>
             </div>
         </div>

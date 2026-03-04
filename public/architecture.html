@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Senior UX/UI: Production Layout Concepts</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #FAFAFA;
+            --border-color: #EAEAEA;
+            --text-main: #111;
+            --text-muted: #666;
+            --accent: #000;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Presentation UI */
+        .presentation-header {
+            padding: 20px 40px;
+            background: #111;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .presentation-header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .presentation-header p {
+            font-size: 13px;
+            color: #888;
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
+        .layout-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .layout-tab {
+            padding: 8px 16px;
+            border-radius: 6px;
+            background: transparent;
+            border: 1px solid #333;
+            color: #888;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .layout-tab:hover {
+            border-color: #666;
+            color: #ccc;
+        }
+
+        .layout-tab.active {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+        }
+
+        .viewport-container {
+            flex: 1;
+            padding: 40px;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .browser-window {
+            width: 100%;
+            max-width: 1280px;
+            height: 100%;
+            max-height: 800px;
+            background: var(--bg-main);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        /* =========================================
+   LAYOUT 1: THE COMMAND CENTER (Vercel Style)
+   Concept: Top Navigation, High Information Density
+   ========================================= */
+        .layout-top-nav .nav-bar {
+            height: 64px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 32px;
+            background: #fff;
+        }
+
+        .layout-top-nav .logo {
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: -0.05em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .layout-top-nav .logo span {
+            width: 24px;
+            height: 24px;
+            background: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .layout-top-nav .nav-links {
+            display: flex;
+            gap: 24px;
+            flex: 1;
+        }
+
+        .layout-top-nav .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.15s;
+        }
+
+        .layout-top-nav .nav-links a:hover {
+            color: var(--text-main);
+        }
+
+        .layout-top-nav .nav-links a.active {
+            color: var(--text-main);
+        }
+
+        .layout-top-nav .page-content {
+            flex: 1;
+            padding: 32px 48px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .layout-top-nav .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 32px;
+        }
+
+        .layout-top-nav .page-header h2 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            color: var(--text-main);
+        }
+
+        .layout-top-nav .btn {
+            background: #000;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .layout-top-nav .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .layout-top-nav .card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            background: #fff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+        }
+
+        .layout-top-nav .card-title {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .layout-top-nav .table-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .layout-top-nav th {
+            text-align: left;
+            padding: 12px 24px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            background: #FAFAFA;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .layout-top-nav td {
+            padding: 16px 24px;
+            font-size: 14px;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* =========================================
+   LAYOUT 2: THE WORKSPACE (Linear Style)
+   Concept: Collapsible, Hierarchical Sidebar
+   ========================================= */
+        .layout-workspace {
+            flex-direction: row;
+        }
+
+        .layout-workspace .sidebar {
+            width: 240px;
+            background: #F7F7F8;
+            border-right: 1px solid #EBECEF;
+            display: flex;
+            flex-direction: column;
+            padding: 16px 12px;
+        }
+
+        .layout-workspace .workspace-switcher {
+            border: 1px solid #EBECEF;
+            border-radius: 6px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            background: #fff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+            cursor: pointer;
+        }
+
+        .layout-workspace .workspace-switcher .icon {
+            width: 20px;
+            height: 20px;
+            background: #5E6AD2;
+            border-radius: 4px;
+        }
+
+        .layout-workspace .workspace-switcher span {
+            font-size: 13px;
+            font-weight: 600;
+            color: #111820;
+        }
+
+        .layout-workspace .nav-section {
+            margin-bottom: 16px;
+        }
+
+        .layout-workspace .nav-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #8A8F98;
+            margin-bottom: 4px;
+            padding: 0 8px;
+        }
+
+        .layout-workspace .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            color: #3A3F45;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .layout-workspace .nav-item:hover {
+            background: #EBECEF;
+        }
+
+        .layout-workspace .nav-item.active {
+            background: #EBECEF;
+            color: #111820;
+        }
+
+        .layout-workspace .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+
+        .layout-workspace .top-bar {
+            height: 48px;
+            border-bottom: 1px solid #EBECEF;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            font-size: 13px;
+            color: #8A8F98;
+            font-weight: 500;
+        }
+
+        .layout-workspace .content-area {
+            padding: 32px 48px;
+        }
+
+        .layout-workspace .content-area h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #111820;
+            margin-bottom: 32px;
+            letter-spacing: -0.01em;
+        }
+
+        .layout-workspace .list-row {
+            display: flex;
+            border-bottom: 1px solid #EBECEF;
+            padding: 12px 0;
+            align-items: center;
+        }
+
+        .layout-workspace .list-row:last-child {
+            border-bottom: none;
+        }
+
+        .layout-workspace .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 2px solid #5E6AD2;
+            margin-right: 16px;
+        }
+
+        .layout-workspace .list-id {
+            font-family: monospace;
+            color: #8A8F98;
+            font-size: 13px;
+            width: 100px;
+        }
+
+        .layout-workspace .list-title {
+            flex: 1;
+            font-weight: 500;
+            font-size: 14px;
+            color: #111820;
+        }
+
+        /* =========================================
+   LAYOUT 3: THE ENTERPRISE (Stripe Style)
+   Concept: Structured Two-Column, Soft Shadows
+   ========================================= */
+        .layout-enterprise {
+            flex-direction: row;
+            background: #F3F4F6 !important;
+        }
+
+        .layout-enterprise .sidebar {
+            width: 260px;
+            background: #F9FAFB;
+            border-right: 1px solid #E5E7EB;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .layout-enterprise .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 32px;
+            padding: 0 12px;
+        }
+
+        .layout-enterprise .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: #4B5563;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .layout-enterprise .nav-item.active {
+            background: #fff;
+            color: #6366F1;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .layout-enterprise .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .layout-enterprise .content-area {
+            padding: 40px;
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .layout-enterprise .header {
+            margin-bottom: 32px;
+        }
+
+        .layout-enterprise .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .layout-enterprise .header p {
+            font-size: 14px;
+            color: #6B7280;
+        }
+
+        .layout-enterprise .card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .layout-enterprise .stat-card {
+            background: #fff;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .layout-enterprise .pill {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #ECFDF5;
+            color: #059669;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Setup Display */
+        .layout-view {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: inherit;
+        }
+
+        .layout-view.active {
+            display: flex;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="presentation-header">
+        <div>
+            <h1>UX/UI Architecture Proposals</h1>
+            <p>Production-grade structural layouts for QC Lab</p>
+        </div>
+        <div class="layout-tabs">
+            <button class="layout-tab active" onclick="switchLayout('layout1', this)">1. Top Nav (Vercel)</button>
+            <button class="layout-tab" onclick="switchLayout('layout2', this)">2. Workspace (Linear)</button>
+            <button class="layout-tab" onclick="switchLayout('layout3', this)">3. Enterprise (Stripe)</button>
+        </div>
+    </div>
+
+    <div class="viewport-container">
+        <div class="browser-window" id="browserWindow">
+
+            <!-- =========================================
+             LAYOUT 1: VERCEL STYLE (Top Nav)
+             ========================================= -->
+            <div class="layout-view layout-top-nav active" id="layout1">
+                <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                    <div class="nav-bar">
+                        <div class="logo"><span>Q</span> QCLab</div>
+                        <div class="nav-links">
+                            <a href="#" class="active">Overview</a>
+                            <a href="#">Receive Job</a>
+                            <a href="#">Tests</a>
+                            <a href="#">Reports</a>
+                            <a href="#">Settings</a>
+                        </div>
+                    </div>
+                    <div class="page-content">
+                        <div class="page-header">
+                            <h2>Overview</h2>
+                            <button class="btn">New Job</button>
+                        </div>
+                        <div class="grid-3">
+                            <div class="card">
+                                <div class="card-title">Pending Jobs</div>
+                                <div style="font-size:32px; font-weight:600; letter-spacing:-0.05em; color:#000;">12
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-title">Completed Today</div>
+                                <div style="font-size:32px; font-weight:600; letter-spacing:-0.05em; color:#000;">48
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-title">Fail Rate</div>
+                                <div style="font-size:32px; font-weight:600; letter-spacing:-0.05em; color:#E00;">2.4%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-card">
+                            <table style="width:100%; border-collapse:collapse;">
+                                <thead>
+                                    <tr>
+                                        <th>Job ID</th>
+                                        <th>Equipment</th>
+                                        <th>Status</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>DMC-9124</td>
+                                        <td>Caliper 150mm</td>
+                                        <td style="color:#0A0;">Passed</td>
+                                        <td>10:42 AM</td>
+                                    </tr>
+                                    <tr>
+                                        <td>DMC-9125</td>
+                                        <td>Micrometer 25mm</td>
+                                        <td style="color:#E00;">Failed</td>
+                                        <td>09:15 AM</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- =========================================
+             LAYOUT 2: LINEAR STYLE (Workspace)
+             ========================================= -->
+            <div class="layout-view layout-workspace" id="layout2">
+                <div class="sidebar">
+                    <div class="workspace-switcher">
+                        <div class="icon"></div>
+                        <span>QC Lab Team</span>
+                    </div>
+                    <div class="nav-section">
+                        <div class="nav-title">Your Work</div>
+                        <div class="nav-item">Inbox</div>
+                        <div class="nav-item">My Issues</div>
+                    </div>
+                    <div class="nav-section">
+                        <div class="nav-title">Laboratory</div>
+                        <div class="nav-item active">All Jobs</div>
+                        <div class="nav-item">Pending Test</div>
+                        <div class="nav-item">Completed</div>
+                    </div>
+                </div>
+                <div class="main-area">
+                    <div class="top-bar">Laboratory / All Jobs</div>
+                    <div class="content-area">
+                        <h1>All Jobs</h1>
+                        <div style="border-top: 1px solid #EBECEF;">
+                            <div class="list-row">
+                                <div class="status-dot"></div>
+                                <div class="list-id">QC-401</div>
+                                <div class="list-title">Measure bore diameter for Engine Block A</div>
+                                <div style="font-size:13px; color:#8A8F98;">Today</div>
+                            </div>
+                            <div class="list-row">
+                                <div class="status-dot" style="border-color:#EBECEF;"></div>
+                                <div class="list-id">QC-400</div>
+                                <div class="list-title">Calibrate Micrometer Set B</div>
+                                <div style="font-size:13px; color:#8A8F98;">Yesterday</div>
+                            </div>
+                            <div class="list-row">
+                                <div class="status-dot" style="border-color:#D93025; background:#D93025;"></div>
+                                <div class="list-id">QC-399</div>
+                                <div class="list-title">Failed visual inspection on Chassis Weld</div>
+                                <div style="font-size:13px; color:#8A8F98;">Mon</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =========================================
+             LAYOUT 3: STRIPE STYLE (Enterprise)
+             ========================================= -->
+            <div class="layout-view layout-enterprise" id="layout3">
+                <div class="sidebar">
+                    <div class="logo">QCLab.</div>
+                    <div class="nav-item active">Dashboard</div>
+                    <div class="nav-item">Receive Job</div>
+                    <div class="nav-item">Execute Test</div>
+                    <div class="nav-item">Reports</div>
+                    <div class="nav-item">Certificates</div>
+                    <div style="margin-top:auto; font-size:13px; color:#6B7280; padding: 12px;">Admin<br>admin@qclab.com
+                    </div>
+                </div>
+                <div class="main-area">
+                    <div class="content-area">
+                        <div class="header">
+                            <h1>Good morning, Admin</h1>
+                            <p>Here’s what’s happening in your laboratory today.</p>
+                        </div>
+                        <div class="card-grid">
+                            <div class="stat-card">
+                                <div style="font-size:14px; color:#6B7280; font-weight:500; margin-bottom:8px;">Gross
+                                    Volume</div>
+                                <div style="font-size:36px; font-weight:600; color:#111827; letter-spacing:-0.03em;">284
+                                    <span style="font-size:16px; color:#6B7280; font-weight:400;">items</span></div>
+                            </div>
+                            <div class="stat-card">
+                                <div style="font-size:14px; color:#6B7280; font-weight:500; margin-bottom:8px;">Avg.
+                                    Processing Time</div>
+                                <div style="font-size:36px; font-weight:600; color:#111827; letter-spacing:-0.03em;">1.2
+                                    <span style="font-size:16px; color:#6B7280; font-weight:400;">hours</span></div>
+                            </div>
+                        </div>
+                        <div
+                            style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="font-size:16px; font-weight:600; color:#111827; margin-bottom:16px;">Recent
+                                Activity</div>
+                            <div
+                                style="display:flex; justify-content:space-between; padding: 16px 0; border-bottom: 1px solid #F3F4F6;">
+                                <div>
+                                    <div style="font-size:14px; font-weight:500; color:#111827;">DMC-9082</div>
+                                    <div style="font-size:13px; color:#6B7280;">Dimensional Check</div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div class="pill">Succeeded</div>
+                                    <div style="font-size:13px; color:#6B7280; margin-top:4px;">12:30 PM</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function switchLayout(id, btn) {
+            document.querySelectorAll('.layout-view').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+
+            document.querySelectorAll('.layout-tab').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+
+            const browser = document.getElementById('browserWindow');
+            // adjust root background based on layout style roughly
+            if (id === 'layout1') browser.style.background = '#fff';
+            if (id === 'layout2') browser.style.background = '#fff';
+            if (id === 'layout3') browser.style.background = '#F3F4F6';
+        }
+    </script>
+
+</body>
+
+</html>

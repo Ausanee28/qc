@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QC Lab — Design Gallery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            transition: background .3s, color .3s;
+            -webkit-font-smoothing: antialiased
+        }
+
+        /* THEME SWITCHER FLOATING PANEL */
+        .theme-switcher {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            width: 320px;
+            border: 1px solid #E2E8F0;
+            font-family: 'Inter', sans-serif
+        }
+
+        .theme-switcher h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .theme-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            text-align: left;
+            padding: 12px;
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all .15s
+        }
+
+        .theme-btn:hover {
+            border-color: #CBD5E1;
+            background: #F1F5F9
+        }
+
+        .theme-btn.active {
+            border-color: #4F46E5;
+            background: #EEF2FF;
+            box-shadow: 0 0 0 1px #4F46E5
+        }
+
+        .theme-btn .color-balls {
+            display: flex;
+            gap: 4px
+        }
+
+        .theme-btn .ball {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.1)
+        }
+
+        .theme-info {
+            flex: 1
+        }
+
+        .theme-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #0F172A;
+            display: block
+        }
+
+        .theme-desc {
+            font-size: 11px;
+            color: #64748B;
+            display: block;
+            margin-top: 2px
+        }
+
+        /* =========================================
+   THEME 1: MINIMAL LIGHT (Apple/Linear) 
+   ========================================= */
+        body.theme-light {
+            background: #F8FAFC;
+            color: #0F172A
+        }
+
+        .theme-light .sidebar {
+            background: #fff;
+            border-right: 1px solid #E2E8F0
+        }
+
+        .theme-light .sidebar-text {
+            color: #0F172A
+        }
+
+        .theme-light .nav-link {
+            color: #64748B
+        }
+
+        .theme-light .nav-link:hover {
+            background: #F1F5F9
+        }
+
+        .theme-light .nav-link.active {
+            background: #EEF2FF;
+            color: #4F46E5;
+            font-weight: 600
+        }
+
+        .theme-light .topbar {
+            background: #fff;
+            border-bottom: 1px solid #E2E8F0;
+            color: #0F172A
+        }
+
+        .theme-light .card {
+            background: #fff;
+            border: 1px solid #E2E8F0;
+            border-radius: 16px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02)
+        }
+
+        .theme-light .text-muted {
+            color: #64748B
+        }
+
+        .theme-light .text-primary {
+            color: #0F172A
+        }
+
+        .theme-light table th {
+            background: #F8FAFC;
+            color: #64748B;
+            border-bottom: 1px solid #E2E8F0
+        }
+
+        .theme-light table td {
+            border-bottom: 1px solid #F1F5F9;
+            color: #334155
+        }
+
+        .theme-light .chart-area {
+            background: linear-gradient(180deg, rgba(79, 70, 229, 0.1) 0%, rgba(79, 70, 229, 0) 100%)
+        }
+
+        .theme-light .topbar-user {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0
+        }
+
+        /* =========================================
+   THEME 2: SLEEK DARK (GitHub Dark Dimmed)
+   ========================================= */
+        body.theme-dark {
+            background: #0F172A;
+            color: #F8FAFC
+        }
+
+        .theme-dark .sidebar {
+            background: #1E293B;
+            border-right: 1px solid #334155
+        }
+
+        .theme-dark .sidebar-text {
+            color: #F8FAFC
+        }
+
+        .theme-dark .nav-link {
+            color: #94A3B8
+        }
+
+        .theme-dark .nav-link:hover {
+            background: #334155;
+            color: #F8FAFC
+        }
+
+        .theme-dark .nav-link.active {
+            background: #3B82F6;
+            color: #fff;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3)
+        }
+
+        .theme-dark .topbar {
+            background: #1E293B;
+            border-bottom: 1px solid #334155;
+            color: #F8FAFC
+        }
+
+        .theme-dark .card {
+            background: #1E293B;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1)
+        }
+
+        .theme-dark .text-muted {
+            color: #94A3B8
+        }
+
+        .theme-dark .text-primary {
+            color: #F8FAFC
+        }
+
+        .theme-dark table th {
+            background: #0F172A;
+            color: #94A3B8;
+            border-bottom: 1px solid #334155
+        }
+
+        .theme-dark table td {
+            border-bottom: 1px solid #1E293B;
+            color: #CBD5E1
+        }
+
+        .theme-dark table tr:hover td {
+            background: #334155
+        }
+
+        .theme-dark .chart-area {
+            background: linear-gradient(180deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0) 100%)
+        }
+
+        .theme-dark .topbar-user {
+            background: #0F172A;
+            border: 1px solid #334155
+        }
+
+        /* =========================================
+   THEME 3: GLASSMORPHISM (Colorful Mesh)
+   ========================================= */
+        body.theme-glass {
+            background-color: #F5EFFF;
+            background-image: radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+            color: #F8FAFC;
+            background-attachment: fixed
+        }
+
+        .theme-glass .sidebar {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1)
+        }
+
+        .theme-glass .sidebar-text {
+            color: #fff
+        }
+
+        .theme-glass .nav-link {
+            color: rgba(255, 255, 255, 0.7)
+        }
+
+        .theme-glass .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff
+        }
+
+        .theme-glass .nav-link.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1)
+        }
+
+        .theme-glass .topbar {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff
+        }
+
+        .theme-glass .card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37)
+        }
+
+        .theme-glass .text-muted {
+            color: rgba(255, 255, 255, 0.6)
+        }
+
+        .theme-glass .text-primary {
+            color: #fff
+        }
+
+        .theme-glass table th {
+            background: rgba(0, 0, 0, 0.2);
+            color: rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1)
+        }
+
+        .theme-glass table td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.9)
+        }
+
+        .theme-glass table tr:hover td {
+            background: rgba(255, 255, 255, 0.05)
+        }
+
+        .theme-glass .chart-area {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 100%)
+        }
+
+        .theme-glass .topbar-user {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1)
+        }
+
+        /* =========================================
+   THEME 4: MODERN BANKING (Navy + White)
+   ========================================= */
+        body.theme-corp {
+            background: #F3F4F6;
+            color: #111827
+        }
+
+        .theme-corp .sidebar {
+            background: #111827;
+            border-right: none
+        }
+
+        .theme-corp .sidebar-text {
+            color: #F9FAFB
+        }
+
+        .theme-corp .nav-link {
+            color: #9CA3AF
+        }
+
+        .theme-corp .nav-link:hover {
+            background: #1F2937;
+            color: #F9FAFB
+        }
+
+        .theme-corp .nav-link.active {
+            background: #3B82F6;
+            color: #fff;
+            font-weight: 600
+        }
+
+        .theme-corp .topbar {
+            background: #fff;
+            border-bottom: 1px solid #E5E7EB;
+            color: #111827
+        }
+
+        .theme-corp .card {
+            background: #fff;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)
+        }
+
+        .theme-corp .text-muted {
+            color: #6B7280
+        }
+
+        .theme-corp .text-primary {
+            color: #111827
+        }
+
+        .theme-corp table th {
+            background: #F9FAFB;
+            color: #374151;
+            border-bottom: 2px solid #E5E7EB;
+            text-transform: none;
+            font-size: 13px
+        }
+
+        .theme-corp table td {
+            border-bottom: 1px solid #E5E7EB;
+            color: #111827
+        }
+
+        .theme-corp .chart-area {
+            background: linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0) 100%)
+        }
+
+        .theme-corp .topbar-user {
+            background: #F3F4F6;
+            border: 1px solid #E5E7EB
+        }
+
+
+        /* CORE LAYOUT */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 240px;
+            display: flex;
+            flex-direction: column;
+            z-index: 50;
+            padding: 24px 16px;
+            transition: all .3s
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+            padding: 0 8px
+        }
+
+        .logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #4F46E5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 800;
+            font-size: 18px
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.02em
+        }
+
+        nav {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            text-decoration: none;
+            transition: all .15s;
+            font-size: 14px;
+            font-weight: 500
+        }
+
+        .nav-link .icon {
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            opacity: 0.8
+        }
+
+        .main {
+            margin-left: 240px
+        }
+
+        .topbar {
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            transition: all .3s
+        }
+
+        .topbar h2 {
+            font-size: 18px;
+            font-weight: 600
+        }
+
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 6px 6px 16px;
+            border-radius: 30px;
+            transition: all .3s
+        }
+
+        .topbar-user .name {
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px
+        }
+
+        .topbar-user .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: bold;
+            font-size: 14px
+        }
+
+        .content {
+            padding: 32px;
+            max-width: 1200px;
+            margin: 0 auto
+        }
+
+        /* DASHBOARD COMPONENTS */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 32px
+        }
+
+        .card {
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: all .3s
+        }
+
+        .card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px
+        }
+
+        .card-label {
+            font-size: 14px;
+            font-weight: 500
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2)
+        }
+
+        .card-value {
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 8px;
+            letter-spacing: -0.03em
+        }
+
+        .card-trend {
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px
+        }
+
+        .chart-section {
+            padding: 32px;
+            margin-bottom: 32px
+        }
+
+        .chart-section h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 6px
+        }
+
+        .chart-area {
+            height: 300px;
+            position: relative;
+            margin: 24px -10px 0;
+            border-radius: 12px 12px 0 0
+        }
+
+        .x-axis {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px 10px 0;
+            margin-top: 8px
+        }
+
+        .x-axis span {
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse
+        }
+
+        table th {
+            text-align: left;
+            padding: 16px 24px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em
+        }
+
+        table td {
+            padding: 18px 24px;
+            font-size: 14px;
+            font-weight: 500
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px
+        }
+
+        .status-ok {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10B981
+        }
+
+        .status-warn {
+            background: rgba(245, 158, 11, 0.15);
+            color: #F59E0B
+        }
+    </style>
+</head>
+
+<body class="theme-light">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="logo-area">
+            <div class="logo">Q</div>
+            <div class="logo-text sidebar-text">QC Lab</div>
+        </div>
+        <nav>
+            <a href="#" class="nav-link active">
+                <span class="icon">🏠</span> Dashboard
+            </a>
+            <a href="#" class="nav-link">
+                <span class="icon">📥</span> Receive Job
+            </a>
+            <a href="#" class="nav-link">
+                <span class="icon">📋</span> Execute Test
+            </a>
+            <a href="#" class="nav-link">
+                <span class="icon">📊</span> Report
+            </a>
+            <a href="#" class="nav-link">
+                <span class="icon">⚙️</span> Settings
+            </a>
+        </nav>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <h2 class="text-primary">Dashboard Overview</h2>
+            <div class="topbar-user">
+                <div class="name text-primary">Admin User</div>
+                <div class="avatar">A</div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- KPI CARDS -->
+            <div class="kpi-row">
+                <div class="card">
+                    <div class="card-top">
+                        <span class="card-label text-muted">Total Inspections</span>
+                        <div class="card-icon" style="background:rgba(59,130,246,0.1);color:#3B82F6">📦</div>
+                    </div>
+                    <div class="card-value text-primary">1,284</div>
+                    <div class="card-trend" style="color:#10B981">↗ +12.5% this week</div>
+                </div>
+                <div class="card">
+                    <div class="card-top">
+                        <span class="card-label text-muted">Passed Rate</span>
+                        <div class="card-icon" style="background:rgba(16,185,129,0.1);color:#10B981">✓</div>
+                    </div>
+                    <div class="card-value text-primary">94.2%</div>
+                    <div class="card-trend" style="color:#10B981">↗ +2.1% this week</div>
+                </div>
+                <div class="card">
+                    <div class="card-top">
+                        <span class="card-label text-muted">Pending Tests</span>
+                        <div class="card-icon" style="background:rgba(245,158,11,0.1);color:#F59E0B">⏳</div>
+                    </div>
+                    <div class="card-value text-primary">42</div>
+                    <div class="card-trend" style="color:#EF4444">↘ -5 pending</div>
+                </div>
+                <div class="card">
+                    <div class="card-top">
+                        <span class="card-label text-muted">Avg. Time</span>
+                        <div class="card-icon" style="background:rgba(239,68,68,0.1);color:#EF4444">⏱</div>
+                    </div>
+                    <div class="card-value text-primary">2.4h</div>
+                    <div class="card-trend" style="color:#10B981">↘ -0.3h improved</div>
+                </div>
+            </div>
+
+            <!-- CHART -->
+            <div class="card chart-section">
+                <h3 class="text-primary">Quality Trends</h3>
+                <div class="text-muted" style="font-size:14px">Pass rate vs Time</div>
+
+                <div class="chart-area flex items-end">
+                    <svg viewBox="0 0 1000 300" preserveAspectRatio="none"
+                        style="width:100%;height:100%;position:absolute;bottom:0">
+                        <path d="M0 250 C150 150, 300 180, 500 120 S800 140, 1000 80" fill="none" stroke="#4F46E5"
+                            stroke-width="4" stroke-linecap="round" />
+                        <path d="M0 200 Q200 180, 400 210 T1000 160" fill="none" stroke="#10B981" stroke-width="3"
+                            stroke-dasharray="8,8" opacity="0.8" />
+                    </svg>
+                </div>
+                <div class="x-axis text-muted">
+                    <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                </div>
+            </div>
+
+            <!-- TABLE -->
+            <div class="card" style="padding:0">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Batch ID</th>
+                            <th>Product Line</th>
+                            <th>Inspector</th>
+                            <th>Status</th>
+                            <th>Completion Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="text-primary" style="font-family:monospace;font-weight:600">BTH-2026-001</td>
+                            <td>Engine Block A</td>
+                            <td>Somchai K.</td>
+                            <td><span class="status-pill status-ok">Passed</span></td>
+                            <td class="text-muted">Mar 4, 10:30 AM</td>
+                        </tr>
+                        <tr>
+                            <td class="text-primary" style="font-family:monospace;font-weight:600">BTH-2026-002</td>
+                            <td>Chassis Frame</td>
+                            <td>Wichai P.</td>
+                            <td><span class="status-pill status-ok">Passed</span></td>
+                            <td class="text-muted">Mar 4, 09:15 AM</td>
+                        </tr>
+                        <tr>
+                            <td class="text-primary" style="font-family:monospace;font-weight:600">BTH-2026-003</td>
+                            <td>Transmission Case</td>
+                            <td>Araya T.</td>
+                            <td><span class="status-pill status-warn">Pending Review</span></td>
+                            <td class="text-muted">Mar 3, 16:45 PM</td>
+                        </tr>
+                        <tr>
+                            <td class="text-primary" style="font-family:monospace;font-weight:600">BTH-2026-004</td>
+                            <td>Suspension Arm</td>
+                            <td>Somchai K.</td>
+                            <td><span class="status-pill status-ok">Passed</span></td>
+                            <td class="text-muted">Mar 3, 14:20 PM</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- THEME SWITCHER UI -->
+    <div class="theme-switcher">
+        <h3>✨ Choose a Design Theme</h3>
+        <strong style="font-size:12px;color:#64748B;display:block;margin-bottom:12px">Click below to live-preview new
+            designs:</strong>
+
+        <button class="theme-btn active" onclick="setTheme('theme-light', this)">
+            <div class="color-balls">
+                <div class="ball" style="background:#fff"></div>
+                <div class="ball" style="background:#F8FAFC"></div>
+            </div>
+            <div class="theme-info">
+                <span class="theme-name">Minimal Light (Apple/Linear)</span>
+                <span class="theme-desc">Clean white, lots of whitespace, pure</span>
+            </div>
+        </button>
+
+        <button class="theme-btn" onclick="setTheme('theme-dark', this)">
+            <div class="color-balls">
+                <div class="ball" style="background:#0F172A"></div>
+                <div class="ball" style="background:#1E293B"></div>
+            </div>
+            <div class="theme-info">
+                <span class="theme-name">Sleek Dark (Developer Focus)</span>
+                <span class="theme-desc">Deep slate, gentle on the eyes, glowing</span>
+            </div>
+        </button>
+
+        <button class="theme-btn" onclick="setTheme('theme-glass', this)">
+            <div class="color-balls">
+                <div class="ball" style="background:linear-gradient(135deg, #FF9A9E, #FECFEF)"></div>
+                <div class="ball" style="background:rgba(255,255,255,0.2)"></div>
+            </div>
+            <div class="theme-info">
+                <span class="theme-name">Glassmorphism (Trendy)</span>
+                <span class="theme-desc">Frosted glass, colorful mesh background</span>
+            </div>
+        </button>
+
+        <button class="theme-btn" onclick="setTheme('theme-corp', this)">
+            <div class="color-balls">
+                <div class="ball" style="background:#111827"></div>
+                <div class="ball" style="background:#F3F4F6"></div>
+            </div>
+            <div class="theme-info">
+                <span class="theme-name">Modern Corporate (Stripe)</span>
+                <span class="theme-desc">Dark navy sidebar, high contrast sharp</span>
+            </div>
+        </button>
+    </div>
+
+    <script>
+        function setTheme(themeClass, btnElement) {
+            // remove all theme classes
+            document.body.className = '';
+            // add selected theme
+            document.body.classList.add(themeClass);
+
+            // update active button state
+            document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+        }
+    </script>
+</body>
+
+</html>

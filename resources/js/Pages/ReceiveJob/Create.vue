@@ -22,100 +22,80 @@ const submit = () => {
     <Head title="Receive Job" />
     <AuthenticatedLayout>
         <template #title>Receive Job</template>
-
-        <div class="max-w-3xl mx-auto">
-            <!-- Header -->
-            <div class="mb-8">
-                <div class="flex items-center gap-3 mb-2">
-                    <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900">New Job Entry</h2>
-                        <p class="text-sm text-gray-500">Register equipment for quality inspection</p>
-                    </div>
+        <div class="pg-header">
+                <div>
+                    <h1 class="pg-title">Receive Job</h1>
+                    <p class="pg-sub">Record a new incoming inspection job</p>
                 </div>
             </div>
 
-            <!-- Success -->
+            <!-- Success Message -->
             <transition enter-active-class="transition-all duration-300" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition-all duration-300" leave-from-class="opacity-100" leave-to-class="opacity-0">
-                <div v-if="flash.success || submitted" class="mb-6 flex items-center gap-3 bg-emerald-50 border border-emerald-200 px-5 py-4 rounded-xl">
-                    <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                <div v-if="flash.success || submitted" style="margin-bottom:20px;display:flex;align-items:center;gap:12px;background:#ECFDF5;border:1px solid #A7F3D0;padding:16px 20px;border-radius:12px">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#D1FAE5;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                        <span style="color:#059669;font-size:16px;font-weight:bold">✓</span>
                     </div>
                     <div>
-                        <p class="text-sm font-semibold text-emerald-800">Job registered successfully</p>
-                        <p class="text-xs text-emerald-600">The item has been added to the queue</p>
+                        <p style="font-size:14px;font-weight:600;color:#065F46;margin:0">Job registered successfully</p>
+                        <p style="font-size:12px;color:#059669;margin:0">The item has been added to the queue</p>
                     </div>
                 </div>
             </transition>
 
-            <!-- Form -->
-            <form @submit.prevent="submit" class="bg-white border border-gray-200/80 rounded-2xl shadow-sm overflow-hidden">
-                <!-- Section: Parties -->
-                <div class="px-6 pt-6 pb-2">
-                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Parties</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <form @submit.prevent="submit" class="card card-fill" style="margin: 0; display: flex; flex-direction: column;">
+                <h3 style="font-size:15px;font-weight:600;padding-bottom:12px;border-bottom:1px solid #E5E7EB;margin-bottom:24px;margin-top:0">
+                    Job Registration</h3>
+                
+                <div class="form-grow">
+                    <div class="form-grid" style="margin-bottom:24px">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Sender <span class="text-red-400">*</span></label>
-                            <div class="relative">
-                                <select v-model="form.external_id" required class="w-full h-11 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-sm pl-4 pr-10 focus:bg-white focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all appearance-none">
-                                    <option value="">Select sender...</option>
-                                    <option v-for="e in externals" :key="e.external_id" :value="e.external_id">{{ e.external_name }}</option>
-                                </select>
-                                <svg class="w-4 h-4 text-gray-400 absolute right-3 top-3.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Receiver <span class="text-red-400">*</span></label>
-                            <div class="relative">
-                                <select v-model="form.internal_id" required class="w-full h-11 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-sm pl-4 pr-10 focus:bg-white focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all appearance-none">
-                                    <option value="">Select receiver...</option>
-                                    <option v-for="u in internals" :key="u.user_id" :value="u.user_id">{{ u.name }}</option>
-                                </select>
-                                <svg class="w-4 h-4 text-gray-400 absolute right-3 top-3.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="border-t border-gray-100 mx-6 my-4"></div>
-
-                <!-- Section: Equipment -->
-                <div class="px-6 pb-2">
-                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Equipment Details</h3>
-                    <div class="mb-5">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Equipment <span class="text-red-400">*</span></label>
-                        <div class="relative">
-                            <select v-model="form.equipment_id" required class="w-full h-11 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-sm pl-4 pr-10 focus:bg-white focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all appearance-none">
-                                <option value="">Select equipment...</option>
-                                <option v-for="eq in equipments" :key="eq.equipment_id" :value="eq.equipment_id">{{ eq.equipment_name }}</option>
+                            <label class="form-lbl">Sender (External) *</label>
+                            <select v-model="form.external_id" required class="form-inp" style="padding:10px 12px">
+                                <option value="" disabled>-- Select Sender --</option>
+                                <option v-for="e in externals" :key="e.external_id" :value="e.external_id">{{ e.external_name }}</option>
                             </select>
-                            <svg class="w-4 h-4 text-gray-400 absolute right-3 top-3.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        </div>
+                        <div>
+                            <label class="form-lbl">Receiver (Internal) *</label>
+                            <select v-model="form.internal_id" required class="form-inp" style="padding:10px 12px">
+                                <option value="" disabled>-- Select Receiver --</option>
+                                <option v-for="u in internals" :key="u.user_id" :value="u.user_id">{{ u.name }}</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    
+                    <div style="margin-bottom:24px">
+                        <label class="form-lbl">Equipment *</label>
+                        <select v-model="form.equipment_id" required class="form-inp" style="padding:10px 12px">
+                            <option value="" disabled>-- Select Equipment --</option>
+                            <option v-for="eq in equipments" :key="eq.equipment_id" :value="eq.equipment_id">{{ eq.equipment_name }}</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-grid" style="margin-bottom:24px">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">DMC Code</label>
-                            <input v-model="form.dmc" type="text" placeholder="e.g. DMC-20250303-001" class="w-full h-11 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 focus:bg-white focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all placeholder:text-gray-400" />
+                            <label class="form-lbl">DMC Code</label>
+                            <input v-model="form.dmc" type="text" class="form-inp" style="padding:10px 12px" placeholder="e.g. DMC-2026-001">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Production Line</label>
-                            <input v-model="form.line" type="text" placeholder="e.g. Line A1" class="w-full h-11 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 focus:bg-white focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all placeholder:text-gray-400" />
+                            <label class="form-lbl">Line</label>
+                            <input v-model="form.line" type="text" class="form-inp" style="padding:10px 12px" placeholder="e.g. Line 3">
                         </div>
+                    </div>
+                    
+                    <div style="margin-bottom:24px">
+                        <label class="form-lbl">Remark</label>
+                        <textarea class="form-inp" style="padding:10px 12px;min-height:80px;resize:vertical" placeholder="Optional notes about this job..."></textarea>
                     </div>
                 </div>
 
-                <!-- Submit -->
-                <div class="bg-gray-50/50 border-t border-gray-100 px-6 py-4 flex items-center justify-between mt-4">
-                    <p class="text-xs text-gray-400">Fields marked with <span class="text-red-400">*</span> are required</p>
-                    <button type="submit" :disabled="form.processing" class="inline-flex items-center gap-2 px-6 h-10 rounded-xl text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 transition-all disabled:opacity-50">
-                        <svg v-if="!form.processing" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                        <svg v-else class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
-                        Submit Job
+                <div style="padding-top:20px;border-top:1px solid #E5E7EB;display:flex;justify-content:flex-end;gap:12px;margin-top:auto">
+                    <button type="button" @click="form.reset()" class="btn-outline">Clear</button>
+                    <button type="submit" :disabled="form.processing" class="btn">
+                        <span v-if="form.processing">Submitting...</span>
+                        <span v-else>Save & Print Tag</span>
                     </button>
                 </div>
             </form>
-        </div>
     </AuthenticatedLayout>
 </template>
