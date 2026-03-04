@@ -54,6 +54,7 @@ const submit = () => {
                                 <option value="" disabled>-- Select Sender --</option>
                                 <option v-for="e in externals" :key="e.external_id" :value="e.external_id">{{ e.external_name }}</option>
                             </select>
+                            <div v-if="form.errors.external_id" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.external_id }}</div>
                         </div>
                         <div>
                             <label class="form-lbl">Receiver (Internal) *</label>
@@ -61,6 +62,7 @@ const submit = () => {
                                 <option value="" disabled>-- Select Receiver --</option>
                                 <option v-for="u in internals" :key="u.user_id" :value="u.user_id">{{ u.name }}</option>
                             </select>
+                            <div v-if="form.errors.internal_id" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.internal_id }}</div>
                         </div>
                     </div>
                     
@@ -70,16 +72,19 @@ const submit = () => {
                             <option value="" disabled>-- Select Equipment --</option>
                             <option v-for="eq in equipments" :key="eq.equipment_id" :value="eq.equipment_id">{{ eq.equipment_name }}</option>
                         </select>
+                        <div v-if="form.errors.equipment_id" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.equipment_id }}</div>
                     </div>
                     
                     <div class="form-grid" style="margin-bottom:24px">
                         <div>
                             <label class="form-lbl">DMC Code</label>
                             <input v-model="form.dmc" type="text" class="form-inp" style="padding:10px 12px" placeholder="e.g. DMC-2026-001">
+                            <div v-if="form.errors.dmc" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.dmc }}</div>
                         </div>
                         <div>
                             <label class="form-lbl">Line</label>
                             <input v-model="form.line" type="text" class="form-inp" style="padding:10px 12px" placeholder="e.g. Line 3">
+                            <div v-if="form.errors.line" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.line }}</div>
                         </div>
                     </div>
                     

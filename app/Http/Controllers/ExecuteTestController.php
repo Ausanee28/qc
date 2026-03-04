@@ -37,7 +37,7 @@ class ExecuteTestController extends Controller
             'transaction_id' => 'required|exists:Transaction_Header,transaction_id',
             'method_id' => 'required|exists:Test_Methods,method_id',
             'internal_id' => 'required|exists:Internal_Users,user_id',
-            'judgement' => 'required|in:OK,NG',
+            'judgement' => 'required|in:' . \App\Models\TransactionDetail::JUDGEMENT_OK . ',' . \App\Models\TransactionDetail::JUDGEMENT_NG,
             'start_date' => 'nullable|date',
             'start_time' => 'nullable',
             'end_date' => 'nullable|date',
@@ -50,18 +50,20 @@ class ExecuteTestController extends Controller
         $endDt = ($request->end_date && $request->end_time)
             ? $request->end_date . ' ' . $request->end_time . ':00' : null;
 
-        TransactionDetail::create([
-            'transaction_id' => $request->transaction_id,
-            'method_id' => $request->method_id,
-            'internal_id' => $request->internal_id,
-            'start_time' => $startDt,
-            'end_time' => $endDt,
-            'judgement' => $request->judgement,
-            'remark' => $request->remark,
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $startDt, $endDt) {
+            TransactionDetail::create([
+                'transaction_id' => $request->transaction_id,
+                'method_id' => $request->method_id,
+                'internal_id' => $request->internal_id,
+                'start_time' => $startDt,
+                'end_time' => $endDt,
+                'judgement' => $request->judgement,
+                'remark' => $request->remark,
+            ]);
 
-        TransactionHeader::where('transaction_id', $request->transaction_id)
-            ->update(['return_date' => now()]);
+            TransactionHeader::where('transaction_id', $request->transaction_id)
+                ->update(['return_date' => now()]);
+        });
 
         return redirect()->route('execute-test.create')
             ->with('success', "Test result recorded for Job #{$request->transaction_id}!");

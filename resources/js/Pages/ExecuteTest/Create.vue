@@ -71,6 +71,7 @@ const submit = () => {
                                     #{{ j.transaction_id }} — {{ j.equipment_name }} {{ j.dmc ? `(${j.dmc})` : '' }}
                                 </option>
                             </select>
+                            <div v-if="form.errors.transaction_id" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.transaction_id }}</div>
                         </div>
                         <div>
                             <label class="form-lbl">Test Method *</label>
@@ -78,6 +79,7 @@ const submit = () => {
                                 <option value="" disabled>Select method...</option>
                                 <option v-for="m in methods" :key="m.method_id" :value="m.method_id">{{ m.method_name }}</option>
                             </select>
+                            <div v-if="form.errors.method_id" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.method_id }}</div>
                         </div>
                     </div>
 
@@ -88,6 +90,7 @@ const submit = () => {
                                 <option value="" disabled>Select inspector...</option>
                                 <option v-for="u in inspectors" :key="u.user_id" :value="u.user_id">{{ u.name }}</option>
                             </select>
+                            <div v-if="form.errors.internal_id" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.internal_id }}</div>
                         </div>
                         <div>
                             <label class="form-lbl">Judgement *</label>
@@ -103,6 +106,7 @@ const submit = () => {
                                     <span style="font-size:13px;font-weight:600;color:#EF4444">NG</span>
                                 </label>
                             </div>
+                            <div v-if="form.errors.judgement" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.judgement }}</div>
                         </div>
                     </div>
 

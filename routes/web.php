@@ -19,11 +19,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Receive Job
     Route::get('/receive-job', [ReceiveJobController::class , 'create'])->name('receive-job.create');
-    Route::post('/receive-job', [ReceiveJobController::class , 'store'])->name('receive-job.store');
+    Route::post('/receive-job', [ReceiveJobController::class , 'store'])->middleware('throttle:15,1')->name('receive-job.store');
 
     // Execute Test
     Route::get('/execute-test', [ExecuteTestController::class , 'create'])->name('execute-test.create');
-    Route::post('/execute-test', [ExecuteTestController::class , 'store'])->name('execute-test.store');
+    Route::post('/execute-test', [ExecuteTestController::class , 'store'])->middleware('throttle:15,1')->name('execute-test.store');
 
     // Report
     Route::get('/report', [ReportController::class , 'index'])->name('report.index');

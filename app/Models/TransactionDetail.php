@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TransactionDetail extends Model
 {
+    public const JUDGEMENT_OK = 'OK';
+    public const JUDGEMENT_NG = 'NG';
+
     protected $table = 'Transaction_Detail';
     protected $primaryKey = 'detail_id';
     public $timestamps = false;
