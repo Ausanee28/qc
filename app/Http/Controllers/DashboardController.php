@@ -6,7 +6,9 @@ use App\Models\TransactionHeader;
 use App\Models\TransactionDetail;
 use App\Models\Equipment;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
 use App\Services\DashboardMetricsService;
@@ -20,33 +22,52 @@ class DashboardController extends Controller
         $this->metricsService = $metricsService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $globalCounts = $this->metricsService->getGlobalCounts();
+        $period = $request->get('period', 'month');
+
+        // Compute date range based on period
+        [$from, $to] = $this->getDateRange($period);
+
+        $counts = $this->metricsService->getCounts($from, $to);
         $todayJudgements = $this->metricsService->getTodayJudgements();
 
         return Inertia::render('Dashboard', [
+            'currentPeriod' => $period,
             'metrics' => [
                 'todayCount' => $this->metricsService->getTodayCount(),
                 'monthCount' => $this->metricsService->getMonthCount(),
-                'okCount' => $globalCounts['okCount'],
-                'ngCount' => $globalCounts['ngCount'],
-                'pendingCount' => $globalCounts['pendingCount'],
+                'okCount' => $counts['okCount'],
+                'ngCount' => $counts['ngCount'],
+                'pendingCount' => TransactionHeader::whereNull('return_date')->count(),
                 'todayOK' => $todayJudgements['todayOK'],
                 'todayNG' => $todayJudgements['todayNG'],
-                'yieldRate' => $globalCounts['yieldRate'],
-                'defectRate' => $globalCounts['defectRate'],
-                'avgTestTime' => $this->metricsService->getAverageTestTimeMinutes(),
-                'totalTests' => $globalCounts['totalTests'],
-                'testsPerJob' => $this->metricsService->getTestsPerJob(),
+                'yieldRate' => $counts['yieldRate'],
+                'defectRate' => $counts['defectRate'],
+                'avgTestTime' => $this->metricsService->getAverageTestTimeMinutes($from, $to),
+                'totalTests' => $counts['totalTests'],
+                'testsPerJob' => $this->metricsService->getTestsPerJob($from, $to),
             ],
             'weeklyData' => $this->metricsService->getWeeklyTrend(),
+            'dailyData' => $this->metricsService->getDailyTrend(),
             'monthlyData' => $this->metricsService->getMonthlyTrend(),
-            'equipRank' => $this->metricsService->getEquipmentRanking(),
-            'failByEquip' => $this->metricsService->getFailuresByEquipment(),
-            'inspectorEff' => $this->metricsService->getInspectorEfficiency(),
-            'recentActivities' => $this->metricsService->getRecentActivities(),
-            'inspectorData' => $this->metricsService->getInspectorData(),
+            'equipRank' => $this->metricsService->getEquipmentRanking(5, $from, $to),
+            'failByEquip' => $this->metricsService->getFailuresByEquipment(5, $from, $to),
+            'inspectorEff' => $this->metricsService->getInspectorEfficiency(5, $from, $to),
+            'recentActivities' => $this->metricsService->getRecentActivities(5, $from, $to),
+            'inspectorData' => $this->metricsService->getInspectorData(5, $from, $to),
         ]);
+    }
+
+    private function getDateRange(string $period): array
+    {
+        return match ($period) {
+            'today' => [Carbon::today(), Carbon::today()->endOfDay()],
+            'week' => [Carbon::now()->subDays(6)->startOfDay(), Carbon::now()->endOfDay()],
+            'month' => [Carbon::now()->startOfMonth(), Carbon::now()->endOfDay()],
+            '30days' => [Carbon::now()->subDays(29)->startOfDay(), Carbon::now()->endOfDay()],
+            'quarter' => [Carbon::now()->startOfQuarter(), Carbon::now()->endOfDay()],
+            default => [Carbon::now()->startOfMonth(), Carbon::now()->endOfDay()],
+        };
     }
 }

@@ -27,6 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Report
     Route::get('/report', [ReportController::class , 'index'])->name('report.index');
+    Route::get('/report/export', [ReportController::class , 'export'])->name('report.export');
 
     // Certificates
     Route::get('/certificates', [CertificateController::class , 'index'])->name('certificates.index');

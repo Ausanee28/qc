@@ -6,55 +6,51 @@ use App\Models\TransactionHeader;
 use App\Models\TransactionDetail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
 
 class DashboardMetricsService
 {
     public function getTodayCount(): int
     {
-        return Cache::remember('dashboard_today_count_' . today()->format('Ymd'), 300, function () {
-            return TransactionHeader::whereDate('receive_date', today())->count();
-        });
+        return TransactionHeader::whereDate('receive_date', today())->count();
     }
 
     public function getMonthCount(): int
     {
-        return Cache::remember('dashboard_month_count_' . now()->format('Ym'), 300, function () {
-            return TransactionHeader::whereMonth('receive_date', now()->month)
-                ->whereYear('receive_date', now()->year)->count();
-        });
+        return TransactionHeader::whereMonth('receive_date', now()->month)
+            ->whereYear('receive_date', now()->year)->count();
     }
 
-    public function getGlobalCounts(): array
+    public function getCounts(Carbon $from, Carbon $to): array
     {
-        return Cache::remember('dashboard_global_counts', 300, function () {
-            $okCount = TransactionDetail::where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
-            $ngCount = TransactionDetail::where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
-            $pendingCount = TransactionHeader::whereNull('return_date')->count();
+        $headerIds = TransactionHeader::whereBetween('receive_date', [$from, $to])
+            ->pluck('transaction_id');
 
-            $totalTests = $okCount + $ngCount;
-            $yieldRate = $totalTests > 0 ? round($okCount / $totalTests * 100, 1) : 0;
-            $defectRate = $totalTests > 0 ? round($ngCount / $totalTests * 100, 1) : 0;
+        $okCount = TransactionDetail::whereIn('transaction_id', $headerIds)
+            ->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
+        $ngCount = TransactionDetail::whereIn('transaction_id', $headerIds)
+            ->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
 
-            return compact('okCount', 'ngCount', 'pendingCount', 'totalTests', 'yieldRate', 'defectRate');
-        });
+        $totalTests = $okCount + $ngCount;
+        $yieldRate = $totalTests > 0 ? round($okCount / $totalTests * 100, 1) : 0;
+        $defectRate = $totalTests > 0 ? round($ngCount / $totalTests * 100, 1) : 0;
+
+        return compact('okCount', 'ngCount', 'totalTests', 'yieldRate', 'defectRate');
     }
 
     public function getTodayJudgements(): array
     {
-        return Cache::remember('dashboard_today_judgements_' . today()->format('Ymd'), 300, function () {
-            $todayOK = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', today()))
-                ->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
-            $todayNG = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', today()))
-                ->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
+        $todayOK = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', today()))
+            ->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
+        $todayNG = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', today()))
+            ->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
 
-            return compact('todayOK', 'todayNG');
-        });
+        return compact('todayOK', 'todayNG');
     }
 
-    public function getAverageTestTimeMinutes(): float
+    public function getAverageTestTimeMinutes(Carbon $from, Carbon $to): float
     {
-        $avgTime = TransactionDetail::whereNotNull('end_time')
+        $avgTime = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereBetween('receive_date', [$from, $to]))
+            ->whereNotNull('end_time')
             ->whereNotNull('start_time')
             ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as avg_min')
             ->value('avg_min');
@@ -78,6 +74,27 @@ class DashboardMetricsService
             ];
         }
         return $weeklyData;
+    }
+
+    public function getDailyTrend(): array
+    {
+        $startOfMonth = now()->startOfMonth();
+        $today = now();
+        $days = [];
+
+        for ($d = $startOfMonth->copy(); $d->lte($today); $d->addDay()) {
+            $date = $d->format('Y-m-d');
+            $ok = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', $date))
+                ->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
+            $ng = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', $date))
+                ->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
+            $days[] = [
+                'label' => $d->format('d M'),
+                'ok' => $ok,
+                'ng' => $ng,
+            ];
+        }
+        return $days;
     }
 
     public function getMonthlyTrend(): array
@@ -117,12 +134,18 @@ class DashboardMetricsService
         return $monthlyData;
     }
 
-    public function getEquipmentRanking(int $limit = 5): \Illuminate\Support\Collection
+    public function getEquipmentRanking(int $limit = 5, ?Carbon $from = null, ?Carbon $to = null): \Illuminate\Support\Collection
     {
-        return DB::table('Transaction_Detail')
+        $query = DB::table('Transaction_Detail')
             ->join('Test_Methods', 'Transaction_Detail.method_id', '=', 'Test_Methods.method_id')
-            ->leftJoin('Equipments', 'Test_Methods.equipment_id', '=', 'Equipments.equipment_id')
-            ->select(
+            ->leftJoin('Equipments', 'Test_Methods.equipment_id', '=', 'Equipments.equipment_id');
+
+        if ($from && $to) {
+            $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+                ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
+        }
+
+        return $query->select(
                 DB::raw("COALESCE(Equipments.equipment_name, Test_Methods.method_name) as equipment"),
                 DB::raw('COUNT(*) as cnt')
             )
@@ -133,60 +156,77 @@ class DashboardMetricsService
             ->map(fn($r) => ['name' => $r->equipment, 'count' => $r->cnt]);
     }
 
-    public function getRecentActivities(int $limit = 5): \Illuminate\Support\Collection
+    public function getRecentActivities(int $limit = 5, ?Carbon $from = null, ?Carbon $to = null): \Illuminate\Support\Collection
     {
-        return TransactionHeader::with(['details'])
-            ->whereNotNull('return_date')
-            ->orderByDesc('return_date')
+        $query = TransactionHeader::with(['details'])
+            ->whereNotNull('return_date');
+
+        if ($from && $to) {
+            $query->whereBetween('receive_date', [$from, $to]);
+        }
+
+        return $query->orderByDesc('return_date')
             ->limit($limit)
             ->get()
             ->map(function ($tx) {
-            $ok = $tx->details->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
-            $ng = $tx->details->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
-            return [
-                'id' => $tx->transaction_id,
-                'detail' => $tx->detail ?? $tx->dmc ?? $tx->line ?? '—',
-                'dmcCode' => $tx->dmc ?? '-',
-                'result' => $ng > 0 ?TransactionDetail::JUDGEMENT_NG : TransactionDetail::JUDGEMENT_OK,
-                'date' => $tx->return_date ? $tx->return_date->format('d M Y') : '-',
-                'ok' => $ok,
-                'ng' => $ng,
-            ];
-        });
+                $ok = $tx->details->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
+                $ng = $tx->details->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
+                return [
+                    'id' => $tx->transaction_id,
+                    'detail' => $tx->detail ?? $tx->dmc ?? $tx->line ?? '—',
+                    'dmcCode' => $tx->dmc ?? '-',
+                    'result' => $ng > 0 ? TransactionDetail::JUDGEMENT_NG : TransactionDetail::JUDGEMENT_OK,
+                    'date' => $tx->return_date ? $tx->return_date->format('d M Y') : '-',
+                    'ok' => $ok,
+                    'ng' => $ng,
+                ];
+            });
     }
 
-    public function getInspectorData(int $limit = 5): \Illuminate\Support\Collection
+    public function getInspectorData(int $limit = 5, ?Carbon $from = null, ?Carbon $to = null): \Illuminate\Support\Collection
     {
-        return TransactionDetail::join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id')
-            ->select(
-            'Internal_Users.name',
-            DB::raw('COUNT(*) as total'),
-            DB::raw("SUM(CASE WHEN judgement = '" . TransactionDetail::JUDGEMENT_OK . "' THEN 1 ELSE 0 END) as ok"),
-            DB::raw("SUM(CASE WHEN judgement = '" . TransactionDetail::JUDGEMENT_NG . "' THEN 1 ELSE 0 END) as ng")
-        )
-            ->whereNotNull('internal_id')
-            ->groupBy('internal_id', 'Internal_Users.name')
+        $query = TransactionDetail::join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id');
+
+        if ($from && $to) {
+            $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+                ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
+        }
+
+        return $query->select(
+                'Internal_Users.name',
+                DB::raw('COUNT(*) as total'),
+                DB::raw("SUM(CASE WHEN Transaction_Detail.judgement = '" . TransactionDetail::JUDGEMENT_OK . "' THEN 1 ELSE 0 END) as ok"),
+                DB::raw("SUM(CASE WHEN Transaction_Detail.judgement = '" . TransactionDetail::JUDGEMENT_NG . "' THEN 1 ELSE 0 END) as ng")
+            )
+            ->whereNotNull('Transaction_Detail.internal_id')
+            ->groupBy('Transaction_Detail.internal_id', 'Internal_Users.name')
             ->orderByDesc('total')
             ->limit($limit)
             ->get()
             ->map(function ($row) {
-            return [
-                'name' => $row->name,
-                'total' => $row->total,
-                'ok' => $row->ok,
-                'ng' => $row->ng,
-                'yield' => $row->total > 0 ? round($row->ok / $row->total * 100, 1) : 0,
-            ];
-        });
+                return [
+                    'name' => $row->name,
+                    'total' => $row->total,
+                    'ok' => $row->ok,
+                    'ng' => $row->ng,
+                    'yield' => $row->total > 0 ? round($row->ok / $row->total * 100, 1) : 0,
+                ];
+            });
     }
 
-    public function getFailuresByEquipment(int $limit = 5): \Illuminate\Support\Collection
+    public function getFailuresByEquipment(int $limit = 5, ?Carbon $from = null, ?Carbon $to = null): \Illuminate\Support\Collection
     {
-        return DB::table('Transaction_Detail')
+        $query = DB::table('Transaction_Detail')
             ->join('Test_Methods', 'Transaction_Detail.method_id', '=', 'Test_Methods.method_id')
             ->leftJoin('Equipments', 'Test_Methods.equipment_id', '=', 'Equipments.equipment_id')
-            ->where('Transaction_Detail.judgement', TransactionDetail::JUDGEMENT_NG)
-            ->select(
+            ->where('Transaction_Detail.judgement', TransactionDetail::JUDGEMENT_NG);
+
+        if ($from && $to) {
+            $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+                ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
+        }
+
+        return $query->select(
                 DB::raw("COALESCE(Equipments.equipment_name, Test_Methods.method_name) as name"),
                 DB::raw('COUNT(*) as count')
             )
@@ -196,31 +236,43 @@ class DashboardMetricsService
             ->get();
     }
 
-    public function getTestsPerJob(): float
+    public function getTestsPerJob(?Carbon $from = null, ?Carbon $to = null): float
     {
-        $totalJobs = TransactionHeader::count();
-        $totalTests = TransactionDetail::count();
+        if ($from && $to) {
+            $totalJobs = TransactionHeader::whereBetween('receive_date', [$from, $to])->count();
+            $headerIds = TransactionHeader::whereBetween('receive_date', [$from, $to])->pluck('transaction_id');
+            $totalTests = TransactionDetail::whereIn('transaction_id', $headerIds)->count();
+        } else {
+            $totalJobs = TransactionHeader::count();
+            $totalTests = TransactionDetail::count();
+        }
         return $totalJobs > 0 ? round($totalTests / $totalJobs, 1) : 0;
     }
 
-    public function getInspectorEfficiency(int $limit = 5): \Illuminate\Support\Collection
+    public function getInspectorEfficiency(int $limit = 5, ?Carbon $from = null, ?Carbon $to = null): \Illuminate\Support\Collection
     {
-        return TransactionDetail::join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id')
-            ->select('Internal_Users.name', DB::raw('AVG(TIMESTAMPDIFF(SECOND, start_time, end_time)) as avg_seconds'))
-            ->whereNotNull('internal_id')
-            ->whereNotNull('start_time')
-            ->whereNotNull('end_time')
-            ->whereRaw('TIMESTAMPDIFF(SECOND, start_time, end_time) > 0')
-            ->whereRaw('TIMESTAMPDIFF(SECOND, start_time, end_time) < 3600')
-            ->groupBy('internal_id', 'Internal_Users.name')
+        $query = TransactionDetail::join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id');
+
+        if ($from && $to) {
+            $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+                ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
+        }
+
+        return $query->select('Internal_Users.name', DB::raw('AVG(TIMESTAMPDIFF(SECOND, Transaction_Detail.start_time, Transaction_Detail.end_time)) as avg_seconds'))
+            ->whereNotNull('Transaction_Detail.internal_id')
+            ->whereNotNull('Transaction_Detail.start_time')
+            ->whereNotNull('Transaction_Detail.end_time')
+            ->whereRaw('TIMESTAMPDIFF(SECOND, Transaction_Detail.start_time, Transaction_Detail.end_time) > 0')
+            ->whereRaw('TIMESTAMPDIFF(SECOND, Transaction_Detail.start_time, Transaction_Detail.end_time) < 3600')
+            ->groupBy('Transaction_Detail.internal_id', 'Internal_Users.name')
             ->orderByDesc('avg_seconds')
             ->limit($limit)
             ->get()
             ->map(function ($row) {
-            return [
-                'name' => $row->name,
-                'avgMinutes' => round($row->avg_seconds / 60, 2)
-            ];
-        });
+                return [
+                    'name' => $row->name,
+                    'avgMinutes' => round($row->avg_seconds / 60, 2)
+                ];
+            });
     }
 }
