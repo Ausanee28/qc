@@ -83,7 +83,10 @@ const submit = () => {
                         </div>
                         <div>
                             <label class="form-lbl">Line</label>
-                            <input v-model="form.line" type="text" class="form-inp" style="padding:10px 12px" placeholder="e.g. Line 3">
+                            <select v-model="form.line" class="form-inp" style="padding:10px 12px">
+                                <option value="">-- Select Line --</option>
+                                <option v-for="n in 10" :key="n" :value="'Line ' + n">Line {{ n }}</option>
+                            </select>
                             <div v-if="form.errors.line" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.line }}</div>
                         </div>
                     </div>

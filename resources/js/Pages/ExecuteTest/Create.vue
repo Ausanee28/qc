@@ -125,8 +125,8 @@ const submit = () => {
                                 <button type="button" @click="() => { const d = new Date(); form.end_date = d.toISOString().split('T')[0]; form.end_time = d.toTimeString().slice(0,5); }" class="btn-outline" style="padding:2px 8px;font-size:10px">Now</button>
                             </label>
                             <div style="display:flex;gap:8px;margin-top:4px">
-                                <input v-model="form.end_date" type="date" class="form-inp" required>
-                                <input v-model="form.end_time" type="time" class="form-inp" required>
+                                <input v-model="form.end_date" type="date" class="form-inp">
+                                <input v-model="form.end_time" type="time" class="form-inp">
                             </div>
                         </div>
                     </div>
