@@ -16,13 +16,12 @@ class ReportController extends Controller
         $results = DB::table('Transaction_Detail as TD')
             ->join('Transaction_Header as TH', 'TD.transaction_id', '=', 'TH.transaction_id')
             ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id')
-            ->join('Equipments as E', 'TH.equipment_id', '=', 'E.equipment_id')
             ->join('Test_Methods as TM', 'TD.method_id', '=', 'TM.method_id')
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
             ->whereBetween(DB::raw('DATE(TH.receive_date)'), [$dateFrom, $dateTo])
             ->select(
             'TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date',
-            'EU.external_name as sender', 'E.equipment_name',
+            'EU.external_name as sender', 'TH.detail',
             'TM.method_name', 'IU.name as inspector',
             'TD.start_time', 'TD.end_time', 'TD.judgement', 'TD.remark'
         )

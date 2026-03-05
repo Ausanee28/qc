@@ -294,7 +294,7 @@ const avatarBgs = ['#E0E7FF', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#DBEAFE'];
                     <div class="lbl">MTTE (Avg Test Time)</div>
                 </div>
                 <div class="stat-mini">
-                    <div class="val" style="color:#7C3AED">3.2</div>
+                    <div class="val" style="color:#7C3AED">{{ metrics.testsPerJob }}</div>
                     <div class="lbl">Tests per Job (Avg)</div>
                 </div>
             </div>
@@ -308,13 +308,13 @@ const avatarBgs = ['#E0E7FF', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#DBEAFE'];
         <!-- ROW 4: Equipment Charts -->
         <div class="chart-row chart-row-3">
             <div class="card">
-                <div class="card-title">Equipment Usage Ranking</div>
-                <div class="card-desc">Most frequently inspected equipment types</div>
+                <div class="card-title">Top Inspected Items</div>
+                <div class="card-desc">Most frequently inspected items</div>
                 <div style="height:240px"><Bar :data="equipUsageData" :options="equipBarOpts" /></div>
             </div>
             <div class="card">
-                <div class="card-title">Failure by Equipment</div>
-                <div class="card-desc">Which equipment types generate the most NG results</div>
+                <div class="card-title">Failure by Item Detail</div>
+                <div class="card-desc">Which items generate the most NG results</div>
                 <div style="height:240px;display:flex;justify-content:center"><Doughnut :data="failDoughnutData" :options="doughnutOpts" /></div>
             </div>
             <div class="card">
@@ -360,7 +360,7 @@ const avatarBgs = ['#E0E7FF', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#DBEAFE'];
                             <tr>
                                 <th>ID</th>
                                 <th>DMC</th>
-                                <th>Equipment</th>
+                                <th>Detail</th>
                                 <th>Status</th>
                                 <th>Tag</th>
                             </tr>
@@ -369,7 +369,7 @@ const avatarBgs = ['#E0E7FF', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#DBEAFE'];
                             <tr v-for="act in recentActivities.slice(0,5)" :key="act.id">
                                 <td style="font-family:monospace;color:#4F46E5;font-weight:700">#{{ act.id }}</td>
                                 <td style="font-weight:600">{{ act.dmcCode }}</td>
-                                <td>{{ act.equipment }}</td>
+                                <td>{{ act.detail }}</td>
                                 <td><span :class="['pill', act.result === 'OK' ? 'pill-g' : 'pill-r']">{{ act.result }}</span></td>
                                 <td><button class="btn-outline" style="padding:2px 6px;font-size:10px">🖨️</button></td>
                             </tr>

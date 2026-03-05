@@ -19,6 +19,7 @@ class User extends Authenticatable
         'user_password',
         'employee_id',
         'name',
+        'email',
         'role',
     ];
 

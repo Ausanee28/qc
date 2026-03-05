@@ -141,7 +141,7 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
                                 <th>ID</th>
                                 <th>Inspector</th>
                                 <th>DMC</th>
-                                <th>Equipment</th>
+                                <th>Detail</th>
                                 <th>Duration</th>
                                 <th>Result</th>
                             </tr>
@@ -151,7 +151,7 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
                                 <td style="font-family:monospace;color:#4F46E5;font-weight:700">#{{ d.detail_id }}</td>
                                 <td>{{ d.inspector }}</td>
                                 <td>{{ d.dmc || '—' }}</td>
-                                <td>{{ d.equipment_name }}</td>
+                                <td>{{ d.detail }}</td>
                                 <td style="font-weight:700;color:#D97706">{{ fmt(d.duration_sec) }}</td>
                                 <td>
                                     <span v-if="d.judgement === 'OK'" class="pill pill-g">OK</span>

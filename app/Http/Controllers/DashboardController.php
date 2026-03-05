@@ -38,6 +38,7 @@ class DashboardController extends Controller
                 'defectRate' => $globalCounts['defectRate'],
                 'avgTestTime' => $this->metricsService->getAverageTestTimeMinutes(),
                 'totalTests' => $globalCounts['totalTests'],
+                'testsPerJob' => $this->metricsService->getTestsPerJob(),
             ],
             'weeklyData' => $this->metricsService->getWeeklyTrend(),
             'monthlyData' => $this->metricsService->getMonthlyTrend(),

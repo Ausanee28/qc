@@ -16,18 +16,17 @@ class CertificateController extends Controller
 
         $jobs = DB::table('Transaction_Header as TH')
             ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id')
-            ->join('Equipments as E', 'TH.equipment_id', '=', 'E.equipment_id')
             ->leftJoin('Transaction_Detail as TD', 'TH.transaction_id', '=', 'TD.transaction_id')
             ->whereBetween(DB::raw('DATE(TH.receive_date)'), [$dateFrom, $dateTo])
             ->select(
             'TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date', 'TH.return_date',
-            'EU.external_name as sender', 'E.equipment_name',
+            'EU.external_name as sender', 'TH.detail',
             DB::raw('COUNT(TD.detail_id) as test_count'),
             DB::raw("SUM(CASE WHEN TD.judgement = 'OK' THEN 1 ELSE 0 END) as ok_count"),
             DB::raw("SUM(CASE WHEN TD.judgement = 'NG' THEN 1 ELSE 0 END) as ng_count")
         )
             ->groupBy('TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date', 'TH.return_date',
-            'EU.external_name', 'E.equipment_name')
+            'EU.external_name', 'TH.detail')
             ->orderByDesc('TH.receive_date')
             ->get();
 
@@ -41,10 +40,9 @@ class CertificateController extends Controller
     {
         $job = DB::table('Transaction_Header as TH')
             ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id')
-            ->join('Equipments as E', 'TH.equipment_id', '=', 'E.equipment_id')
             ->join('Internal_Users as IU', 'TH.internal_id', '=', 'IU.user_id')
             ->where('TH.transaction_id', $id)
-            ->select('TH.*', 'EU.external_name as sender', 'E.equipment_name', 'IU.name as receiver')
+            ->select('TH.*', 'EU.external_name as sender', 'IU.name as receiver')
             ->first();
 
         if (!$job)

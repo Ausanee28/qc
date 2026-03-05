@@ -29,12 +29,11 @@ class PerformanceController extends Controller
         $details = DB::table('Transaction_Detail as TD')
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
             ->join('Transaction_Header as TH', 'TD.transaction_id', '=', 'TH.transaction_id')
-            ->join('Equipments as E', 'TH.equipment_id', '=', 'E.equipment_id')
             ->whereNotNull('TD.start_time')
             ->whereNotNull('TD.end_time')
             ->select(
             'TD.detail_id', 'IU.name as inspector', 'TH.dmc', 'TH.line',
-            'E.equipment_name', 'TD.judgement', 'TD.start_time', 'TD.end_time',
+            'TH.detail', 'TD.judgement', 'TD.start_time', 'TD.end_time',
             DB::raw('TIMESTAMPDIFF(SECOND, TD.start_time, TD.end_time) as duration_sec')
         )
             ->orderByDesc('TD.end_time')

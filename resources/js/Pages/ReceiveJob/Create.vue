@@ -3,12 +3,12 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
-const props = defineProps({ externals: Array, internals: Array, equipments: Array });
+const props = defineProps({ externals: Array, internals: Array });
 const flash = usePage().props.flash || {};
 const submitted = ref(false);
 
 const form = useForm({
-    external_id: '', internal_id: '', equipment_id: '', dmc: '', line: '',
+    external_id: '', internal_id: '', detail: '', dmc: '', line: '',
 });
 
 const submit = () => {
@@ -66,15 +66,6 @@ const submit = () => {
                         </div>
                     </div>
                     
-                    <div style="margin-bottom:24px">
-                        <label class="form-lbl">Equipment *</label>
-                        <select v-model="form.equipment_id" required class="form-inp" style="padding:10px 12px">
-                            <option value="" disabled>-- Select Equipment --</option>
-                            <option v-for="eq in equipments" :key="eq.equipment_id" :value="eq.equipment_id">{{ eq.equipment_name }}</option>
-                        </select>
-                        <div v-if="form.errors.equipment_id" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.equipment_id }}</div>
-                    </div>
-                    
                     <div class="form-grid" style="margin-bottom:24px">
                         <div>
                             <label class="form-lbl">DMC Code</label>
@@ -92,9 +83,12 @@ const submit = () => {
                     </div>
                     
                     <div style="margin-bottom:24px">
-                        <label class="form-lbl">Remark</label>
-                        <textarea class="form-inp" style="padding:10px 12px;min-height:80px;resize:vertical" placeholder="Optional notes about this job..."></textarea>
+                        <label class="form-lbl">Detail</label>
+                        <textarea v-model="form.detail" class="form-inp" style="padding:10px 12px;min-height:80px;resize:vertical" placeholder="Enter job details..."></textarea>
+                        <div v-if="form.errors.detail" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.detail }}</div>
                     </div>
+                    
+
                 </div>
 
                 <div style="padding-top:20px;border-top:1px solid #E5E7EB;display:flex;justify-content:flex-end;gap:12px;margin-top:auto">

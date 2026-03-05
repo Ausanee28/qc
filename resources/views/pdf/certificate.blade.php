@@ -34,8 +34,8 @@
             <td class="info-value">{{ now()->format('d/m/Y') }}</td>
         </tr>
         <tr>
-            <td class="info-label">Equipment</td>
-            <td class="info-value">{{ $job->equipment_name }}</td>
+            <td class="info-label">Detail</td>
+            <td class="info-value">{{ $job->detail }}</td>
             <td class="info-label">DMC</td>
             <td class="info-value">{{ $job->dmc ?: '-' }}</td>
         </tr>
@@ -68,7 +68,7 @@
         <thead>
             <tr>
                 <th>#</th>
-                <th>Method</th>
+                <th>Process</th>
                 <th>Inspector</th>
                 <th>Start</th>
                 <th>End</th>

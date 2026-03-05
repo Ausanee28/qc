@@ -119,18 +119,23 @@ class DashboardMetricsService
 
     public function getEquipmentRanking(int $limit = 5): \Illuminate\Support\Collection
     {
-        return TransactionHeader::select('equipment_id', DB::raw('COUNT(*) as cnt'))
-            ->groupBy('equipment_id')
+        return DB::table('Transaction_Detail')
+            ->join('Test_Methods', 'Transaction_Detail.method_id', '=', 'Test_Methods.method_id')
+            ->leftJoin('Equipments', 'Test_Methods.equipment_id', '=', 'Equipments.equipment_id')
+            ->select(
+                DB::raw("COALESCE(Equipments.equipment_name, Test_Methods.method_name) as equipment"),
+                DB::raw('COUNT(*) as cnt')
+            )
+            ->groupBy('equipment')
             ->orderByDesc('cnt')
             ->limit($limit)
-            ->with('equipment')
             ->get()
-            ->map(fn($r) => ['name' => $r->equipment->equipment_name ?? 'N/A', 'count' => $r->cnt]);
+            ->map(fn($r) => ['name' => $r->equipment, 'count' => $r->cnt]);
     }
 
     public function getRecentActivities(int $limit = 5): \Illuminate\Support\Collection
     {
-        return TransactionHeader::with(['equipment', 'details'])
+        return TransactionHeader::with(['details'])
             ->whereNotNull('return_date')
             ->orderByDesc('return_date')
             ->limit($limit)
@@ -140,7 +145,7 @@ class DashboardMetricsService
             $ng = $tx->details->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
             return [
                 'id' => $tx->transaction_id,
-                'equipment' => $tx->equipment->equipment_name ?? 'N/A',
+                'detail' => $tx->detail ?? $tx->dmc ?? $tx->line ?? '—',
                 'dmcCode' => $tx->dmc ?? '-',
                 'result' => $ng > 0 ?TransactionDetail::JUDGEMENT_NG : TransactionDetail::JUDGEMENT_OK,
                 'date' => $tx->return_date ? $tx->return_date->format('d M Y') : '-',
@@ -177,14 +182,25 @@ class DashboardMetricsService
 
     public function getFailuresByEquipment(int $limit = 5): \Illuminate\Support\Collection
     {
-        return TransactionDetail::join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
-            ->join('Equipments', 'Transaction_Header.equipment_id', '=', 'Equipments.equipment_id')
+        return DB::table('Transaction_Detail')
+            ->join('Test_Methods', 'Transaction_Detail.method_id', '=', 'Test_Methods.method_id')
+            ->leftJoin('Equipments', 'Test_Methods.equipment_id', '=', 'Equipments.equipment_id')
             ->where('Transaction_Detail.judgement', TransactionDetail::JUDGEMENT_NG)
-            ->select('Equipments.equipment_name as name', DB::raw('COUNT(*) as count'))
-            ->groupBy('Equipments.equipment_name')
+            ->select(
+                DB::raw("COALESCE(Equipments.equipment_name, Test_Methods.method_name) as name"),
+                DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('name')
             ->orderByDesc('count')
             ->limit($limit)
             ->get();
+    }
+
+    public function getTestsPerJob(): float
+    {
+        $totalJobs = TransactionHeader::count();
+        $totalTests = TransactionDetail::count();
+        return $totalJobs > 0 ? round($totalTests / $totalJobs, 1) : 0;
     }
 
     public function getInspectorEfficiency(int $limit = 5): \Illuminate\Support\Collection

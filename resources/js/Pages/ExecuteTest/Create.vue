@@ -68,13 +68,13 @@ const submit = () => {
                             <select v-model="form.transaction_id" required class="form-inp" style="padding:10px 12px">
                                 <option value="" disabled>Select job...</option>
                                 <option v-for="j in pendingJobs" :key="j.transaction_id" :value="j.transaction_id">
-                                    #{{ j.transaction_id }} — {{ j.equipment_name }} {{ j.dmc ? `(${j.dmc})` : '' }}
+                                    #{{ j.transaction_id }} — {{ j.detail }} {{ j.dmc ? `(${j.dmc})` : '' }}
                                 </option>
                             </select>
                             <div v-if="form.errors.transaction_id" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.transaction_id }}</div>
                         </div>
                         <div>
-                            <label class="form-lbl">Test Method *</label>
+                            <label class="form-lbl">Inspection Process *</label>
                             <select v-model="form.method_id" required class="form-inp" style="padding:10px 12px">
                                 <option value="" disabled>Select method...</option>
                                 <option v-for="m in methods" :key="m.method_id" :value="m.method_id">{{ m.method_name }}</option>

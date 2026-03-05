@@ -16,7 +16,6 @@ class ReceiveJobController extends Controller
         return Inertia::render('ReceiveJob/Create', [
             'externals' => ExternalUser::orderBy('external_name')->get(),
             'internals' => User::orderBy('name')->get(['user_id', 'name']),
-            'equipments' => Equipment::orderBy('equipment_name')->get(),
         ]);
     }
 
@@ -25,7 +24,7 @@ class ReceiveJobController extends Controller
         $request->validate([
             'external_id' => 'required|exists:External_Users,external_id',
             'internal_id' => 'required|exists:Internal_Users,user_id',
-            'equipment_id' => 'required|exists:Equipments,equipment_id',
+            'detail' => 'nullable|string|max:255',
             'dmc' => 'nullable|string',
             'line' => 'nullable|string',
         ]);
@@ -33,7 +32,7 @@ class ReceiveJobController extends Controller
         $job = TransactionHeader::create([
             'external_id' => $request->external_id,
             'internal_id' => $request->internal_id,
-            'equipment_id' => $request->equipment_id,
+            'detail' => $request->detail,
             'dmc' => $request->dmc,
             'line' => $request->line,
             'receive_date' => now(),

@@ -1,7 +1,7 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 defineProps({
@@ -89,6 +89,7 @@ const submit = () => {
                     <input type="checkbox" v-model="form.remember" class="ent-checkbox" />
                     <span class="ent-checkbox-text">Remember me for 30 days</span>
                 </label>
+                <Link :href="route('password.request')" class="ent-forgot-link">Forgot password?</Link>
             </div>
 
             <!-- Submit Button -->
@@ -106,6 +107,10 @@ const submit = () => {
                     Signing in...
                 </span>
             </button>
+
+            <div class="ent-register-link">
+                Don't have an account? <Link :href="route('register')" class="ent-link">Create one</Link>
+            </div>
         </form>
     </GuestLayout>
 </template>
@@ -365,5 +370,34 @@ const submit = () => {
 @keyframes entSpin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+/* Forgot Password Link */
+.ent-forgot-link {
+    font-size: 13px;
+    color: #555;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+.ent-forgot-link:hover {
+    color: #000;
+    text-decoration: underline;
+}
+
+/* Register Link */
+.ent-register-link {
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    margin-top: 4px;
+}
+.ent-link {
+    color: #000;
+    font-weight: 600;
+    text-decoration: none;
+}
+.ent-link:hover {
+    text-decoration: underline;
 }
 </style>

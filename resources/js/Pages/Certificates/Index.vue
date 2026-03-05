@@ -37,7 +37,7 @@ const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-
                         <span v-else-if="j.ok_count > 0" class="pill pill-g" style="font-size:9px;margin-left:6px">OK</span>
                         <span v-else class="pill pill-y" style="font-size:9px;margin-left:6px">Pending</span>
                         
-                        <h3 style="font-size:15px;font-weight:700;margin-top:4px">{{ j.equipment_name }}</h3>
+                        <h3 style="font-size:15px;font-weight:700;margin-top:4px">{{ j.detail }}</h3>
                     </div>
                 </div>
                 <div style="font-size:12px;color:#6B7280;display:flex;flex-direction:column;gap:4px;margin-bottom:14px">

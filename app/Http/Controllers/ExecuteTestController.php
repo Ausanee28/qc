@@ -14,14 +14,13 @@ class ExecuteTestController extends Controller
     public function create()
     {
         $pendingJobs = TransactionHeader::whereNull('return_date')
-            ->with('equipment')
             ->orderByDesc('receive_date')
             ->get()
             ->map(fn($j) => [
         'transaction_id' => $j->transaction_id,
         'dmc' => $j->dmc,
         'line' => $j->line,
-        'equipment_name' => $j->equipment->equipment_name ?? '',
+        'detail' => $j->detail,
         ]);
 
         return Inertia::render('ExecuteTest/Create', [

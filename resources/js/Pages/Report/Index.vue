@@ -48,8 +48,8 @@ const ngCount = computed(() => props.results.filter(r => r.judgement === 'NG').l
                             <th>Date</th>
                             <th>Sender</th>
                             <th>DMC</th>
-                            <th>Equipment</th>
-                            <th>Method</th>
+                            <th>Detail</th>
+                            <th>Process</th>
                             <th>Inspector</th>
                             <th>Start</th>
                             <th>End</th>
@@ -64,7 +64,7 @@ const ngCount = computed(() => props.results.filter(r => r.judgement === 'NG').l
                             <td style="font-size:11px">{{ formatDate(r.receive_date) }}</td>
                             <td>{{ r.sender }}</td>
                             <td style="font-weight:700">{{ r.dmc || '—' }}</td>
-                            <td>{{ r.equipment_name }}</td>
+                            <td>{{ r.detail }}</td>
                             <td>{{ r.method_name }}</td>
                             <td>{{ r.inspector }}</td>
                             <td style="font-size:11px">{{ r.start_time ? new Date(r.start_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '—' }}</td>

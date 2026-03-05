@@ -12,7 +12,7 @@ class TransactionHeader extends Model
     protected $primaryKey = 'transaction_id';
     public $timestamps = false;
     protected $fillable = [
-        'external_id', 'internal_id', 'equipment_id',
+        'external_id', 'internal_id', 'detail',
         'dmc', 'line', 'receive_date', 'return_date'
     ];
 
@@ -29,11 +29,6 @@ class TransactionHeader extends Model
     public function internalUser(): BelongsTo
     {
         return $this->belongsTo(User::class , 'internal_id', 'user_id');
-    }
-
-    public function equipment(): BelongsTo
-    {
-        return $this->belongsTo(Equipment::class , 'equipment_id', 'equipment_id');
     }
 
     public function details(): HasMany
