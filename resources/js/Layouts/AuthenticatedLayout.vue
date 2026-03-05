@@ -1,10 +1,18 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 
 const showMobileMenu = ref(false);
+
+const globalSearch = ref('');
+const handleGlobalSearch = () => {
+    if (globalSearch.value.trim()) {
+        router.get(route('report.index'), { dmc: globalSearch.value.trim() });
+        globalSearch.value = ''; // clear after search
+    }
+};
 
 const groupedNav = [
     {
@@ -109,7 +117,7 @@ const currentDate = computed(() => {
                     <svg width="14" height="14" fill="none" stroke="#9CA3AF" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <input placeholder="Search DMC code..." />
+                    <input v-model="globalSearch" @keyup.enter="handleGlobalSearch" placeholder="Search DMC code..." />
                 </div>
                 <div style="display:flex;align-items:center;gap:16px">
                     <span style="font-size:12px;color:#9CA3AF">{{ currentDate }}</span>

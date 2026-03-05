@@ -6,7 +6,13 @@ import { ref, computed } from 'vue';
 const props = defineProps({ results: Array, filters: Object });
 const dateFrom = ref(props.filters.date_from);
 const dateTo = ref(props.filters.date_to);
-const search = () => router.get(route('report.index'), { date_from: dateFrom.value, date_to: dateTo.value }, { preserveState: true });
+const dmcSearch = ref(props.filters.dmc || '');
+
+const search = () => router.get(route('report.index'), {
+    date_from: dateFrom.value,
+    date_to: dateTo.value,
+    dmc: dmcSearch.value
+}, { preserveState: true });
 
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
 
@@ -69,6 +75,7 @@ const doExport = () => {
                     <p class="pg-sub">View and export completed test results</p>
                 </div>
                 <div style="display:flex;gap:8px;align-items:end">
+                    <input v-model="dmcSearch" @keyup.enter="search" type="text" placeholder="DMC code..." class="form-inp" style="padding:6px 10px; width:150px">
                     <input v-model="dateFrom" type="date" class="form-inp" style="padding:6px 10px">
                     <input v-model="dateTo" type="date" class="form-inp" style="padding:6px 10px">
                     <button @click="search" class="btn" style="padding:6px 14px">Filter</button>

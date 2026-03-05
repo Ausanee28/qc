@@ -157,12 +157,18 @@ body {
     align-items: center;
     gap: 8px;
     padding: 6px 14px;
-    background: #F3F4F6;
-    border: 1px solid #E5E7EB;
-    border-radius: 6px;
-    width: 280px;
-    max-width: 280px;
-    flex-shrink: 0
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 20px;
+    width: 200px;
+    transition: all 0.2s ease;
+}
+
+.search-box:focus-within {
+    background: #FFFFFF;
+    border-color: #818CF8;
+    box-shadow: 0 0 0 3px rgba(129,140,248,0.15);
+    width: 240px;
 }
 
 .search-box input {
@@ -171,7 +177,13 @@ body {
     font-size: 13px;
     outline: none;
     width: 100%;
-    font-family: 'Inter'
+    font-family: 'Inter';
+    color: #334155;
+    padding: 2px 0;
+}
+
+.search-box input::placeholder {
+    color: #94A3B8;
 }
 
 .top-right {
