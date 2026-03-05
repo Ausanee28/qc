@@ -49,13 +49,19 @@ class ExecuteTestController extends Controller
         $endDt = ($request->end_date && $request->end_time)
             ? $request->end_date . ' ' . $request->end_time . ':00' : null;
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $startDt, $endDt) {
+        $durationSec = null;
+        if ($startDt && $endDt) {
+            $durationSec = strtotime($endDt) - strtotime($startDt);
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $startDt, $endDt, $durationSec) {
             TransactionDetail::create([
                 'transaction_id' => $request->transaction_id,
                 'method_id' => $request->method_id,
                 'internal_id' => $request->internal_id,
                 'start_time' => $startDt,
                 'end_time' => $endDt,
+                'duration_sec' => $durationSec,
                 'judgement' => $request->judgement,
                 'remark' => $request->remark,
             ]);

@@ -13,12 +13,13 @@ class PerformanceController extends Controller
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
             ->whereNotNull('TD.start_time')
             ->whereNotNull('TD.end_time')
+            ->where('TD.start_time', '>=', now()->subDays(30))
             ->select(
             'IU.user_id as id', 'IU.name',
             DB::raw('COUNT(*) as total_tests'),
-            DB::raw('ROUND(AVG(TIMESTAMPDIFF(SECOND, TD.start_time, TD.end_time))) as avg_sec'),
-            DB::raw('MIN(TIMESTAMPDIFF(SECOND, TD.start_time, TD.end_time)) as min_sec'),
-            DB::raw('MAX(TIMESTAMPDIFF(SECOND, TD.start_time, TD.end_time)) as max_sec'),
+            DB::raw('ROUND(AVG(TD.duration_sec)) as avg_sec'),
+            DB::raw('MIN(TD.duration_sec) as min_sec'),
+            DB::raw('MAX(TD.duration_sec) as max_sec'),
             DB::raw("SUM(CASE WHEN TD.judgement = 'OK' THEN 1 ELSE 0 END) as ok_cnt"),
             DB::raw("SUM(CASE WHEN TD.judgement = 'NG' THEN 1 ELSE 0 END) as ng_cnt")
         )
@@ -31,10 +32,11 @@ class PerformanceController extends Controller
             ->join('Transaction_Header as TH', 'TD.transaction_id', '=', 'TH.transaction_id')
             ->whereNotNull('TD.start_time')
             ->whereNotNull('TD.end_time')
+            ->where('TD.start_time', '>=', now()->subDays(30))
             ->select(
             'TD.detail_id', 'IU.name as inspector', 'TH.dmc', 'TH.line',
             'TH.detail', 'TD.judgement', 'TD.start_time', 'TD.end_time',
-            DB::raw('TIMESTAMPDIFF(SECOND, TD.start_time, TD.end_time) as duration_sec')
+            'TD.duration_sec'
         )
             ->orderByDesc('TD.end_time')
             ->limit(50)
