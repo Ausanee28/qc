@@ -72,7 +72,7 @@ const currentDate = computed(() => {
             
             <div class="flex-1 overflow-y-auto">
                 <template v-for="(group, gIdx) in groupedNav" :key="gIdx">
-                    <div class="px-3" :class="[gIdx === 0 ? 'mt-2 mb-5' : 'mt-6 mb-5']">
+                    <div class="px-4" :class="[gIdx === 0 ? 'mt-2 mb-5' : 'mt-6 mb-5']">
                         <div class="px-3 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">{{ group.label }}</div>
                         <div class="space-y-1">
                             <Link
@@ -147,9 +147,10 @@ const currentDate = computed(() => {
                 </div>
             </header>
 
-            <div class="flex-1 overflow-y-auto w-full">
-                <!-- No container padding constraints here, to let pages manage their own spacing. -->
-                <slot />
+            <div class="flex-1 overflow-y-auto w-full p-6 lg:p-8">
+                <div class="max-w-7xl mx-auto">
+                    <slot />
+                </div>
             </div>
         </main>
 

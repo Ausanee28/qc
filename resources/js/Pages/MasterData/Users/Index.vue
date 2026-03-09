@@ -62,7 +62,7 @@ const deleteUser = (id) => {
 <template>
     <Head title="Users - Master Data" />
     <AuthenticatedLayout>
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="w-full">
             
             <div class="sm:flex sm:items-center sm:justify-between mb-8">
                 <div>

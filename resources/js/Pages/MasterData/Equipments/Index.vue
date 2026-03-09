@@ -52,8 +52,9 @@ const deleteEquipment = (id) => {
 <template>
     <Head title="Equipment - Master Data" />
     <AuthenticatedLayout>
-        <div class="px-[28px] py-[28px] max-w-[1600px] mx-auto text-[color:var(--text-bright)] relative" style="background-color: var(--bg-root); min-height: calc(100vh - 54px);">
+        <div class="w-full text-[color:var(--text-bright)] relative" style="background-color: var(--bg-root); min-height: calc(100vh - 54px);">
             
+            <!-- PAGE HEADER -->
             <div class="flex flex-col md:flex-row md:items-start justify-between gap-[16px] mb-[28px]">
                 <div>
                     <h1 class="text-[1.75rem] font-[800] leading-[1.2] tracking-[-0.025em]" style="color: var(--text-bright);">Equipment</h1>

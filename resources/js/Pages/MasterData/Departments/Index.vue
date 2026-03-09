@@ -54,7 +54,7 @@ const deleteDepartment = (id) => {
 <template>
     <Head title="Departments - Master Data" />
     <AuthenticatedLayout>
-        <div class="px-[28px] py-[28px] max-w-[1600px] mx-auto text-[color:var(--text-bright)] relative" style="background-color: var(--bg-root); min-height: calc(100vh - 54px);">
+        <div class="w-full text-[color:var(--text-bright)] relative" style="background-color: var(--bg-root); min-height: calc(100vh - 54px);">
             
             <!-- PAGE HEADER -->
             <div class="flex flex-col md:flex-row md:items-start justify-between gap-[16px] mb-[28px]">
