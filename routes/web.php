@@ -40,6 +40,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile', [ProfileController::class , 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class , 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class , 'destroy'])->name('profile.destroy');
+
+    // Master Data
+    Route::prefix('master-data')->name('master-data.')->group(function () {
+        Route::resource('departments', \App\Http\Controllers\DepartmentController::class)->except(['create', 'show', 'edit']);
+        Route::resource('equipments', \App\Http\Controllers\EquipmentController::class)->except(['create', 'show', 'edit']);
+        Route::resource('test-methods', \App\Http\Controllers\TestMethodController::class)->except(['create', 'show', 'edit']);
+    });
 });
 
 require __DIR__ . '/auth.php';
