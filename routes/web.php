@@ -46,6 +46,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('departments', \App\Http\Controllers\DepartmentController::class)->except(['create', 'show', 'edit']);
         Route::resource('equipments', \App\Http\Controllers\EquipmentController::class)->except(['create', 'show', 'edit']);
         Route::resource('test-methods', \App\Http\Controllers\TestMethodController::class)->except(['create', 'show', 'edit']);
+        Route::resource('users', \App\Http\Controllers\UserController::class)->except(['create', 'show', 'edit']);
     });
 });
 
