@@ -128,22 +128,68 @@ const currentDate = computed(() => {
 
         <!-- MAIN -->
         <main class="flex-1 flex flex-col min-w-0 bg-gray-50">
-            <header class="h-14 bg-white border-b border-gray-200 shadow-sm px-8 flex items-center justify-between z-10">
-                <div class="search-box">
-                    <svg width="14" height="14" fill="none" stroke="#9CA3AF" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input v-model="globalSearch" @keyup.enter="handleGlobalSearch" placeholder="Search DMC code..." />
-                </div>
-                <div class="flex items-center gap-4">
-                    <span class="text-xs text-gray-500 font-medium">{{ currentDate }}</span>
-                    <div class="flex items-center gap-2">
-                        <div class="w-7 h-7 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[11px] font-bold">
-                            {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
-                        </div>
-                        <span class="text-[13px] font-semibold text-gray-900">{{ $page.props.auth.user.name }}</span>
+            <header class="h-16 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 flex items-center justify-between z-10 antialiased shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                
+                <!-- LEFT: Mobile Menu Toggle & Title Area -->
+                <div class="flex items-center gap-3">
+                    <button @click="showMobileMenu = true" class="md:hidden text-gray-500 hover:text-gray-900 focus:outline-none p-1.5 rounded-md hover:bg-gray-100 transition-colors">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <div class="hidden sm:flex items-center text-[13px] font-medium tracking-tight">
+                        <span class="text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">QC Lab</span>
+                        <svg class="w-4 h-4 text-gray-300 mx-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                        <span class="text-gray-900 font-semibold"><slot name="title">Workspace</slot></span>
                     </div>
-                    <Link :href="route('logout')" method="post" as="button" class="text-xs text-gray-500 hover:text-gray-900 bg-none border-none cursor-pointer font-medium ml-2">Log out</Link>
+                </div>
+
+                <!-- RIGHT: Search, Date, Profile, Logout -->
+                <div class="flex items-center gap-4 lg:gap-6">
+                    
+                    <!-- Search Input (Linear style) -->
+                    <div class="relative group hidden md:block">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <input 
+                            v-model="globalSearch" 
+                            @keyup.enter="handleGlobalSearch" 
+                            class="block w-[260px] lg:w-[320px] pl-9 pr-12 py-1.5 border border-gray-200 rounded-md leading-5 bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-900 focus:border-gray-900 sm:text-[13px] transition-all focus:shadow-sm"
+                            placeholder="Search DMC code..." 
+                            type="text" 
+                            autocomplete="off"
+                        />
+                        <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                            <span class="text-gray-400 text-[10px] font-mono font-medium border border-gray-200 rounded px-1.5 py-0.5 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.04)]">⌘K</span>
+                        </div>
+                    </div>
+
+                    <!-- Separator -->
+                    <div class="hidden lg:block h-5 w-px bg-gray-200"></div>
+
+                    <!-- User Actions Row -->
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <span class="text-[12px] text-gray-500 font-medium hidden xl:block tracking-wide bg-gray-50 px-2 py-1 rounded-md border border-gray-100">{{ currentDate }}</span>
+                        
+                        <!-- User Identity -->
+                        <div class="flex items-center gap-3">
+                            <div class="flex-col items-end hidden sm:flex leading-tight">
+                                <span class="text-[13px] font-bold text-gray-900 tracking-tight">{{ $page.props.auth.user.name }}</span>
+                                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">{{ $page.props.auth.user.role === 'admin' ? 'Admin' : 'QC Tech' }}</span>
+                            </div>
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white flex items-center justify-center text-[11px] font-bold ring-2 ring-white shadow-[0_2px_4px_rgba(0,0,0,0.1)] cursor-pointer hover:opacity-90 transition-opacity">
+                                {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
+                            </div>
+                        </div>
+
+                        <!-- Logout Icon Button -->
+                        <Link :href="route('logout')" method="post" as="button" class="text-gray-400 hover:text-gray-900 p-1.5 rounded-lg hover:bg-gray-100 transition-colors ml-1" title="Log out">
+                            <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        </Link>
+                    </div>
                 </div>
             </header>
 
