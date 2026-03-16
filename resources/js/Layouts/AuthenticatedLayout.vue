@@ -1,10 +1,43 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 
 const showMobileMenu = ref(false);
+const sidebarRef = ref(null);
+
+// Preserve sidebar scroll position across Inertia navigations
+const SCROLL_KEY = 'qc_sidebar_scroll';
+
+const removeBeforeListener = router.on('before', () => {
+    if (sidebarRef.value) {
+        localStorage.setItem(SCROLL_KEY, sidebarRef.value.scrollTop);
+    }
+});
+
+const removeFinishListener = router.on('finish', () => {
+    nextTick(() => {
+        const saved = parseInt(localStorage.getItem(SCROLL_KEY) || '0');
+        if (sidebarRef.value) {
+            sidebarRef.value.scrollTop = saved;
+        }
+    });
+});
+
+onMounted(() => {
+    const saved = parseInt(localStorage.getItem(SCROLL_KEY) || '0');
+    nextTick(() => {
+        if (sidebarRef.value) {
+            sidebarRef.value.scrollTop = saved;
+        }
+    });
+});
+
+onUnmounted(() => {
+    removeBeforeListener();
+    removeFinishListener();
+});
 
 const globalSearch = ref('');
 const handleGlobalSearch = () => {
@@ -71,7 +104,7 @@ const currentDate = computed(() => {
                 </div>
             </div>
             
-            <div class="flex-1 overflow-y-auto">
+            <div ref="sidebarRef" class="flex-1 overflow-y-auto">
                 <template v-for="(group, gIdx) in groupedNav" :key="gIdx">
                     <div class="px-4" :class="[gIdx === 0 ? 'mt-2 mb-5' : 'mt-6 mb-5']">
                         <div class="px-3 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">{{ group.label }}</div>
