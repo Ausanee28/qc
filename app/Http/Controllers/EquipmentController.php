@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Equipment;
+use App\Models\TestMethod;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -43,13 +44,10 @@ class EquipmentController extends Controller
     public function destroy($id)
     {
         $equipment = Equipment::findOrFail($id);
-        
-        // Check if used in transactions or test methods
-        if (
-            \App\Models\TestMethod::where('equipment_id', $equipment->equipment_id)->exists() ||
-            $equipment->transactionHeaders()->exists()
-        ) {
-            return redirect()->back()->with('error', 'Cannot delete equipment that is assigned to test methods or transactions.');
+
+        // Check if used in any Test Method
+        if (TestMethod::where('equipment_id', $equipment->equipment_id)->exists()) {
+            return redirect()->back()->with('error', 'Cannot delete equipment that is assigned to test methods.');
         }
 
         $equipment->delete();

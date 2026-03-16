@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
@@ -74,9 +75,18 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // Prevent deleting yourself
         if (auth()->id() === $user->user_id) {
             return redirect()->back()->with('error', 'You cannot delete your own account.');
+        }
+
+        $hasTransactions = DB::table('Transaction_Detail')
+            ->where('internal_id', $user->user_id)->exists();
+
+        $hasHeaders = DB::table('Transaction_Header')
+            ->where('internal_id', $user->user_id)->exists();
+
+        if ($hasTransactions || $hasHeaders) {
+            return redirect()->back()->with('error', 'Cannot delete user that has existing transactions.');
         }
 
         $user->delete();
