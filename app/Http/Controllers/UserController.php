@@ -5,14 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class UserController extends Controller
 {
     public function index()
     {
-        $users = User::orderBy('name')->get();
+        $users = User::orderBy('name')->get(['user_id', 'user_name', 'name', 'employee_id', 'email', 'role']);
         return Inertia::render('MasterData/Users/Index', [
             'users' => $users
         ]);
@@ -20,23 +19,23 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'user_name' => 'required|string|max:255|unique:Internal_Users,user_name',
-            'employee_id' => 'required|string|max:50',
-            'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'role' => ['required', Rule::in(['admin', 'qc'])],
-            'password' => 'required|string|min:8',
+        $request->validate([
+            'user_name'   => 'required|string|max:50|unique:Internal_Users,user_name',
+            'name'        => 'required|string|max:100',
+            'employee_id' => 'nullable|string|max:50|unique:Internal_Users,employee_id',
+            'email'       => 'nullable|email|max:255|unique:Internal_Users,email',
+            'role'        => 'required|in:admin,engineer,inspector',
+            'password'    => 'required|string|min:8|confirmed',
         ]);
 
-        $user = new User();
-        $user->user_name = $validated['user_name'];
-        $user->employee_id = $validated['employee_id'];
-        $user->name = $validated['name'];
-        $user->email = $validated['email'];
-        $user->role = $validated['role'];
-        $user->user_password = Hash::make($validated['password']);
-        $user->save();
+        User::create([
+            'user_name'     => $request->user_name,
+            'user_password' => Hash::make($request->password),
+            'name'          => $request->name,
+            'employee_id'   => $request->employee_id,
+            'email'         => $request->email,
+            'role'          => $request->role,
+        ]);
 
         return redirect()->back()->with('success', 'User created successfully.');
     }
@@ -45,26 +44,28 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        $validated = $request->validate([
-            'user_name' => 'required|string|max:255|unique:Internal_Users,user_name,' . $user->user_id . ',user_id',
-            'employee_id' => 'required|string|max:50',
-            'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'role' => ['required', Rule::in(['admin', 'qc'])],
-            'password' => 'nullable|string|min:8',
+        $request->validate([
+            'user_name'   => 'required|string|max:50|unique:Internal_Users,user_name,' . $user->user_id . ',user_id',
+            'name'        => 'required|string|max:100',
+            'employee_id' => 'nullable|string|max:50|unique:Internal_Users,employee_id,' . $user->user_id . ',user_id',
+            'email'       => 'nullable|email|max:255|unique:Internal_Users,email,' . $user->user_id . ',user_id',
+            'role'        => 'required|in:admin,engineer,inspector',
+            'password'    => 'nullable|string|min:8|confirmed',
         ]);
 
-        $user->user_name = $validated['user_name'];
-        $user->employee_id = $validated['employee_id'];
-        $user->name = $validated['name'];
-        $user->email = $validated['email'];
-        $user->role = $validated['role'];
-        
-        if (!empty($validated['password'])) {
-            $user->user_password = Hash::make($validated['password']);
+        $data = [
+            'user_name'   => $request->user_name,
+            'name'        => $request->name,
+            'employee_id' => $request->employee_id,
+            'email'       => $request->email,
+            'role'        => $request->role,
+        ];
+
+        if ($request->filled('password')) {
+            $data['user_password'] = Hash::make($request->password);
         }
 
-        $user->save();
+        $user->update($data);
 
         return redirect()->back()->with('success', 'User updated successfully.');
     }
@@ -73,8 +74,8 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // Prevent self-deletion if needed (assuming auth check is here)
-        if (auth()->id() == $user->user_id) {
+        // Prevent deleting yourself
+        if (auth()->id() === $user->user_id) {
             return redirect()->back()->with('error', 'You cannot delete your own account.');
         }
 
