@@ -9,6 +9,15 @@ use Illuminate\Support\Carbon;
 
 class DashboardMetricsService
 {
+    private function durationSecondsExpression(string $startColumn, string $endColumn): string
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            return "CAST((julianday({$endColumn}) - julianday({$startColumn})) * 86400 AS INTEGER)";
+        }
+
+        return "TIMESTAMPDIFF(SECOND, {$startColumn}, {$endColumn})";
+    }
+
     public function getTodayCount(): int
     {
         return TransactionHeader::whereDate('receive_date', today())->count();
@@ -52,7 +61,7 @@ class DashboardMetricsService
         $avgTime = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereBetween('receive_date', [$from, $to]))
             ->whereNotNull('end_time')
             ->whereNotNull('start_time')
-            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as avg_min')
+            ->selectRaw('AVG(duration_sec) / 60 as avg_min')
             ->value('avg_min');
 
         return $avgTime ? round($avgTime) : 0;
@@ -251,6 +260,8 @@ class DashboardMetricsService
 
     public function getInspectorEfficiency(int $limit = 5, ?Carbon $from = null, ?Carbon $to = null): \Illuminate\Support\Collection
     {
+        $durationExpression = $this->durationSecondsExpression('Transaction_Detail.start_time', 'Transaction_Detail.end_time');
+
         $query = TransactionDetail::join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id');
 
         if ($from && $to) {
@@ -258,12 +269,12 @@ class DashboardMetricsService
                 ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
         }
 
-        return $query->select('Internal_Users.name', DB::raw('AVG(TIMESTAMPDIFF(SECOND, Transaction_Detail.start_time, Transaction_Detail.end_time)) as avg_seconds'))
+        return $query->select('Internal_Users.name', DB::raw("AVG({$durationExpression}) as avg_seconds"))
             ->whereNotNull('Transaction_Detail.internal_id')
             ->whereNotNull('Transaction_Detail.start_time')
             ->whereNotNull('Transaction_Detail.end_time')
-            ->whereRaw('TIMESTAMPDIFF(SECOND, Transaction_Detail.start_time, Transaction_Detail.end_time) > 0')
-            ->whereRaw('TIMESTAMPDIFF(SECOND, Transaction_Detail.start_time, Transaction_Detail.end_time) < 3600')
+            ->whereRaw("{$durationExpression} > 0")
+            ->whereRaw("{$durationExpression} < 3600")
             ->groupBy('Transaction_Detail.internal_id', 'Internal_Users.name')
             ->orderByDesc('avg_seconds')
             ->limit($limit)

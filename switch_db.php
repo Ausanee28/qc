@@ -1,82 +1,125 @@
 <?php
+
 /**
  * QC Lab DB Switcher
- * Usage: 
- *   php switch_db.php work  (สลับไปใช้ Database ที่ทำงาน)
- *   php switch_db.php home  (สลับไปใช้ Database ที่บ้าน xampp)
+ *
+ * Usage:
+ *   php switch_db.php status
+ *   php switch_db.php home
+ *   php switch_db.php work
  */
 
 $mode = $argv[1] ?? 'status';
-
 $envPath = __DIR__ . '/.env';
-$legacyPath = __DIR__ . '/legacy/config.php';
 
 if (!file_exists($envPath)) {
-    die("Error: .env file not found!\n");
-}
-if (!file_exists($legacyPath)) {
-    die("Error: legacy/config.php not found!\n");
+    fwrite(STDERR, "Error: .env file not found.\n");
+    exit(1);
 }
 
 $envContent = file_get_contents($envPath);
-$legacyContent = file_get_contents($legacyPath);
 
-$workConfig = [
-    'host' => '10.22.0.101',
-    'port' => '3307',
-    'db' => 'qc3',
-    'user' => 'std01',
-    'pass' => '9F1e-VE3Fhbq'
+function envValue(string $content, string $key): ?string
+{
+    if (!preg_match('/^' . preg_quote($key, '/') . '=(.*)$/m', $content, $matches)) {
+        return null;
+    }
+
+    return trim($matches[1]);
+}
+
+function setEnvValue(string $content, string $key, string $value): string
+{
+    $line = $key . '=' . $value;
+
+    if (preg_match('/^' . preg_quote($key, '/') . '=.*$/m', $content)) {
+        return preg_replace('/^' . preg_quote($key, '/') . '=.*$/m', $line, $content);
+    }
+
+    return rtrim($content) . PHP_EOL . $line . PHP_EOL;
+}
+
+function getProfileConfig(string $content, string $prefix): array
+{
+    $requiredKeys = ['CONNECTION', 'HOST', 'PORT', 'DATABASE', 'USERNAME', 'PASSWORD'];
+    $config = [];
+
+    foreach ($requiredKeys as $key) {
+        $fullKey = $prefix . '_' . $key;
+        $value = envValue($content, $fullKey);
+
+        if ($value === null) {
+            fwrite(STDERR, "Error: missing {$fullKey} in .env\n");
+            exit(1);
+        }
+
+        $config[strtolower($key)] = $value;
+    }
+
+    return $config;
+}
+
+$profiles = [
+    'work' => getProfileConfig($envContent, 'WORK_DB'),
+    'home' => getProfileConfig($envContent, 'HOME_DB'),
 ];
 
-$homeConfig = [
-    'host' => '127.0.0.1',
-    'port' => '3306',
-    'db' => 'qc',
-    'user' => 'root',
-    'pass' => ''
-];
+if (!array_key_exists($mode, $profiles) && $mode !== 'status') {
+    fwrite(STDERR, "Unknown mode: {$mode}\n");
+    fwrite(STDERR, "Usage: php switch_db.php [status|home|work]\n");
+    exit(1);
+}
 
-if ($mode !== 'work' && $mode !== 'home') {
-    // Check current mode roughly by seeing what's uncommented in legacy
-    $isWork = strpos($legacyContent, "\$host = '10.22.0.101';") !== false;
+if ($mode === 'status') {
+    $currentProfile = envValue($envContent, 'DB_PROFILE') ?? 'unknown';
+    $currentConnection = envValue($envContent, 'DB_CONNECTION') ?? 'unknown';
+    $currentHost = envValue($envContent, 'DB_HOST') ?? 'unknown';
+    $currentPort = envValue($envContent, 'DB_PORT') ?? 'unknown';
+    $currentDatabase = envValue($envContent, 'DB_DATABASE') ?? 'unknown';
+    $currentUser = envValue($envContent, 'DB_USERNAME') ?? 'unknown';
+
     echo "====================================\n";
     echo "  QC Database Switcher\n";
     echo "====================================\n";
-    echo "Current Mode: " . ($isWork ? "WORK (MariaDB 10.22...)" : "HOME (XAMPP Localhost)") . "\n\n";
+    echo "Current Profile : {$currentProfile}\n";
+    echo "Driver          : {$currentConnection}\n";
+    echo "Host            : {$currentHost}\n";
+    echo "Port            : {$currentPort}\n";
+    echo "Database        : {$currentDatabase}\n";
+    echo "Username        : {$currentUser}\n\n";
     echo "To switch, run:\n";
-    echo "  php switch_db.php work\n";
     echo "  php switch_db.php home\n";
-    exit;
+    echo "  php switch_db.php work\n";
+    exit(0);
 }
 
-$cfg = $mode === 'work' ? $workConfig : $homeConfig;
+$config = $profiles[$mode];
 
-// 1. Update .env
-$envContent = preg_replace('/^DB_HOST=.*$/m', 'DB_HOST=' . $cfg['host'], $envContent);
-$envContent = preg_replace('/^DB_PORT=.*$/m', 'DB_PORT=' . $cfg['port'], $envContent);
-$envContent = preg_replace('/^DB_DATABASE=.*$/m', 'DB_DATABASE=' . $cfg['db'], $envContent);
-$envContent = preg_replace('/^DB_USERNAME=.*$/m', 'DB_USERNAME=' . $cfg['user'], $envContent);
-$envContent = preg_replace('/^DB_PASSWORD=.*$/m', 'DB_PASSWORD=' . $cfg['pass'], $envContent);
+$envContent = setEnvValue($envContent, 'DB_PROFILE', $mode);
+$envContent = setEnvValue($envContent, 'DB_CONNECTION', $config['connection']);
+$envContent = setEnvValue($envContent, 'DB_HOST', $config['host']);
+$envContent = setEnvValue($envContent, 'DB_PORT', $config['port']);
+$envContent = setEnvValue($envContent, 'DB_DATABASE', $config['database']);
+$envContent = setEnvValue($envContent, 'DB_USERNAME', $config['username']);
+$envContent = setEnvValue($envContent, 'DB_PASSWORD', $config['password']);
+
 file_put_contents($envPath, $envContent);
 
-// 2. Update legacy/config.php
-$newLegacy = "<?php
-/**
- * Local Database Configuration (Auto-generated by switch_db.php)
- */
+echo "Switching to " . strtoupper($mode) . " profile...\n";
 
-\$host = '{$cfg['host']}';
-\$port = {$cfg['port']};
-\$db = '{$cfg['db']}';
-\$user = '{$cfg['user']}';
-\$pass = '{$cfg['pass']}';
-";
-file_put_contents($legacyPath, $newLegacy);
+$commands = [
+    'php artisan config:clear',
+    'php artisan route:clear',
+    'php artisan view:clear',
+    'php artisan event:clear',
+];
 
-// 3. Clear artisan cache if available
-echo "Switching to " . strtoupper($mode) . " mode...\n";
-exec('php artisan config:clear');
-exec('php artisan cache:clear');
+foreach ($commands as $command) {
+    passthru($command, $exitCode);
 
-echo "Done! The project is now using the [" . strtoupper($mode) . "] database.\n";
+    if ($exitCode !== 0) {
+        fwrite(STDERR, "Warning: command failed: {$command}\n");
+    }
+}
+
+echo "Done. Active database profile is now [" . strtoupper($mode) . "].\n";
