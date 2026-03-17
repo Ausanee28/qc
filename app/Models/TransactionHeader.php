@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TransactionHeader extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'Transaction_Header';
     protected $primaryKey = 'transaction_id';
     public $timestamps = false;
@@ -19,6 +22,7 @@ class TransactionHeader extends Model
     protected $casts = [
         'receive_date' => 'datetime',
         'return_date' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     public function externalUser(): BelongsTo

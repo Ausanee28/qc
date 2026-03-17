@@ -103,6 +103,8 @@ class ReportController extends Controller
             ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id')
             ->join('Test_Methods as TM', 'TD.method_id', '=', 'TM.method_id')
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
+            ->whereNull('TD.deleted_at')
+            ->whereNull('TH.deleted_at')
             ->whereBetween(DB::raw('DATE(TH.receive_date)'), [$dateFrom, $dateTo])
             ->select(
                 'TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date',

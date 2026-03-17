@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TransactionDetail extends Model
 {
+    use SoftDeletes;
+
     public const JUDGEMENT_OK = 'OK';
     public const JUDGEMENT_NG = 'NG';
 
@@ -21,11 +24,12 @@ class TransactionDetail extends Model
     protected $casts = [
         'start_time' => 'datetime',
         'end_time' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     public function transactionHeader(): BelongsTo
     {
-        return $this->belongsTo(TransactionHeader::class , 'transaction_id', 'transaction_id');
+        return $this->belongsTo(TransactionHeader::class , 'transaction_id', 'transaction_id')->withTrashed();
     }
 
     public function testMethod(): BelongsTo

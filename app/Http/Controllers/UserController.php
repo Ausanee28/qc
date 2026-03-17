@@ -80,10 +80,14 @@ class UserController extends Controller
         }
 
         $hasTransactions = DB::table('Transaction_Detail')
-            ->where('internal_id', $user->user_id)->exists();
+            ->where('internal_id', $user->user_id)
+            ->whereNull('deleted_at')
+            ->exists();
 
         $hasHeaders = DB::table('Transaction_Header')
-            ->where('internal_id', $user->user_id)->exists();
+            ->where('internal_id', $user->user_id)
+            ->whereNull('deleted_at')
+            ->exists();
 
         if ($hasTransactions || $hasHeaders) {
             return redirect()->back()->with('error', 'Cannot delete user that has existing transactions.');

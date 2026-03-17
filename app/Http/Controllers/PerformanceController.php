@@ -11,6 +11,7 @@ class PerformanceController extends Controller
     {
         $inspectors = DB::table('Transaction_Detail as TD')
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
+            ->whereNull('TD.deleted_at')
             ->whereNotNull('TD.start_time')
             ->whereNotNull('TD.end_time')
             ->where('TD.start_time', '>=', now()->subDays(30))
@@ -30,6 +31,8 @@ class PerformanceController extends Controller
         $details = DB::table('Transaction_Detail as TD')
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
             ->join('Transaction_Header as TH', 'TD.transaction_id', '=', 'TH.transaction_id')
+            ->whereNull('TD.deleted_at')
+            ->whereNull('TH.deleted_at')
             ->whereNotNull('TD.start_time')
             ->whereNotNull('TD.end_time')
             ->where('TD.start_time', '>=', now()->subDays(30))

@@ -5,6 +5,8 @@ import { ref } from 'vue';
 
 const props = defineProps({ externals: Array, internals: Array, jobs: Object, filters: Object });
 const flash = usePage().props.flash || {};
+const currentUserRole = usePage().props.auth?.user?.role ?? '';
+const canDelete = currentUserRole === 'admin';
 const submitted = ref(false);
 const isEditing = ref(false);
 
@@ -88,8 +90,22 @@ const editJob = (job) => {
 };
 
 const deleteJob = (job) => {
+    if (!canDelete) {
+        return;
+    }
+
     if (confirm(`Delete job #${job.transaction_id}?`)) {
         form.delete(route('receive-job.destroy', job.transaction_id));
+    }
+};
+
+const restoreJob = (job) => {
+    if (!canDelete) {
+        return;
+    }
+
+    if (confirm(`Restore job #${job.transaction_id}?`)) {
+        form.patch(route('receive-job.restore', job.transaction_id));
     }
 };
 
@@ -206,6 +222,7 @@ const toggleJobStatus = (job) => {
                             <option value="all">All status</option>
                             <option value="open">Open</option>
                             <option value="closed">Closed</option>
+                            <option value="deleted">Deleted</option>
                         </select>
                         <input v-model="filterForm.date_from" type="date" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
                         <input v-model="filterForm.date_to" type="date" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
@@ -250,18 +267,20 @@ const toggleJobStatus = (job) => {
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ job.detail || '-' }}</td>
                                 <td class="px-6 py-4 text-sm">
-                                    <span :class="job.is_closed ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
-                                        {{ job.is_closed ? 'Closed' : 'Open' }}
+                                    <span :class="job.is_deleted ? 'bg-gray-200 text-gray-700' : (job.is_closed ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
+                                        {{ job.is_deleted ? 'Deleted' : (job.is_closed ? 'Closed' : 'Open') }}
                                     </span>
-                                    <div v-if="job.return_date" class="mt-2 text-xs text-gray-500">Closed: {{ job.return_date }}</div>
+                                    <div v-if="job.return_date && !job.is_deleted" class="mt-2 text-xs text-gray-500">Closed: {{ job.return_date }}</div>
+                                    <div v-if="job.deleted_at" class="mt-2 text-xs text-gray-500">Deleted: {{ job.deleted_at }}</div>
                                 </td>
                                 <td class="px-6 py-4 text-right text-sm">
                                     <div class="flex flex-wrap justify-end gap-2">
-                                        <button :disabled="job.details_count > 0 && !job.is_closed" @click="editJob(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
-                                        <button :disabled="job.details_count > 0 && !job.is_closed" @click="deleteJob(job)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">Delete</button>
-                                        <button :disabled="!job.is_closed && job.details_count === 0" @click="toggleJobStatus(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!job.is_closed && job.details_count === 0 ? 'Need at least 1 test result before closing' : ''">
+                                        <button :disabled="job.is_deleted || (job.details_count > 0 && !job.is_closed)" @click="editJob(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
+                                        <button :disabled="job.is_deleted || !canDelete || (job.details_count > 0 && !job.is_closed)" @click="deleteJob(job)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can delete' : ''">Delete</button>
+                                        <button :disabled="job.is_deleted || (!job.is_closed && job.details_count === 0)" @click="toggleJobStatus(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!job.is_closed && job.details_count === 0 ? 'Need at least 1 test result before closing' : ''">
                                             {{ job.is_closed ? 'Reopen' : 'Close' }}
                                         </button>
+                                        <button :disabled="!job.is_deleted || !canDelete" @click="restoreJob(job)" class="rounded-lg border border-emerald-300 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
                                     </div>
                                 </td>
                             </tr>

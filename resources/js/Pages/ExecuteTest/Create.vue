@@ -5,6 +5,8 @@ import { ref } from 'vue';
 
 const props = defineProps({ pendingJobs: Array, methods: Array, inspectors: Array, results: Object, filters: Object });
 const flash = usePage().props.flash || {};
+const currentUserRole = usePage().props.auth?.user?.role ?? '';
+const canDelete = currentUserRole === 'admin';
 const submitted = ref(false);
 const isEditing = ref(false);
 
@@ -24,6 +26,7 @@ const form = useForm({
 const filterForm = useForm({
     search: props.filters?.search ?? '',
     judgement: props.filters?.judgement ?? 'all',
+    record_state: props.filters?.record_state ?? 'active',
     date_from: props.filters?.date_from ?? '',
     date_to: props.filters?.date_to ?? '',
     per_page: String(props.filters?.per_page ?? 20),
@@ -40,6 +43,7 @@ const applyFilters = () => {
 const resetFilters = () => {
     filterForm.search = '';
     filterForm.judgement = 'all';
+    filterForm.record_state = 'active';
     filterForm.date_from = '';
     filterForm.date_to = '';
     filterForm.per_page = '20';
@@ -96,8 +100,22 @@ const editResult = (result) => {
 };
 
 const deleteResult = (result) => {
+    if (!canDelete) {
+        return;
+    }
+
     if (confirm(`Delete test result #${result.detail_id}?`)) {
         form.delete(route('execute-test.destroy', result.detail_id));
+    }
+};
+
+const restoreResult = (result) => {
+    if (!canDelete) {
+        return;
+    }
+
+    if (confirm(`Restore test result #${result.detail_id}?`)) {
+        form.patch(route('execute-test.restore', result.detail_id));
     }
 };
 </script>
@@ -241,6 +259,11 @@ const deleteResult = (result) => {
                             <option value="OK">OK</option>
                             <option value="NG">NG</option>
                         </select>
+                        <select v-model="filterForm.record_state" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
+                            <option value="active">Active records</option>
+                            <option value="deleted">Deleted records</option>
+                            <option value="all">All records</option>
+                        </select>
                         <input v-model="filterForm.date_from" type="date" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
                         <input v-model="filterForm.date_to" type="date" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
                         <select v-model="filterForm.per_page" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
@@ -276,6 +299,7 @@ const deleteResult = (result) => {
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <div class="font-mono font-semibold text-gray-900">#{{ result.detail_id }}</div>
                                     <div class="mt-1 text-xs text-gray-500">Job #{{ result.transaction_id }}</div>
+                                    <div v-if="result.deleted_at" class="mt-1 text-xs text-gray-500">Deleted: {{ result.deleted_at }}</div>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ result.job_label }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
@@ -294,8 +318,9 @@ const deleteResult = (result) => {
                                 </td>
                                 <td class="px-6 py-4 text-right text-sm">
                                     <div class="flex flex-wrap justify-end gap-2">
-                                        <button @click="editResult(result)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Edit</button>
-                                        <button @click="deleteResult(result)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50">Delete</button>
+                                        <button :disabled="result.is_deleted" @click="editResult(result)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
+                                        <button :disabled="!canDelete || result.is_deleted" @click="deleteResult(result)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can delete' : ''">Delete</button>
+                                        <button :disabled="!canDelete || !result.is_deleted" @click="restoreResult(result)" class="rounded-lg border border-emerald-300 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
                                     </div>
                                 </td>
                             </tr>

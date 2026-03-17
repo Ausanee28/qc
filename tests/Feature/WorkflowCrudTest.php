@@ -68,7 +68,7 @@ class WorkflowCrudTest extends TestCase
 
         $deleteResponse = $this->actingAs($user)->delete(route('receive-job.destroy', $job->transaction_id));
         $deleteResponse->assertRedirect(route('receive-job.create'));
-        $this->assertDatabaseMissing('Transaction_Header', [
+        $this->assertSoftDeleted('Transaction_Header', [
             'transaction_id' => $job->transaction_id,
         ]);
     }
@@ -134,10 +134,10 @@ class WorkflowCrudTest extends TestCase
         $deleteResponse = $this->actingAs($user)->delete(route('receive-job.destroy', $job->transaction_id));
 
         $deleteResponse->assertRedirect(route('receive-job.create'));
-        $this->assertDatabaseMissing('Transaction_Detail', [
+        $this->assertSoftDeleted('Transaction_Detail', [
             'transaction_id' => $job->transaction_id,
         ]);
-        $this->assertDatabaseMissing('Transaction_Header', [
+        $this->assertSoftDeleted('Transaction_Header', [
             'transaction_id' => $job->transaction_id,
         ]);
     }
@@ -193,7 +193,129 @@ class WorkflowCrudTest extends TestCase
         $deleteResponse = $this->actingAs($user)->delete(route('execute-test.destroy', $detail->detail_id));
 
         $deleteResponse->assertRedirect(route('execute-test.create'));
-        $this->assertDatabaseMissing('Transaction_Detail', [
+        $this->assertSoftDeleted('Transaction_Detail', [
+            'detail_id' => $detail->detail_id,
+        ]);
+    }
+
+    public function test_admin_can_restore_deleted_job_and_related_details(): void
+    {
+        [$admin, $externalUser] = $this->workflowActors();
+
+        $job = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $admin->user_id,
+            'detail' => 'Restorable job',
+            'dmc' => 'DMC-500',
+            'line' => 'Line 1',
+            'receive_date' => now(),
+            'return_date' => now(),
+        ]);
+
+        $detail = TransactionDetail::create([
+            'transaction_id' => $job->transaction_id,
+            'method_id' => TestMethod::first()->method_id,
+            'internal_id' => $admin->user_id,
+            'start_time' => now()->subHour(),
+            'end_time' => now(),
+            'duration_sec' => 3600,
+            'judgement' => TransactionDetail::JUDGEMENT_OK,
+            'remark' => 'restore',
+        ]);
+
+        $this->actingAs($admin)->delete(route('receive-job.destroy', $job->transaction_id))->assertRedirect(route('receive-job.create'));
+        $this->assertSoftDeleted('Transaction_Header', ['transaction_id' => $job->transaction_id]);
+        $this->assertSoftDeleted('Transaction_Detail', ['detail_id' => $detail->detail_id]);
+
+        $this->actingAs($admin)->patch(route('receive-job.restore', $job->transaction_id))->assertRedirect(route('receive-job.create'));
+        $this->assertDatabaseHas('Transaction_Header', ['transaction_id' => $job->transaction_id, 'deleted_at' => null]);
+        $this->assertDatabaseHas('Transaction_Detail', ['detail_id' => $detail->detail_id, 'deleted_at' => null]);
+    }
+
+    public function test_admin_can_restore_deleted_test_result(): void
+    {
+        [$admin, $externalUser] = $this->workflowActors();
+
+        $job = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $admin->user_id,
+            'detail' => 'Result restore job',
+            'dmc' => 'DMC-510',
+            'line' => 'Line 2',
+            'receive_date' => now(),
+            'return_date' => null,
+        ]);
+
+        $detail = TransactionDetail::create([
+            'transaction_id' => $job->transaction_id,
+            'method_id' => TestMethod::first()->method_id,
+            'internal_id' => $admin->user_id,
+            'start_time' => now()->subHour(),
+            'end_time' => now(),
+            'duration_sec' => 3600,
+            'judgement' => TransactionDetail::JUDGEMENT_OK,
+            'remark' => 'restore result',
+        ]);
+
+        $this->actingAs($admin)->delete(route('execute-test.destroy', $detail->detail_id))
+            ->assertRedirect(route('execute-test.create'));
+
+        $this->assertSoftDeleted('Transaction_Detail', ['detail_id' => $detail->detail_id]);
+
+        $this->actingAs($admin)->patch(route('execute-test.restore', $detail->detail_id))
+            ->assertRedirect(route('execute-test.create'));
+
+        $this->assertDatabaseHas('Transaction_Detail', [
+            'detail_id' => $detail->detail_id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    public function test_non_admin_users_cannot_delete_jobs_or_test_results(): void
+    {
+        [$admin, $externalUser] = $this->workflowActors();
+
+        $inspector = User::factory()->create([
+            'role' => 'inspector',
+        ]);
+
+        $job = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $admin->user_id,
+            'detail' => 'Protected job',
+            'dmc' => 'DMC-401',
+            'line' => 'Line 9',
+            'receive_date' => now(),
+            'return_date' => now(),
+        ]);
+
+        $detail = TransactionDetail::create([
+            'transaction_id' => $job->transaction_id,
+            'method_id' => TestMethod::first()->method_id,
+            'internal_id' => $admin->user_id,
+            'start_time' => now()->subHour(),
+            'end_time' => now(),
+            'duration_sec' => 3600,
+            'judgement' => TransactionDetail::JUDGEMENT_OK,
+            'remark' => 'protected',
+        ]);
+
+        $jobDeleteResponse = $this->actingAs($inspector)->delete(route('receive-job.destroy', $job->transaction_id));
+        $jobDeleteResponse->assertForbidden();
+
+        $detailDeleteResponse = $this->actingAs($inspector)->delete(route('execute-test.destroy', $detail->detail_id));
+        $detailDeleteResponse->assertForbidden();
+
+        $jobRestoreResponse = $this->actingAs($inspector)->patch(route('receive-job.restore', $job->transaction_id));
+        $jobRestoreResponse->assertForbidden();
+
+        $detailRestoreResponse = $this->actingAs($inspector)->patch(route('execute-test.restore', $detail->detail_id));
+        $detailRestoreResponse->assertForbidden();
+
+        $this->assertDatabaseHas('Transaction_Header', [
+            'transaction_id' => $job->transaction_id,
+        ]);
+        $this->assertDatabaseHas('Transaction_Detail', [
             'detail_id' => $detail->detail_id,
         ]);
     }

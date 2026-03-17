@@ -17,6 +17,7 @@ class ExecuteTestController extends Controller
         $validatedFilters = $request->validate([
             'search' => 'nullable|string|max:255',
             'judgement' => 'nullable|in:all,OK,NG',
+            'record_state' => 'nullable|in:active,deleted,all',
             'date_from' => 'nullable|date',
             'date_to' => 'nullable|date',
             'per_page' => 'nullable|integer|in:10,20,50,100',
@@ -25,6 +26,7 @@ class ExecuteTestController extends Controller
         $filters = [
             'search' => trim((string) ($validatedFilters['search'] ?? '')),
             'judgement' => (string) ($validatedFilters['judgement'] ?? 'all'),
+            'record_state' => (string) ($validatedFilters['record_state'] ?? 'active'),
             'date_from' => (string) ($validatedFilters['date_from'] ?? ''),
             'date_to' => (string) ($validatedFilters['date_to'] ?? ''),
             'per_page' => (int) ($validatedFilters['per_page'] ?? 20),
@@ -40,7 +42,10 @@ class ExecuteTestController extends Controller
                 'detail' => $j->detail,
             ]);
 
-        $resultsQuery = TransactionDetail::with([
+        $resultsQuery = TransactionDetail::query()
+            ->when($filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
+            ->when($filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())
+            ->with([
             'transactionHeader:transaction_id,dmc,line,detail',
             'testMethod:method_id,method_name',
             'inspector:user_id,name',
@@ -87,9 +92,11 @@ class ExecuteTestController extends Controller
                     'start_time' => optional($detail->start_time)->format('H:i'),
                     'end_date' => optional($detail->end_time)->format('Y-m-d'),
                     'end_time' => optional($detail->end_time)->format('H:i'),
+                    'deleted_at' => optional($detail->deleted_at)->format('Y-m-d H:i'),
                     'job_label' => '#' . $detail->transaction_id . ' - ' . ($detail->transactionHeader?->detail ?: 'No detail'),
                     'method_name' => $detail->testMethod?->method_name,
                     'inspector_name' => $detail->inspector?->name,
+                    'is_deleted' => $detail->trashed(),
                 ]),
             'filters' => $filters,
         ]);
@@ -140,6 +147,10 @@ class ExecuteTestController extends Controller
 
     public function destroy(int $id)
     {
+        if (auth()->user()?->role !== 'admin') {
+            abort(403, 'Only admins can delete test results.');
+        }
+
         $detail = TransactionDetail::findOrFail($id);
         $detail->delete();
 
@@ -147,9 +158,22 @@ class ExecuteTestController extends Controller
             ->with('success', "Test result #{$id} deleted successfully!");
     }
 
+    public function restore(int $id)
+    {
+        if (auth()->user()?->role !== 'admin') {
+            abort(403, 'Only admins can restore test results.');
+        }
+
+        $detail = TransactionDetail::onlyTrashed()->findOrFail($id);
+        $detail->restore();
+
+        return redirect()->route('execute-test.create')
+            ->with('success', "Test result #{$id} restored successfully!");
+    }
+
     private function validatePayload(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'transaction_id' => 'required|exists:Transaction_Header,transaction_id',
             'method_id' => 'required|exists:Test_Methods,method_id',
             'internal_id' => 'required|exists:Internal_Users,user_id',
@@ -160,6 +184,16 @@ class ExecuteTestController extends Controller
             'end_time' => 'nullable',
             'remark' => 'nullable|string|max:255',
         ]);
+
+        $job = TransactionHeader::find($validated['transaction_id']);
+
+        if (!$job || $job->return_date !== null) {
+            throw ValidationException::withMessages([
+                'transaction_id' => 'Selected job is not open for test execution.',
+            ]);
+        }
+
+        return $validated;
     }
 
     private function normalizeTimes(array $validated): array

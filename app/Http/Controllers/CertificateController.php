@@ -16,7 +16,11 @@ class CertificateController extends Controller
 
         $jobs = DB::table('Transaction_Header as TH')
             ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id')
-            ->leftJoin('Transaction_Detail as TD', 'TH.transaction_id', '=', 'TD.transaction_id')
+            ->leftJoin('Transaction_Detail as TD', function ($join) {
+                $join->on('TH.transaction_id', '=', 'TD.transaction_id')
+                    ->whereNull('TD.deleted_at');
+            })
+            ->whereNull('TH.deleted_at')
             ->whereBetween(DB::raw('DATE(TH.receive_date)'), [$dateFrom, $dateTo])
             ->select(
             'TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date', 'TH.return_date',
@@ -42,6 +46,7 @@ class CertificateController extends Controller
             ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id')
             ->join('Internal_Users as IU', 'TH.internal_id', '=', 'IU.user_id')
             ->where('TH.transaction_id', $id)
+            ->whereNull('TH.deleted_at')
             ->select('TH.*', 'EU.external_name as sender', 'IU.name as receiver')
             ->first();
 
@@ -52,6 +57,7 @@ class CertificateController extends Controller
             ->join('Test_Methods as TM', 'TD.method_id', '=', 'TM.method_id')
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
             ->where('TD.transaction_id', $id)
+            ->whereNull('TD.deleted_at')
             ->select('TD.*', 'TM.method_name', 'IU.name as inspector')
             ->orderBy('TD.start_time')
             ->get();

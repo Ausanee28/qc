@@ -16,7 +16,7 @@ class ReceiveJobController extends Controller
     {
         $validatedFilters = $request->validate([
             'search' => 'nullable|string|max:255',
-            'status' => 'nullable|in:all,open,closed',
+            'status' => 'nullable|in:all,open,closed,deleted',
             'date_from' => 'nullable|date',
             'date_to' => 'nullable|date',
             'per_page' => 'nullable|integer|in:10,20,50,100',
@@ -44,6 +44,7 @@ class ReceiveJobController extends Controller
                         ->orWhereHas('internalUser', fn ($q) => $q->where('name', 'like', "%{$search}%"));
                 });
             })
+            ->when($filters['status'] === 'deleted', fn ($query) => $query->onlyTrashed())
             ->when($filters['status'] === 'open', fn ($query) => $query->whereNull('return_date'))
             ->when($filters['status'] === 'closed', fn ($query) => $query->whereNotNull('return_date'))
             ->when($filters['date_from'] !== '', fn ($query) => $query->whereDate('receive_date', '>=', $filters['date_from']))
@@ -65,10 +66,12 @@ class ReceiveJobController extends Controller
                     'line' => $job->line,
                     'receive_date' => optional($job->receive_date)->format('Y-m-d H:i'),
                     'return_date' => optional($job->return_date)->format('Y-m-d H:i'),
+                    'deleted_at' => optional($job->deleted_at)->format('Y-m-d H:i'),
                     'details_count' => $job->details_count,
                     'external_name' => $job->externalUser?->external_name,
                     'internal_name' => $job->internalUser?->name,
                     'is_closed' => $job->return_date !== null,
+                    'is_deleted' => $job->trashed(),
                 ]),
             'filters' => $filters,
         ]);
@@ -105,6 +108,10 @@ class ReceiveJobController extends Controller
 
     public function destroy(int $id)
     {
+        if (auth()->user()?->role !== 'admin') {
+            abort(403, 'Only admins can delete jobs.');
+        }
+
         $job = TransactionHeader::withCount('details')->findOrFail($id);
 
         if ($job->details_count > 0 && $job->return_date === null) {
@@ -121,6 +128,25 @@ class ReceiveJobController extends Controller
 
         return redirect()->route('receive-job.create')
             ->with('success', "Job #{$id} deleted successfully!");
+    }
+
+    public function restore(int $id)
+    {
+        if (auth()->user()?->role !== 'admin') {
+            abort(403, 'Only admins can restore jobs.');
+        }
+
+        $job = TransactionHeader::onlyTrashed()->findOrFail($id);
+
+        DB::transaction(function () use ($job) {
+            $job->restore();
+            TransactionDetail::onlyTrashed()
+                ->where('transaction_id', $job->transaction_id)
+                ->restore();
+        });
+
+        return redirect()->route('receive-job.create')
+            ->with('success', "Job #{$job->transaction_id} restored successfully!");
     }
 
     public function close(int $id)

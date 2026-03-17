@@ -13,7 +13,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class , 'index'])->name('dashboard');
 
@@ -22,6 +22,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/receive-job', [ReceiveJobController::class , 'store'])->middleware('throttle:15,1')->name('receive-job.store');
     Route::put('/receive-job/{id}', [ReceiveJobController::class, 'update'])->middleware('throttle:15,1')->name('receive-job.update');
     Route::delete('/receive-job/{id}', [ReceiveJobController::class, 'destroy'])->name('receive-job.destroy');
+    Route::patch('/receive-job/{id}/restore', [ReceiveJobController::class, 'restore'])->name('receive-job.restore');
     Route::patch('/receive-job/{id}/close', [ReceiveJobController::class, 'close'])->name('receive-job.close');
     Route::patch('/receive-job/{id}/reopen', [ReceiveJobController::class, 'reopen'])->name('receive-job.reopen');
 
@@ -30,6 +31,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/execute-test', [ExecuteTestController::class , 'store'])->middleware('throttle:15,1')->name('execute-test.store');
     Route::put('/execute-test/{id}', [ExecuteTestController::class, 'update'])->middleware('throttle:15,1')->name('execute-test.update');
     Route::delete('/execute-test/{id}', [ExecuteTestController::class, 'destroy'])->name('execute-test.destroy');
+    Route::patch('/execute-test/{id}/restore', [ExecuteTestController::class, 'restore'])->name('execute-test.restore');
 
     // Report
     Route::get('/report', [ReportController::class , 'index'])->name('report.index');

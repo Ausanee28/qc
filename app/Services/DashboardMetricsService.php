@@ -147,10 +147,12 @@ class DashboardMetricsService
     {
         $query = DB::table('Transaction_Detail')
             ->join('Test_Methods', 'Transaction_Detail.method_id', '=', 'Test_Methods.method_id')
-            ->leftJoin('Equipments', 'Test_Methods.equipment_id', '=', 'Equipments.equipment_id');
+            ->leftJoin('Equipments', 'Test_Methods.equipment_id', '=', 'Equipments.equipment_id')
+            ->whereNull('Transaction_Detail.deleted_at');
 
         if ($from && $to) {
             $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+                ->whereNull('Transaction_Header.deleted_at')
                 ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
         }
 
@@ -198,6 +200,7 @@ class DashboardMetricsService
 
         if ($from && $to) {
             $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+                ->whereNull('Transaction_Header.deleted_at')
                 ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
         }
 
@@ -228,10 +231,12 @@ class DashboardMetricsService
         $query = DB::table('Transaction_Detail')
             ->join('Test_Methods', 'Transaction_Detail.method_id', '=', 'Test_Methods.method_id')
             ->leftJoin('Equipments', 'Test_Methods.equipment_id', '=', 'Equipments.equipment_id')
+            ->whereNull('Transaction_Detail.deleted_at')
             ->where('Transaction_Detail.judgement', TransactionDetail::JUDGEMENT_NG);
 
         if ($from && $to) {
             $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+                ->whereNull('Transaction_Header.deleted_at')
                 ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
         }
 
@@ -266,6 +271,7 @@ class DashboardMetricsService
 
         if ($from && $to) {
             $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+                ->whereNull('Transaction_Header.deleted_at')
                 ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
         }
 
