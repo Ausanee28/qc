@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ExternalUser;
 use App\Models\Department;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class ExternalUserController extends Controller
@@ -28,6 +29,7 @@ class ExternalUserController extends Controller
         ]);
 
         ExternalUser::create($validated);
+        Cache::forget('receive_job.externals');
 
         return redirect()->back()->with('success', 'External user created successfully.');
     }
@@ -42,6 +44,7 @@ class ExternalUserController extends Controller
         ]);
 
         $externalUser->update($validated);
+        Cache::forget('receive_job.externals');
 
         return redirect()->back()->with('success', 'External user updated successfully.');
     }
@@ -52,6 +55,7 @@ class ExternalUserController extends Controller
         
         try {
             $externalUser->delete();
+            Cache::forget('receive_job.externals');
             return redirect()->back()->with('success', 'External user deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Cannot delete this external user as it may be referenced in transactions.');

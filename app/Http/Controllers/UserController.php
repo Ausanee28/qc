@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
@@ -37,6 +38,7 @@ class UserController extends Controller
             'email'         => $request->email,
             'role'          => $request->role,
         ]);
+        Cache::forget('receive_job.internals');
 
         return redirect()->back()->with('success', 'User created successfully.');
     }
@@ -67,6 +69,7 @@ class UserController extends Controller
         }
 
         $user->update($data);
+        Cache::forget('receive_job.internals');
 
         return redirect()->back()->with('success', 'User updated successfully.');
     }
@@ -94,6 +97,7 @@ class UserController extends Controller
         }
 
         $user->delete();
+        Cache::forget('receive_job.internals');
 
         return redirect()->back()->with('success', 'User deleted successfully.');
     }

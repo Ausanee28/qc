@@ -7,6 +7,7 @@ use App\Models\ExternalUser;
 use App\Models\TransactionDetail;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -50,9 +51,19 @@ class ReceiveJobController extends Controller
             ->when($filters['date_from'] !== '', fn ($query) => $query->whereDate('receive_date', '>=', $filters['date_from']))
             ->when($filters['date_to'] !== '', fn ($query) => $query->whereDate('receive_date', '<=', $filters['date_to']));
 
+        $externals = Cache::remember('receive_job.externals', now()->addMinutes(10), function () {
+            return ExternalUser::orderBy('external_name')
+                ->get(['external_id', 'external_name']);
+        });
+
+        $internals = Cache::remember('receive_job.internals', now()->addMinutes(10), function () {
+            return User::orderBy('name')
+                ->get(['user_id', 'name']);
+        });
+
         return Inertia::render('ReceiveJob/Create', [
-            'externals' => ExternalUser::orderBy('external_name')->get(),
-            'internals' => User::orderBy('name')->get(['user_id', 'name']),
+            'externals' => $externals,
+            'internals' => $internals,
             'jobs' => $jobsQuery
                 ->orderByDesc('receive_date')
                 ->paginate($filters['per_page'])
