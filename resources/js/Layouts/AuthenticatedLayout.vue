@@ -118,7 +118,8 @@ const currentDate = computed(() => {
                                 v-for="item in group.items"
                                 :key="item.route"
                                 :href="route(item.route)"
-                                prefetch
+                                prefetch="hover"
+                                :cache-for="60000"
                                 class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-150 decoration-none"
                                 :class="[
                                     route().current(item.route) 
@@ -260,7 +261,8 @@ const currentDate = computed(() => {
                                  v-for="item in group.items"
                                  :key="item.route"
                                  :href="route(item.route)"
-                                 prefetch
+                                 prefetch="hover"
+                                 :cache-for="60000"
                                  @click="showMobileMenu = false"
                                  :class="['flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1', route().current(item.route) ? 'bg-[#EFF6FF] text-[#4F46E5] font-semibold' : 'text-gray-600 hover:bg-gray-50']"
                              >

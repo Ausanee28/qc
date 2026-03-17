@@ -7,6 +7,7 @@ use App\Models\TransactionDetail;
 use App\Models\Equipment;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -29,34 +30,40 @@ class DashboardController extends Controller
         // Compute date range based on period
         [$from, $to] = $this->getDateRange($period);
 
-        $counts = $this->metricsService->getCounts($from, $to);
-        $todayJudgements = $this->metricsService->getTodayJudgements();
+        $cacheKey = "dashboard.metrics.{$period}." . now()->format('YmdHi');
 
-        return Inertia::render('Dashboard', [
-            'currentPeriod' => $period,
-            'metrics' => [
-                'todayCount' => $this->metricsService->getTodayCount(),
-                'monthCount' => $this->metricsService->getMonthCount(),
-                'okCount' => $counts['okCount'],
-                'ngCount' => $counts['ngCount'],
-                'pendingCount' => TransactionHeader::whereNull('return_date')->count(),
-                'todayOK' => $todayJudgements['todayOK'],
-                'todayNG' => $todayJudgements['todayNG'],
-                'yieldRate' => $counts['yieldRate'],
-                'defectRate' => $counts['defectRate'],
-                'avgTestTime' => $this->metricsService->getAverageTestTimeMinutes($from, $to),
-                'totalTests' => $counts['totalTests'],
-                'testsPerJob' => $this->metricsService->getTestsPerJob($from, $to),
-            ],
-            'weeklyData' => $this->metricsService->getWeeklyTrend(),
-            'dailyData' => $this->metricsService->getDailyTrend(),
-            'monthlyData' => $this->metricsService->getMonthlyTrend(),
-            'equipRank' => $this->metricsService->getEquipmentRanking(5, $from, $to),
-            'failByEquip' => $this->metricsService->getFailuresByEquipment(5, $from, $to),
-            'inspectorEff' => $this->metricsService->getInspectorEfficiency(5, $from, $to),
-            'recentActivities' => $this->metricsService->getRecentActivities(5, $from, $to),
-            'inspectorData' => $this->metricsService->getInspectorData(5, $from, $to),
-        ]);
+        $payload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($period, $from, $to) {
+            $counts = $this->metricsService->getCounts($from, $to);
+            $todayJudgements = $this->metricsService->getTodayJudgements();
+
+            return [
+                'currentPeriod' => $period,
+                'metrics' => [
+                    'todayCount' => $this->metricsService->getTodayCount(),
+                    'monthCount' => $this->metricsService->getMonthCount(),
+                    'okCount' => $counts['okCount'],
+                    'ngCount' => $counts['ngCount'],
+                    'pendingCount' => TransactionHeader::whereNull('return_date')->count(),
+                    'todayOK' => $todayJudgements['todayOK'],
+                    'todayNG' => $todayJudgements['todayNG'],
+                    'yieldRate' => $counts['yieldRate'],
+                    'defectRate' => $counts['defectRate'],
+                    'avgTestTime' => $this->metricsService->getAverageTestTimeMinutes($from, $to),
+                    'totalTests' => $counts['totalTests'],
+                    'testsPerJob' => $this->metricsService->getTestsPerJob($from, $to),
+                ],
+                'weeklyData' => $this->metricsService->getWeeklyTrend(),
+                'dailyData' => $this->metricsService->getDailyTrend(),
+                'monthlyData' => $this->metricsService->getMonthlyTrend(),
+                'equipRank' => $this->metricsService->getEquipmentRanking(5, $from, $to),
+                'failByEquip' => $this->metricsService->getFailuresByEquipment(5, $from, $to),
+                'inspectorEff' => $this->metricsService->getInspectorEfficiency(5, $from, $to),
+                'recentActivities' => $this->metricsService->getRecentActivities(5, $from, $to),
+                'inspectorData' => $this->metricsService->getInspectorData(5, $from, $to),
+            ];
+        });
+
+        return Inertia::render('Dashboard', $payload);
     }
 
     private function getDateRange(string $period): array

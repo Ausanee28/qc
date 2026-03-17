@@ -9,6 +9,45 @@ use Illuminate\Support\Carbon;
 
 class DashboardMetricsService
 {
+    private function dateBucketExpression(string $column): string
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            return "strftime('%Y-%m-%d', {$column})";
+        }
+
+        return "DATE({$column})";
+    }
+
+    private function monthBucketExpression(string $column): string
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            return "strftime('%Y-%m', {$column})";
+        }
+
+        return "DATE_FORMAT({$column}, '%Y-%m')";
+    }
+
+    private function getJudgementCountsByBucket(Carbon $from, Carbon $to, string $bucketExpression): array
+    {
+        return DB::table('Transaction_Detail')
+            ->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+            ->whereNull('Transaction_Detail.deleted_at')
+            ->whereNull('Transaction_Header.deleted_at')
+            ->whereBetween('Transaction_Header.receive_date', [$from, $to])
+            ->selectRaw("{$bucketExpression} as bucket")
+            ->selectRaw("SUM(CASE WHEN Transaction_Detail.judgement = ? THEN 1 ELSE 0 END) as ok", [TransactionDetail::JUDGEMENT_OK])
+            ->selectRaw("SUM(CASE WHEN Transaction_Detail.judgement = ? THEN 1 ELSE 0 END) as ng", [TransactionDetail::JUDGEMENT_NG])
+            ->groupBy('bucket')
+            ->get()
+            ->mapWithKeys(fn($row) => [
+                $row->bucket => [
+                    'ok' => (int) $row->ok,
+                    'ng' => (int) $row->ng,
+                ],
+            ])
+            ->all();
+    }
+
     private function durationSecondsExpression(string $startColumn, string $endColumn): string
     {
         if (DB::getDriverName() === 'sqlite') {
@@ -69,52 +108,70 @@ class DashboardMetricsService
 
     public function getWeeklyTrend(): array
     {
+        $from = now()->subDays(6)->startOfDay();
+        $to = now()->endOfDay();
+        $countsByDate = $this->getJudgementCountsByBucket(
+            $from,
+            $to,
+            $this->dateBucketExpression('Transaction_Header.receive_date')
+        );
+
         $weeklyData = [];
         for ($i = 6; $i >= 0; $i--) {
-            $d = now()->subDays($i)->format('Y-m-d');
-            $ok = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', $d))
-                ->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
-            $ng = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', $d))
-                ->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
+            $day = now()->subDays($i);
+            $dateKey = $day->format('Y-m-d');
+            $dayCounts = $countsByDate[$dateKey] ?? ['ok' => 0, 'ng' => 0];
             $weeklyData[] = [
-                'label' => now()->subDays($i)->format('D d/m'),
-                'ok' => $ok,
-                'ng' => $ng,
+                'label' => $day->format('D d/m'),
+                'ok' => $dayCounts['ok'],
+                'ng' => $dayCounts['ng'],
             ];
         }
+
         return $weeklyData;
     }
 
     public function getDailyTrend(): array
     {
         $startOfMonth = now()->startOfMonth();
-        $today = now();
+        $endOfToday = now()->endOfDay();
+        $countsByDate = $this->getJudgementCountsByBucket(
+            $startOfMonth,
+            $endOfToday,
+            $this->dateBucketExpression('Transaction_Header.receive_date')
+        );
+
         $days = [];
 
-        for ($d = $startOfMonth->copy(); $d->lte($today); $d->addDay()) {
+        for ($d = $startOfMonth->copy(); $d->lte(now()); $d->addDay()) {
             $date = $d->format('Y-m-d');
-            $ok = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', $date))
-                ->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
-            $ng = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', $date))
-                ->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
+            $dayCounts = $countsByDate[$date] ?? ['ok' => 0, 'ng' => 0];
             $days[] = [
                 'label' => $d->format('d M'),
-                'ok' => $ok,
-                'ng' => $ng,
+                'ok' => $dayCounts['ok'],
+                'ng' => $dayCounts['ng'],
             ];
         }
+
         return $days;
     }
 
     public function getMonthlyTrend(): array
     {
+        $from = now()->subMonths(5)->startOfMonth();
+        $to = now()->endOfMonth();
+        $countsByMonth = $this->getJudgementCountsByBucket(
+            $from,
+            $to,
+            $this->monthBucketExpression('Transaction_Header.receive_date')
+        );
+
         $monthlyRaw = [];
         for ($i = 5; $i >= 0; $i--) {
             $m = now()->subMonths($i);
-            $ok = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereMonth('receive_date', $m->month)->whereYear('receive_date', $m->year))
-                ->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
-            $ng = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereMonth('receive_date', $m->month)->whereYear('receive_date', $m->year))
-                ->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
+            $monthCounts = $countsByMonth[$m->format('Y-m')] ?? ['ok' => 0, 'ng' => 0];
+            $ok = $monthCounts['ok'];
+            $ng = $monthCounts['ng'];
 
             $total = $ok + $ng;
             $yield = $total > 0 ? round($ok / $total * 100, 1) : 0;
