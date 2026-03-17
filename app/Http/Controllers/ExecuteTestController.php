@@ -7,70 +7,176 @@ use App\Models\TransactionDetail;
 use App\Models\TestMethod;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ExecuteTestController extends Controller
 {
-    public function create()
+    public function create(Request $request)
     {
+        $validatedFilters = $request->validate([
+            'search' => 'nullable|string|max:255',
+            'judgement' => 'nullable|in:all,OK,NG',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date',
+            'per_page' => 'nullable|integer|in:10,20,50,100',
+        ]);
+
+        $filters = [
+            'search' => trim((string) ($validatedFilters['search'] ?? '')),
+            'judgement' => (string) ($validatedFilters['judgement'] ?? 'all'),
+            'date_from' => (string) ($validatedFilters['date_from'] ?? ''),
+            'date_to' => (string) ($validatedFilters['date_to'] ?? ''),
+            'per_page' => (int) ($validatedFilters['per_page'] ?? 20),
+        ];
+
         $pendingJobs = TransactionHeader::whereNull('return_date')
             ->orderByDesc('receive_date')
             ->get()
-            ->map(fn($j) => [
-        'transaction_id' => $j->transaction_id,
-        'dmc' => $j->dmc,
-        'line' => $j->line,
-        'detail' => $j->detail,
-        ]);
+            ->map(fn ($j) => [
+                'transaction_id' => $j->transaction_id,
+                'dmc' => $j->dmc,
+                'line' => $j->line,
+                'detail' => $j->detail,
+            ]);
+
+        $resultsQuery = TransactionDetail::with([
+            'transactionHeader:transaction_id,dmc,line,detail',
+            'testMethod:method_id,method_name',
+            'inspector:user_id,name',
+        ])
+            ->when($filters['search'] !== '', function ($query) use ($filters) {
+                $search = $filters['search'];
+
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('detail_id', 'like', "%{$search}%")
+                        ->orWhere('transaction_id', 'like', "%{$search}%")
+                        ->orWhere('remark', 'like', "%{$search}%")
+                        ->orWhereHas('testMethod', fn ($q) => $q->where('method_name', 'like', "%{$search}%"))
+                        ->orWhereHas('inspector', fn ($q) => $q->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('transactionHeader', function ($q) use ($search) {
+                            $q->where('detail', 'like', "%{$search}%")
+                                ->orWhere('dmc', 'like', "%{$search}%")
+                                ->orWhere('line', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->when(
+                $filters['judgement'] !== 'all',
+                fn ($query) => $query->where('judgement', $filters['judgement'])
+            )
+            ->when($filters['date_from'] !== '', fn ($query) => $query->whereDate('start_time', '>=', $filters['date_from']))
+            ->when($filters['date_to'] !== '', fn ($query) => $query->whereDate('start_time', '<=', $filters['date_to']));
 
         return Inertia::render('ExecuteTest/Create', [
             'pendingJobs' => $pendingJobs,
             'methods' => TestMethod::orderBy('method_name')->get(),
             'inspectors' => User::orderBy('name')->get(['user_id', 'name']),
+            'results' => $resultsQuery
+                ->orderByDesc('detail_id')
+                ->paginate($filters['per_page'])
+                ->withQueryString()
+                ->through(fn (TransactionDetail $detail) => [
+                    'detail_id' => $detail->detail_id,
+                    'transaction_id' => $detail->transaction_id,
+                    'method_id' => $detail->method_id,
+                    'internal_id' => $detail->internal_id,
+                    'judgement' => $detail->judgement,
+                    'remark' => $detail->remark,
+                    'start_date' => optional($detail->start_time)->format('Y-m-d'),
+                    'start_time' => optional($detail->start_time)->format('H:i'),
+                    'end_date' => optional($detail->end_time)->format('Y-m-d'),
+                    'end_time' => optional($detail->end_time)->format('H:i'),
+                    'job_label' => '#' . $detail->transaction_id . ' - ' . ($detail->transactionHeader?->detail ?: 'No detail'),
+                    'method_name' => $detail->testMethod?->method_name,
+                    'inspector_name' => $detail->inspector?->name,
+                ]),
+            'filters' => $filters,
         ]);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $this->validatePayload($request);
+        [$startDt, $endDt, $durationSec] = $this->normalizeTimes($validated);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $startDt, $endDt, $durationSec) {
+            TransactionDetail::create([
+                'transaction_id' => $validated['transaction_id'],
+                'method_id' => $validated['method_id'],
+                'internal_id' => $validated['internal_id'],
+                'start_time' => $startDt,
+                'end_time' => $endDt,
+                'duration_sec' => $durationSec,
+                'judgement' => $validated['judgement'],
+                'remark' => $validated['remark'] ?? null,
+            ]);
+        });
+
+        return redirect()->route('execute-test.create')
+            ->with('success', "Test result recorded for Job #{$validated['transaction_id']}!");
+    }
+
+    public function update(Request $request, int $id)
+    {
+        $detail = TransactionDetail::findOrFail($id);
+        $validated = $this->validatePayload($request);
+        [$startDt, $endDt, $durationSec] = $this->normalizeTimes($validated);
+
+        $detail->update([
+            'transaction_id' => $validated['transaction_id'],
+            'method_id' => $validated['method_id'],
+            'internal_id' => $validated['internal_id'],
+            'start_time' => $startDt,
+            'end_time' => $endDt,
+            'duration_sec' => $durationSec,
+            'judgement' => $validated['judgement'],
+            'remark' => $validated['remark'] ?? null,
+        ]);
+
+        return redirect()->route('execute-test.create')
+            ->with('success', "Test result #{$detail->detail_id} updated successfully!");
+    }
+
+    public function destroy(int $id)
+    {
+        $detail = TransactionDetail::findOrFail($id);
+        $detail->delete();
+
+        return redirect()->route('execute-test.create')
+            ->with('success', "Test result #{$id} deleted successfully!");
+    }
+
+    private function validatePayload(Request $request): array
+    {
+        return $request->validate([
             'transaction_id' => 'required|exists:Transaction_Header,transaction_id',
             'method_id' => 'required|exists:Test_Methods,method_id',
             'internal_id' => 'required|exists:Internal_Users,user_id',
             'judgement' => 'required|in:' . \App\Models\TransactionDetail::JUDGEMENT_OK . ',' . \App\Models\TransactionDetail::JUDGEMENT_NG,
-            'start_date' => 'nullable|date',
-            'start_time' => 'nullable',
+            'start_date' => 'required|date',
+            'start_time' => 'required',
             'end_date' => 'nullable|date',
             'end_time' => 'nullable',
             'remark' => 'nullable|string|max:255',
         ]);
+    }
 
-        $startDt = ($request->start_date && $request->start_time)
-            ? $request->start_date . ' ' . $request->start_time . ':00' : null;
-        $endDt = ($request->end_date && $request->end_time)
-            ? $request->end_date . ' ' . $request->end_time . ':00' : null;
+    private function normalizeTimes(array $validated): array
+    {
+        $startDt = $validated['start_date'] . ' ' . $validated['start_time'] . ':00';
+        $endDt = ($validated['end_date'] ?? null) && ($validated['end_time'] ?? null)
+            ? $validated['end_date'] . ' ' . $validated['end_time'] . ':00'
+            : null;
 
-        $durationSec = null;
-        if ($startDt && $endDt) {
-            $durationSec = strtotime($endDt) - strtotime($startDt);
+        if ($endDt && strtotime($endDt) < strtotime($startDt)) {
+            throw ValidationException::withMessages([
+                'end_time' => 'End time must be after start time.',
+            ]);
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $startDt, $endDt, $durationSec) {
-            TransactionDetail::create([
-                'transaction_id' => $request->transaction_id,
-                'method_id' => $request->method_id,
-                'internal_id' => $request->internal_id,
-                'start_time' => $startDt,
-                'end_time' => $endDt,
-                'duration_sec' => $durationSec,
-                'judgement' => $request->judgement,
-                'remark' => $request->remark,
-            ]);
+        $durationSec = $endDt ? strtotime($endDt) - strtotime($startDt) : null;
 
-            TransactionHeader::where('transaction_id', $request->transaction_id)
-                ->update(['return_date' => now()]);
-        });
-
-        return redirect()->route('execute-test.create')
-            ->with('success', "Test result recorded for Job #{$request->transaction_id}!");
+        return [$startDt, $endDt, $durationSec];
     }
 }

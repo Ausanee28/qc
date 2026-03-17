@@ -21,9 +21,33 @@ class QcSeeder extends Seeder
         // Internal Users
         $password = Hash::make('password');
         DB::table('Internal_Users')->insert([
-            ['user_name' => 'admin', 'user_password' => $password, 'employee_id' => 'EMP001', 'name' => 'Admin User', 'role' => 'admin'],
-            ['user_name' => 'inspector1', 'user_password' => $password, 'employee_id' => 'EMP002', 'name' => 'Somchai Tester', 'role' => 'inspector'],
-            ['user_name' => 'inspector2', 'user_password' => $password, 'employee_id' => 'EMP003', 'name' => 'Nattaya Inspector', 'role' => 'inspector'],
+            [
+                'user_name' => 'admin',
+                'user_password' => $password,
+                'employee_id' => 'EMP001',
+                'name' => 'Admin User',
+                'email' => 'admin@local.test',
+                'email_verified_at' => now(),
+                'role' => 'admin',
+            ],
+            [
+                'user_name' => 'inspector1',
+                'user_password' => $password,
+                'employee_id' => 'EMP002',
+                'name' => 'Somchai Tester',
+                'email' => 'inspector1@local.test',
+                'email_verified_at' => now(),
+                'role' => 'inspector',
+            ],
+            [
+                'user_name' => 'inspector2',
+                'user_password' => $password,
+                'employee_id' => 'EMP003',
+                'name' => 'Nattaya Inspector',
+                'email' => 'inspector2@local.test',
+                'email_verified_at' => now(),
+                'role' => 'inspector',
+            ],
         ]);
 
         // External Users

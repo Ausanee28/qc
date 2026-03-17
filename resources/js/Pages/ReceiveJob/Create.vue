@@ -1,20 +1,111 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
-const props = defineProps({ externals: Array, internals: Array });
+const props = defineProps({ externals: Array, internals: Array, jobs: Object, filters: Object });
 const flash = usePage().props.flash || {};
 const submitted = ref(false);
+const isEditing = ref(false);
 
 const form = useForm({
-    external_id: '', internal_id: '', detail: '', dmc: '', line: '',
+    transaction_id: null,
+    external_id: '',
+    internal_id: '',
+    detail: '',
+    dmc: '',
+    line: '',
 });
 
-const submit = () => {
-    form.post(route('receive-job.store'), {
-        onSuccess: () => { form.reset(); submitted.value = true; setTimeout(() => submitted.value = false, 3000); },
+const filterForm = useForm({
+    search: props.filters?.search ?? '',
+    status: props.filters?.status ?? 'all',
+    date_from: props.filters?.date_from ?? '',
+    date_to: props.filters?.date_to ?? '',
+    per_page: String(props.filters?.per_page ?? 20),
+});
+
+const applyFilters = () => {
+    router.get(route('receive-job.create'), filterForm.data(), {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
     });
+};
+
+const resetFilters = () => {
+    filterForm.search = '';
+    filterForm.status = 'all';
+    filterForm.date_from = '';
+    filterForm.date_to = '';
+    filterForm.per_page = '20';
+    applyFilters();
+};
+
+const visitPage = (url) => {
+    if (!url) return;
+    router.visit(url, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
+
+const resetForm = () => {
+    isEditing.value = false;
+    form.reset();
+    form.clearErrors();
+    form.transaction_id = null;
+};
+
+const submit = () => {
+    const options = {
+        onSuccess: () => {
+            resetForm();
+            submitted.value = true;
+            setTimeout(() => submitted.value = false, 3000);
+        },
+    };
+
+    if (isEditing.value && form.transaction_id) {
+        form.put(route('receive-job.update', form.transaction_id), options);
+        return;
+    }
+
+    form.post(route('receive-job.store'), options);
+};
+
+const editJob = (job) => {
+    isEditing.value = true;
+    form.clearErrors();
+    form.transaction_id = job.transaction_id;
+    form.external_id = job.external_id;
+    form.internal_id = job.internal_id;
+    form.detail = job.detail || '';
+    form.dmc = job.dmc || '';
+    form.line = job.line || '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const deleteJob = (job) => {
+    if (confirm(`Delete job #${job.transaction_id}?`)) {
+        form.delete(route('receive-job.destroy', job.transaction_id));
+    }
+};
+
+const toggleJobStatus = (job) => {
+    form.clearErrors();
+
+    if (!job.is_closed && job.details_count === 0) {
+        return;
+    }
+
+    if (job.is_closed) {
+        form.patch(route('receive-job.reopen', job.transaction_id));
+        return;
+    }
+
+    form.patch(route('receive-job.close', job.transaction_id));
 };
 </script>
 
@@ -22,31 +113,35 @@ const submit = () => {
     <Head title="Receive Job" />
     <AuthenticatedLayout>
         <template #title>Receive Job</template>
-        <div class="pg-header">
+
+        <div class="space-y-6">
+            <div class="pg-header">
                 <div>
                     <h1 class="pg-title">Receive Job</h1>
-                    <p class="pg-sub">Record a new incoming inspection job</p>
+                    <p class="pg-sub">Record incoming jobs and manage open or closed work items.</p>
                 </div>
             </div>
 
-            <!-- Success Message -->
             <transition enter-active-class="transition-all duration-300" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition-all duration-300" leave-from-class="opacity-100" leave-to-class="opacity-0">
-                <div v-if="flash.success || submitted" style="margin-bottom:20px;display:flex;align-items:center;gap:12px;background:#ECFDF5;border:1px solid #A7F3D0;padding:16px 20px;border-radius:12px">
-                    <div style="width:32px;height:32px;border-radius:50%;background:#D1FAE5;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                        <span style="color:#059669;font-size:16px;font-weight:bold">✓</span>
-                    </div>
-                    <div>
-                        <p style="font-size:14px;font-weight:600;color:#065F46;margin:0">Job registered successfully</p>
-                        <p style="font-size:12px;color:#059669;margin:0">The item has been added to the queue</p>
-                    </div>
+                <div v-if="flash.success || submitted" class="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
+                    {{ flash.success || 'Job saved successfully.' }}
                 </div>
             </transition>
 
-            <form @submit.prevent="submit" class="card card-fill" style="margin: 0; display: flex; flex-direction: column;">
-                <h3 style="font-size:15px;font-weight:600;padding-bottom:12px;border-bottom:1px solid #E5E7EB;margin-bottom:24px;margin-top:0">
-                    Job Registration</h3>
-                
-                <div class="form-grow">
+            <div v-if="flash.error" class="rounded-xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-800">
+                {{ flash.error }}
+            </div>
+
+            <form @submit.prevent="submit" class="card card-fill" style="margin:0;display:flex;flex-direction:column;">
+                <div class="flex items-center justify-between gap-4 border-b border-gray-200 pb-4">
+                    <div>
+                        <h3 class="text-[15px] font-semibold text-gray-900">{{ isEditing ? 'Edit Job' : 'Job Registration' }}</h3>
+                        <p class="mt-1 text-sm text-gray-500">{{ isEditing ? 'Update job header details before testing starts.' : 'Create a new inspection job in the queue.' }}</p>
+                    </div>
+                    <button v-if="isEditing" type="button" @click="resetForm" class="btn-outline">Cancel Edit</button>
+                </div>
+
+                <div class="form-grow pt-6">
                     <div class="form-grid" style="margin-bottom:24px">
                         <div>
                             <label class="form-lbl">Sender (External) *</label>
@@ -54,7 +149,7 @@ const submit = () => {
                                 <option value="" disabled>-- Select Sender --</option>
                                 <option v-for="e in externals" :key="e.external_id" :value="e.external_id">{{ e.external_name }}</option>
                             </select>
-                            <div v-if="form.errors.external_id" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.external_id }}</div>
+                            <div v-if="form.errors.external_id" class="mt-1 text-xs text-red-600">{{ form.errors.external_id }}</div>
                         </div>
                         <div>
                             <label class="form-lbl">Receiver (Internal) *</label>
@@ -62,15 +157,15 @@ const submit = () => {
                                 <option value="" disabled>-- Select Receiver --</option>
                                 <option v-for="u in internals" :key="u.user_id" :value="u.user_id">{{ u.name }}</option>
                             </select>
-                            <div v-if="form.errors.internal_id" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.internal_id }}</div>
+                            <div v-if="form.errors.internal_id" class="mt-1 text-xs text-red-600">{{ form.errors.internal_id }}</div>
                         </div>
                     </div>
-                    
+
                     <div class="form-grid" style="margin-bottom:24px">
                         <div>
                             <label class="form-lbl">DMC Code</label>
                             <input v-model="form.dmc" type="text" class="form-inp" style="padding:10px 12px" placeholder="e.g. DMC-2026-001">
-                            <div v-if="form.errors.dmc" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.dmc }}</div>
+                            <div v-if="form.errors.dmc" class="mt-1 text-xs text-red-600">{{ form.errors.dmc }}</div>
                         </div>
                         <div>
                             <label class="form-lbl">Line</label>
@@ -78,26 +173,119 @@ const submit = () => {
                                 <option value="">-- Select Line --</option>
                                 <option v-for="n in 10" :key="n" :value="'Line ' + n">Line {{ n }}</option>
                             </select>
-                            <div v-if="form.errors.line" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.line }}</div>
+                            <div v-if="form.errors.line" class="mt-1 text-xs text-red-600">{{ form.errors.line }}</div>
                         </div>
                     </div>
-                    
-                    <div style="margin-bottom:24px">
+
+                    <div>
                         <label class="form-lbl">Detail</label>
                         <textarea v-model="form.detail" class="form-inp" style="padding:10px 12px;min-height:80px;resize:vertical" placeholder="Enter job details..."></textarea>
-                        <div v-if="form.errors.detail" style="color:#EF4444;font-size:12px;margin-top:4px">{{ form.errors.detail }}</div>
+                        <div v-if="form.errors.detail" class="mt-1 text-xs text-red-600">{{ form.errors.detail }}</div>
                     </div>
-                    
-
                 </div>
 
-                <div style="padding-top:20px;border-top:1px solid #E5E7EB;display:flex;justify-content:flex-end;gap:12px;margin-top:auto">
-                    <button type="button" @click="form.reset()" class="btn-outline">Clear</button>
+                <div style="padding-top:20px;border-top:1px solid #E5E7EB;display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
+                    <button type="button" @click="resetForm" class="btn-outline">Clear</button>
                     <button type="submit" :disabled="form.processing" class="btn">
-                        <span v-if="form.processing">Submitting...</span>
-                        <span v-else>Save & Print Tag</span>
+                        <span v-if="form.processing">{{ isEditing ? 'Updating...' : 'Submitting...' }}</span>
+                        <span v-else>{{ isEditing ? 'Update Job' : 'Save Job' }}</span>
                     </button>
                 </div>
             </form>
+
+            <section class="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                <div class="border-b border-gray-200 px-6 py-5">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-semibold text-gray-900">Recent Jobs</h2>
+                        <p class="mt-1 text-sm text-gray-500">Open jobs with test results are locked. Closed jobs can be edited, reopened, or deleted.</p>
+                    </div>
+
+                    <form @submit.prevent="applyFilters" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                        <input v-model="filterForm.search" type="text" placeholder="Search job, sender, DMC..." class="lg:col-span-2 rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                        <select v-model="filterForm.status" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
+                            <option value="all">All status</option>
+                            <option value="open">Open</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                        <input v-model="filterForm.date_from" type="date" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                        <input v-model="filterForm.date_to" type="date" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                        <select v-model="filterForm.per_page" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
+                            <option value="10">10 / page</option>
+                            <option value="20">20 / page</option>
+                            <option value="50">50 / page</option>
+                            <option value="100">100 / page</option>
+                        </select>
+                    </form>
+                    <div class="mt-3 flex justify-end gap-2">
+                        <button type="button" @click="resetFilters" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Reset</button>
+                        <button type="button" @click="applyFilters" class="rounded-lg bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-black">Apply</button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Job</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Sender / Receiver</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Detail</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
+                                <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 bg-white">
+                            <tr v-if="jobs.data.length === 0">
+                                <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">No jobs found.</td>
+                            </tr>
+                            <tr v-for="job in jobs.data" :key="job.transaction_id" class="align-top">
+                                <td class="px-6 py-4 text-sm text-gray-700">
+                                    <div class="font-mono font-semibold text-gray-900">#{{ job.transaction_id }}</div>
+                                    <div class="mt-1 text-xs text-gray-500">{{ job.receive_date }}</div>
+                                    <div class="mt-1 text-xs text-gray-500">{{ job.dmc || 'No DMC' }} / {{ job.line || 'No line' }}</div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-700">
+                                    <div>{{ job.external_name || '-' }}</div>
+                                    <div class="mt-1 text-xs text-gray-500">Receiver: {{ job.internal_name || '-' }}</div>
+                                    <div class="mt-1 text-xs text-gray-500">{{ job.details_count }} test result(s)</div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ job.detail || '-' }}</td>
+                                <td class="px-6 py-4 text-sm">
+                                    <span :class="job.is_closed ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
+                                        {{ job.is_closed ? 'Closed' : 'Open' }}
+                                    </span>
+                                    <div v-if="job.return_date" class="mt-2 text-xs text-gray-500">Closed: {{ job.return_date }}</div>
+                                </td>
+                                <td class="px-6 py-4 text-right text-sm">
+                                    <div class="flex flex-wrap justify-end gap-2">
+                                        <button :disabled="job.details_count > 0 && !job.is_closed" @click="editJob(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
+                                        <button :disabled="job.details_count > 0 && !job.is_closed" @click="deleteJob(job)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">Delete</button>
+                                        <button :disabled="!job.is_closed && job.details_count === 0" @click="toggleJobStatus(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!job.is_closed && job.details_count === 0 ? 'Need at least 1 test result before closing' : ''">
+                                            {{ job.is_closed ? 'Reopen' : 'Close' }}
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="text-sm text-gray-600">
+                        Showing {{ jobs.from ?? 0 }} to {{ jobs.to ?? 0 }} of {{ jobs.total ?? 0 }} jobs
+                    </div>
+                    <div class="flex flex-wrap justify-end gap-2">
+                        <button
+                            v-for="(link, index) in jobs.links"
+                            :key="index"
+                            :disabled="!link.url"
+                            @click="visitPage(link.url)"
+                            class="rounded-md border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                            :class="link.active ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+                            v-html="link.label"
+                        />
+                    </div>
+                </div>
+            </section>
+        </div>
     </AuthenticatedLayout>
 </template>

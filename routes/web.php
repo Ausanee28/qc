@@ -20,10 +20,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Receive Job
     Route::get('/receive-job', [ReceiveJobController::class , 'create'])->name('receive-job.create');
     Route::post('/receive-job', [ReceiveJobController::class , 'store'])->middleware('throttle:15,1')->name('receive-job.store');
+    Route::put('/receive-job/{id}', [ReceiveJobController::class, 'update'])->middleware('throttle:15,1')->name('receive-job.update');
+    Route::delete('/receive-job/{id}', [ReceiveJobController::class, 'destroy'])->name('receive-job.destroy');
+    Route::patch('/receive-job/{id}/close', [ReceiveJobController::class, 'close'])->name('receive-job.close');
+    Route::patch('/receive-job/{id}/reopen', [ReceiveJobController::class, 'reopen'])->name('receive-job.reopen');
 
     // Execute Test
     Route::get('/execute-test', [ExecuteTestController::class , 'create'])->name('execute-test.create');
     Route::post('/execute-test', [ExecuteTestController::class , 'store'])->middleware('throttle:15,1')->name('execute-test.store');
+    Route::put('/execute-test/{id}', [ExecuteTestController::class, 'update'])->middleware('throttle:15,1')->name('execute-test.update');
+    Route::delete('/execute-test/{id}', [ExecuteTestController::class, 'destroy'])->name('execute-test.destroy');
 
     // Report
     Route::get('/report', [ReportController::class , 'index'])->name('report.index');
@@ -42,7 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class , 'destroy'])->name('profile.destroy');
 
     // Master Data
-    Route::prefix('master-data')->name('master-data.')->group(function () {
+    Route::prefix('master-data')->middleware('admin')->name('master-data.')->group(function () {
         Route::resource('departments', \App\Http\Controllers\DepartmentController::class)->except(['create', 'show', 'edit']);
         Route::resource('equipments', \App\Http\Controllers\EquipmentController::class)->except(['create', 'show', 'edit']);
         Route::resource('test-methods', \App\Http\Controllers\TestMethodController::class)->except(['create', 'show', 'edit']);

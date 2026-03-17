@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmailContract
 {
-    use HasFactory, Notifiable;
+    use HasFactory, MustVerifyEmail, Notifiable;
 
     protected $table = 'Internal_Users';
     protected $primaryKey = 'user_id';
@@ -20,14 +22,20 @@ class User extends Authenticatable
         'employee_id',
         'name',
         'email',
+        'email_verified_at',
         'role',
+        'remember_token',
     ];
 
     protected $hidden = [
         'user_password',
+        'remember_token',
     ];
 
-    // Laravel Auth uses 'password' field — map to user_password
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+    ];
+
     public function getAuthPassword()
     {
         return $this->user_password;
