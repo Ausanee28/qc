@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\SchemaCapabilities;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -77,20 +78,30 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
+        $hasDetailDeletedAt = SchemaCapabilities::hasColumn('Transaction_Detail', 'deleted_at');
+        $hasHeaderDeletedAt = SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at');
 
         if (auth()->id() === $user->user_id) {
             return redirect()->back()->with('error', 'You cannot delete your own account.');
         }
 
-        $hasTransactions = DB::table('Transaction_Detail')
-            ->where('internal_id', $user->user_id)
-            ->whereNull('deleted_at')
-            ->exists();
+        $hasTransactionsQuery = DB::table('Transaction_Detail')
+            ->where('internal_id', $user->user_id);
 
-        $hasHeaders = DB::table('Transaction_Header')
-            ->where('internal_id', $user->user_id)
-            ->whereNull('deleted_at')
-            ->exists();
+        if ($hasDetailDeletedAt) {
+            $hasTransactionsQuery->whereNull('deleted_at');
+        }
+
+        $hasTransactions = $hasTransactionsQuery->exists();
+
+        $hasHeadersQuery = DB::table('Transaction_Header')
+            ->where('internal_id', $user->user_id);
+
+        if ($hasHeaderDeletedAt) {
+            $hasHeadersQuery->whereNull('deleted_at');
+        }
+
+        $hasHeaders = $hasHeadersQuery->exists();
 
         if ($hasTransactions || $hasHeaders) {
             return redirect()->back()->with('error', 'Cannot delete user that has existing transactions.');

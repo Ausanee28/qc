@@ -13,7 +13,7 @@ class EnsureUserIsAdmin
         $user = $request->user();
 
         if (!$user || $user->role !== 'admin') {
-            abort(403);
+            return response('Forbidden.', 403);
         }
 
         return $next($request);

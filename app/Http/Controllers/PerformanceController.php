@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\SchemaCapabilities;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -9,9 +10,11 @@ class PerformanceController extends Controller
 {
     public function index()
     {
-        $inspectors = DB::table('Transaction_Detail as TD')
+        $hasDetailDeletedAt = SchemaCapabilities::hasColumn('Transaction_Detail', 'deleted_at');
+        $hasHeaderDeletedAt = SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at');
+
+        $inspectorsQuery = DB::table('Transaction_Detail as TD')
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
-            ->whereNull('TD.deleted_at')
             ->whereNotNull('TD.start_time')
             ->whereNotNull('TD.end_time')
             ->where('TD.start_time', '>=', now()->subDays(30))
@@ -25,14 +28,17 @@ class PerformanceController extends Controller
             DB::raw("SUM(CASE WHEN TD.judgement = 'NG' THEN 1 ELSE 0 END) as ng_cnt")
         )
             ->groupBy('IU.user_id', 'IU.name')
-            ->orderByDesc('total_tests')
-            ->get();
+            ->orderByDesc('total_tests');
 
-        $details = DB::table('Transaction_Detail as TD')
+        if ($hasDetailDeletedAt) {
+            $inspectorsQuery->whereNull('TD.deleted_at');
+        }
+
+        $inspectors = $inspectorsQuery->get();
+
+        $detailsQuery = DB::table('Transaction_Detail as TD')
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
             ->join('Transaction_Header as TH', 'TD.transaction_id', '=', 'TH.transaction_id')
-            ->whereNull('TD.deleted_at')
-            ->whereNull('TH.deleted_at')
             ->whereNotNull('TD.start_time')
             ->whereNotNull('TD.end_time')
             ->where('TD.start_time', '>=', now()->subDays(30))
@@ -42,8 +48,17 @@ class PerformanceController extends Controller
             'TD.duration_sec'
         )
             ->orderByDesc('TD.end_time')
-            ->limit(50)
-            ->get();
+            ->limit(50);
+
+        if ($hasDetailDeletedAt) {
+            $detailsQuery->whereNull('TD.deleted_at');
+        }
+
+        if ($hasHeaderDeletedAt) {
+            $detailsQuery->whereNull('TH.deleted_at');
+        }
+
+        $details = $detailsQuery->get();
 
         return Inertia::render('Performance/Index', [
             'inspectors' => $inspectors,

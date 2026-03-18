@@ -4,11 +4,57 @@ namespace App\Services;
 
 use App\Models\TransactionHeader;
 use App\Models\TransactionDetail;
+use App\Support\SchemaCapabilities;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 
 class DashboardMetricsService
 {
+    private ?bool $headerHasDeletedAt = null;
+    private ?bool $detailHasDeletedAt = null;
+
+    private function hasHeaderDeletedAt(): bool
+    {
+        return $this->headerHasDeletedAt ??= SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at');
+    }
+
+    private function hasDetailDeletedAt(): bool
+    {
+        return $this->detailHasDeletedAt ??= SchemaCapabilities::hasColumn('Transaction_Detail', 'deleted_at');
+    }
+
+    private function applyHeaderNotDeleted($query, string $column = 'Transaction_Header.deleted_at')
+    {
+        if ($this->hasHeaderDeletedAt()) {
+            $query->whereNull($column);
+        }
+
+        return $query;
+    }
+
+    private function applyDetailNotDeleted($query, string $column = 'Transaction_Detail.deleted_at')
+    {
+        if ($this->hasDetailDeletedAt()) {
+            $query->whereNull($column);
+        }
+
+        return $query;
+    }
+
+    private function headerQuery()
+    {
+        return $this->applyHeaderNotDeleted(
+            TransactionHeader::query()->withoutGlobalScopes()
+        );
+    }
+
+    private function detailQuery()
+    {
+        return $this->applyDetailNotDeleted(
+            TransactionDetail::query()->withoutGlobalScopes()
+        );
+    }
+
     private function dateBucketExpression(string $column): string
     {
         if (DB::getDriverName() === 'sqlite') {
@@ -29,12 +75,15 @@ class DashboardMetricsService
 
     private function getJudgementCountsByBucket(Carbon $from, Carbon $to, string $bucketExpression): array
     {
-        return DB::table('Transaction_Detail')
+        $query = DB::table('Transaction_Detail')
             ->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
-            ->whereNull('Transaction_Detail.deleted_at')
-            ->whereNull('Transaction_Header.deleted_at')
             ->whereBetween('Transaction_Header.receive_date', [$from, $to])
-            ->selectRaw("{$bucketExpression} as bucket")
+            ->selectRaw("{$bucketExpression} as bucket");
+
+        $this->applyDetailNotDeleted($query, 'Transaction_Detail.deleted_at');
+        $this->applyHeaderNotDeleted($query, 'Transaction_Header.deleted_at');
+
+        return $query
             ->selectRaw("SUM(CASE WHEN Transaction_Detail.judgement = ? THEN 1 ELSE 0 END) as ok", [TransactionDetail::JUDGEMENT_OK])
             ->selectRaw("SUM(CASE WHEN Transaction_Detail.judgement = ? THEN 1 ELSE 0 END) as ng", [TransactionDetail::JUDGEMENT_NG])
             ->groupBy('bucket')
@@ -59,23 +108,30 @@ class DashboardMetricsService
 
     public function getTodayCount(): int
     {
-        return TransactionHeader::whereDate('receive_date', today())->count();
+        return $this->headerQuery()
+            ->whereDate('receive_date', today())
+            ->count();
     }
 
     public function getMonthCount(): int
     {
-        return TransactionHeader::whereMonth('receive_date', now()->month)
-            ->whereYear('receive_date', now()->year)->count();
+        return $this->headerQuery()
+            ->whereMonth('receive_date', now()->month)
+            ->whereYear('receive_date', now()->year)
+            ->count();
     }
 
     public function getCounts(Carbon $from, Carbon $to): array
     {
-        $headerIds = TransactionHeader::whereBetween('receive_date', [$from, $to])
+        $headerIds = $this->headerQuery()
+            ->whereBetween('receive_date', [$from, $to])
             ->pluck('transaction_id');
 
-        $okCount = TransactionDetail::whereIn('transaction_id', $headerIds)
+        $okCount = $this->detailQuery()
+            ->whereIn('transaction_id', $headerIds)
             ->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
-        $ngCount = TransactionDetail::whereIn('transaction_id', $headerIds)
+        $ngCount = $this->detailQuery()
+            ->whereIn('transaction_id', $headerIds)
             ->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
 
         $totalTests = $okCount + $ngCount;
@@ -87,9 +143,17 @@ class DashboardMetricsService
 
     public function getTodayJudgements(): array
     {
-        $todayOK = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', today()))
+        $todayOK = $this->detailQuery()
+            ->whereHas('transactionHeader', function ($q) {
+                $q->withoutGlobalScopes()->whereDate('receive_date', today());
+                $this->applyHeaderNotDeleted($q);
+            })
             ->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
-        $todayNG = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereDate('receive_date', today()))
+        $todayNG = $this->detailQuery()
+            ->whereHas('transactionHeader', function ($q) {
+                $q->withoutGlobalScopes()->whereDate('receive_date', today());
+                $this->applyHeaderNotDeleted($q);
+            })
             ->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
 
         return compact('todayOK', 'todayNG');
@@ -97,7 +161,11 @@ class DashboardMetricsService
 
     public function getAverageTestTimeMinutes(Carbon $from, Carbon $to): float
     {
-        $avgTime = TransactionDetail::whereHas('transactionHeader', fn($q) => $q->whereBetween('receive_date', [$from, $to]))
+        $avgTime = $this->detailQuery()
+            ->whereHas('transactionHeader', function ($q) use ($from, $to) {
+                $q->withoutGlobalScopes()->whereBetween('receive_date', [$from, $to]);
+                $this->applyHeaderNotDeleted($q);
+            })
             ->whereNotNull('end_time')
             ->whereNotNull('start_time')
             ->selectRaw('AVG(duration_sec) / 60 as avg_min')
@@ -204,13 +272,14 @@ class DashboardMetricsService
     {
         $query = DB::table('Transaction_Detail')
             ->join('Test_Methods', 'Transaction_Detail.method_id', '=', 'Test_Methods.method_id')
-            ->leftJoin('Equipments', 'Test_Methods.equipment_id', '=', 'Equipments.equipment_id')
-            ->whereNull('Transaction_Detail.deleted_at');
+            ->leftJoin('Equipments', 'Test_Methods.equipment_id', '=', 'Equipments.equipment_id');
+
+        $this->applyDetailNotDeleted($query, 'Transaction_Detail.deleted_at');
 
         if ($from && $to) {
             $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
-                ->whereNull('Transaction_Header.deleted_at')
                 ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
+            $this->applyHeaderNotDeleted($query, 'Transaction_Header.deleted_at');
         }
 
         return $query->select(
@@ -226,7 +295,11 @@ class DashboardMetricsService
 
     public function getRecentActivities(int $limit = 5, ?Carbon $from = null, ?Carbon $to = null): \Illuminate\Support\Collection
     {
-        $query = TransactionHeader::with(['details'])
+        $query = $this->headerQuery()
+            ->with(['details' => function ($q) {
+                $q->withoutGlobalScopes();
+                $this->applyDetailNotDeleted($q);
+            }])
             ->whereNotNull('return_date');
 
         if ($from && $to) {
@@ -241,7 +314,7 @@ class DashboardMetricsService
                 $ng = $tx->details->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
                 return [
                     'id' => $tx->transaction_id,
-                    'detail' => $tx->detail ?? $tx->dmc ?? $tx->line ?? '—',
+                    'detail' => $tx->detail ?? $tx->dmc ?? $tx->line ?? '-',
                     'dmcCode' => $tx->dmc ?? '-',
                     'result' => $ng > 0 ? TransactionDetail::JUDGEMENT_NG : TransactionDetail::JUDGEMENT_OK,
                     'date' => $tx->return_date ? $tx->return_date->format('d M Y') : '-',
@@ -253,12 +326,13 @@ class DashboardMetricsService
 
     public function getInspectorData(int $limit = 5, ?Carbon $from = null, ?Carbon $to = null): \Illuminate\Support\Collection
     {
-        $query = TransactionDetail::join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id');
+        $query = $this->detailQuery()
+            ->join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id');
 
         if ($from && $to) {
             $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
-                ->whereNull('Transaction_Header.deleted_at')
                 ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
+            $this->applyHeaderNotDeleted($query, 'Transaction_Header.deleted_at');
         }
 
         return $query->select(
@@ -288,13 +362,13 @@ class DashboardMetricsService
         $query = DB::table('Transaction_Detail')
             ->join('Test_Methods', 'Transaction_Detail.method_id', '=', 'Test_Methods.method_id')
             ->leftJoin('Equipments', 'Test_Methods.equipment_id', '=', 'Equipments.equipment_id')
-            ->whereNull('Transaction_Detail.deleted_at')
             ->where('Transaction_Detail.judgement', TransactionDetail::JUDGEMENT_NG);
+        $this->applyDetailNotDeleted($query, 'Transaction_Detail.deleted_at');
 
         if ($from && $to) {
             $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
-                ->whereNull('Transaction_Header.deleted_at')
                 ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
+            $this->applyHeaderNotDeleted($query, 'Transaction_Header.deleted_at');
         }
 
         return $query->select(
@@ -310,12 +384,12 @@ class DashboardMetricsService
     public function getTestsPerJob(?Carbon $from = null, ?Carbon $to = null): float
     {
         if ($from && $to) {
-            $totalJobs = TransactionHeader::whereBetween('receive_date', [$from, $to])->count();
-            $headerIds = TransactionHeader::whereBetween('receive_date', [$from, $to])->pluck('transaction_id');
-            $totalTests = TransactionDetail::whereIn('transaction_id', $headerIds)->count();
+            $totalJobs = $this->headerQuery()->whereBetween('receive_date', [$from, $to])->count();
+            $headerIds = $this->headerQuery()->whereBetween('receive_date', [$from, $to])->pluck('transaction_id');
+            $totalTests = $this->detailQuery()->whereIn('transaction_id', $headerIds)->count();
         } else {
-            $totalJobs = TransactionHeader::count();
-            $totalTests = TransactionDetail::count();
+            $totalJobs = $this->headerQuery()->count();
+            $totalTests = $this->detailQuery()->count();
         }
         return $totalJobs > 0 ? round($totalTests / $totalJobs, 1) : 0;
     }
@@ -324,12 +398,13 @@ class DashboardMetricsService
     {
         $durationExpression = $this->durationSecondsExpression('Transaction_Detail.start_time', 'Transaction_Detail.end_time');
 
-        $query = TransactionDetail::join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id');
+        $query = $this->detailQuery()
+            ->join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id');
 
         if ($from && $to) {
             $query->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
-                ->whereNull('Transaction_Header.deleted_at')
                 ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
+            $this->applyHeaderNotDeleted($query, 'Transaction_Header.deleted_at');
         }
 
         return $query->select('Internal_Users.name', DB::raw("AVG({$durationExpression}) as avg_seconds"))

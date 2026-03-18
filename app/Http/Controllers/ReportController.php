@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\SchemaCapabilities;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -47,7 +48,8 @@ class ReportController extends Controller
             $results = $results->filter(fn($r) => in_array($r->transaction_id, $selectedIds));
         }
 
-        $filename = ($customName ?: 'QC_Report_' . $dateFrom . '_to_' . $dateTo) . '.csv';
+        $baseFilename = $this->sanitizeFilename($customName ?: 'QC_Report_' . $dateFrom . '_to_' . $dateTo);
+        $filename = str_ends_with(strtolower($baseFilename), '.csv') ? $baseFilename : "{$baseFilename}.csv";
 
         return new StreamedResponse(function () use ($results) {
             $handle = fopen('php://output', 'w');
@@ -98,13 +100,14 @@ class ReportController extends Controller
 
     private function getResults(string $dateFrom, string $dateTo, ?string $dmc = null)
     {
+        $hasDetailDeletedAt = SchemaCapabilities::hasColumn('Transaction_Detail', 'deleted_at');
+        $hasHeaderDeletedAt = SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at');
+
         $query = DB::table('Transaction_Detail as TD')
             ->join('Transaction_Header as TH', 'TD.transaction_id', '=', 'TH.transaction_id')
             ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id')
             ->join('Test_Methods as TM', 'TD.method_id', '=', 'TM.method_id')
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
-            ->whereNull('TD.deleted_at')
-            ->whereNull('TH.deleted_at')
             ->whereBetween(DB::raw('DATE(TH.receive_date)'), [$dateFrom, $dateTo])
             ->select(
                 'TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date',
@@ -114,10 +117,28 @@ class ReportController extends Controller
             )
             ->orderByDesc('TH.receive_date');
 
+        if ($hasDetailDeletedAt) {
+            $query->whereNull('TD.deleted_at');
+        }
+
+        if ($hasHeaderDeletedAt) {
+            $query->whereNull('TH.deleted_at');
+        }
+
         if ($dmc) {
             $query->where('TH.dmc', 'like', "%{$dmc}%");
         }
 
         return $query->get();
+    }
+
+    private function sanitizeFilename(string $filename): string
+    {
+        $value = trim($filename);
+        $value = preg_replace('/[\r\n]+/', ' ', $value) ?? '';
+        $value = preg_replace('/[^\w\s\-.]/u', '_', $value) ?? '';
+        $value = trim($value, " .\t\n\r\0\x0B");
+
+        return $value !== '' ? $value : 'QC_Report';
     }
 }

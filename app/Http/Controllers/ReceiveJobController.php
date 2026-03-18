@@ -15,6 +15,8 @@ class ReceiveJobController extends Controller
 {
     public function create(Request $request)
     {
+        $supportsHeaderSoftDeletes = TransactionHeader::supportsSoftDeletes();
+
         $validatedFilters = $request->validate([
             'search' => 'nullable|string|max:255',
             'status' => 'nullable|in:all,open,closed,deleted',
@@ -31,6 +33,10 @@ class ReceiveJobController extends Controller
             'per_page' => (int) ($validatedFilters['per_page'] ?? 20),
         ];
 
+        if (!$supportsHeaderSoftDeletes && $filters['status'] === 'deleted') {
+            $filters['status'] = 'all';
+        }
+
         $jobsQuery = TransactionHeader::with(['externalUser:external_id,external_name', 'internalUser:user_id,name'])
             ->withCount('details')
             ->when($filters['search'] !== '', function ($query) use ($filters) {
@@ -45,7 +51,7 @@ class ReceiveJobController extends Controller
                         ->orWhereHas('internalUser', fn ($q) => $q->where('name', 'like', "%{$search}%"));
                 });
             })
-            ->when($filters['status'] === 'deleted', fn ($query) => $query->onlyTrashed())
+            ->when($supportsHeaderSoftDeletes && $filters['status'] === 'deleted', fn ($query) => $query->onlyTrashed())
             ->when($filters['status'] === 'open', fn ($query) => $query->whereNull('return_date'))
             ->when($filters['status'] === 'closed', fn ($query) => $query->whereNotNull('return_date'))
             ->when($filters['date_from'] !== '', fn ($query) => $query->whereDate('receive_date', '>=', $filters['date_from']))
@@ -77,12 +83,12 @@ class ReceiveJobController extends Controller
                     'line' => $job->line,
                     'receive_date' => optional($job->receive_date)->format('Y-m-d H:i'),
                     'return_date' => optional($job->return_date)->format('Y-m-d H:i'),
-                    'deleted_at' => optional($job->deleted_at)->format('Y-m-d H:i'),
+                    'deleted_at' => $supportsHeaderSoftDeletes ? optional($job->deleted_at)->format('Y-m-d H:i') : null,
                     'details_count' => $job->details_count,
                     'external_name' => $job->externalUser?->external_name,
                     'internal_name' => $job->internalUser?->name,
                     'is_closed' => $job->return_date !== null,
-                    'is_deleted' => $job->trashed(),
+                    'is_deleted' => $supportsHeaderSoftDeletes && $job->trashed(),
                 ]),
             'filters' => $filters,
         ]);
@@ -120,7 +126,7 @@ class ReceiveJobController extends Controller
     public function destroy(int $id)
     {
         if (auth()->user()?->role !== 'admin') {
-            abort(403, 'Only admins can delete jobs.');
+            return response('Forbidden.', 403);
         }
 
         $job = TransactionHeader::withCount('details')->findOrFail($id);
@@ -144,16 +150,23 @@ class ReceiveJobController extends Controller
     public function restore(int $id)
     {
         if (auth()->user()?->role !== 'admin') {
-            abort(403, 'Only admins can restore jobs.');
+            return response('Forbidden.', 403);
+        }
+
+        if (!TransactionHeader::supportsSoftDeletes()) {
+            return redirect()->route('receive-job.create')
+                ->with('error', 'Restore is unavailable because this database does not support soft deletes.');
         }
 
         $job = TransactionHeader::onlyTrashed()->findOrFail($id);
 
         DB::transaction(function () use ($job) {
             $job->restore();
-            TransactionDetail::onlyTrashed()
-                ->where('transaction_id', $job->transaction_id)
-                ->restore();
+            if (TransactionDetail::supportsSoftDeletes()) {
+                TransactionDetail::onlyTrashed()
+                    ->where('transaction_id', $job->transaction_id)
+                    ->restore();
+            }
         });
 
         return redirect()->route('receive-job.create')

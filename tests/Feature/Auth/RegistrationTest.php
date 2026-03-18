@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\User;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -18,16 +21,26 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register(): void
     {
+        Notification::fake();
+
+        $email = 'test@example.com';
+
         $response = $this->post('/register', [
             'user_name' => 'test.user',
             'employee_id' => 'EMP001',
             'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'email' => $email,
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
         ]);
 
-        $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertDatabaseHas('Internal_Users', [
+            'email' => $email,
+        ]);
+        Notification::assertSentTo(
+            User::where('email', $email)->firstOrFail(),
+            VerifyEmail::class
+        );
     }
 }

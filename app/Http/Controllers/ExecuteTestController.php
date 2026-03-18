@@ -14,6 +14,8 @@ class ExecuteTestController extends Controller
 {
     public function create(Request $request)
     {
+        $supportsDetailSoftDeletes = TransactionDetail::supportsSoftDeletes();
+
         $validatedFilters = $request->validate([
             'search' => 'nullable|string|max:255',
             'judgement' => 'nullable|in:all,OK,NG',
@@ -32,6 +34,10 @@ class ExecuteTestController extends Controller
             'per_page' => (int) ($validatedFilters['per_page'] ?? 20),
         ];
 
+        if (!$supportsDetailSoftDeletes && $filters['record_state'] !== 'active') {
+            $filters['record_state'] = 'active';
+        }
+
         $pendingJobs = TransactionHeader::whereNull('return_date')
             ->orderByDesc('receive_date')
             ->get()
@@ -43,8 +49,8 @@ class ExecuteTestController extends Controller
             ]);
 
         $resultsQuery = TransactionDetail::query()
-            ->when($filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
-            ->when($filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())
+            ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
+            ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())
             ->with([
             'transactionHeader:transaction_id,dmc,line,detail',
             'testMethod:method_id,method_name',
@@ -92,11 +98,11 @@ class ExecuteTestController extends Controller
                     'start_time' => optional($detail->start_time)->format('H:i'),
                     'end_date' => optional($detail->end_time)->format('Y-m-d'),
                     'end_time' => optional($detail->end_time)->format('H:i'),
-                    'deleted_at' => optional($detail->deleted_at)->format('Y-m-d H:i'),
+                    'deleted_at' => $supportsDetailSoftDeletes ? optional($detail->deleted_at)->format('Y-m-d H:i') : null,
                     'job_label' => '#' . $detail->transaction_id . ' - ' . ($detail->transactionHeader?->detail ?: 'No detail'),
                     'method_name' => $detail->testMethod?->method_name,
                     'inspector_name' => $detail->inspector?->name,
-                    'is_deleted' => $detail->trashed(),
+                    'is_deleted' => $supportsDetailSoftDeletes && $detail->trashed(),
                 ]),
             'filters' => $filters,
         ]);
@@ -148,7 +154,7 @@ class ExecuteTestController extends Controller
     public function destroy(int $id)
     {
         if (auth()->user()?->role !== 'admin') {
-            abort(403, 'Only admins can delete test results.');
+            return response('Forbidden.', 403);
         }
 
         $detail = TransactionDetail::findOrFail($id);
@@ -161,7 +167,12 @@ class ExecuteTestController extends Controller
     public function restore(int $id)
     {
         if (auth()->user()?->role !== 'admin') {
-            abort(403, 'Only admins can restore test results.');
+            return response('Forbidden.', 403);
+        }
+
+        if (!TransactionDetail::supportsSoftDeletes()) {
+            return redirect()->route('execute-test.create')
+                ->with('error', 'Restore is unavailable because this database does not support soft deletes.');
         }
 
         $detail = TransactionDetail::onlyTrashed()->findOrFail($id);

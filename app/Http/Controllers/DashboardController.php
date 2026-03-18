@@ -6,6 +6,7 @@ use App\Models\TransactionHeader;
 use App\Models\TransactionDetail;
 use App\Models\Equipment;
 use App\Models\User;
+use App\Support\SchemaCapabilities;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +36,10 @@ class DashboardController extends Controller
         $payload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($period, $from, $to) {
             $counts = $this->metricsService->getCounts($from, $to);
             $todayJudgements = $this->metricsService->getTodayJudgements();
+            $pendingCountQuery = DB::table('Transaction_Header')->whereNull('return_date');
+            if (SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at')) {
+                $pendingCountQuery->whereNull('deleted_at');
+            }
 
             return [
                 'currentPeriod' => $period,
@@ -43,7 +48,7 @@ class DashboardController extends Controller
                     'monthCount' => $this->metricsService->getMonthCount(),
                     'okCount' => $counts['okCount'],
                     'ngCount' => $counts['ngCount'],
-                    'pendingCount' => TransactionHeader::whereNull('return_date')->count(),
+                    'pendingCount' => $pendingCountQuery->count(),
                     'todayOK' => $todayJudgements['todayOK'],
                     'todayNG' => $todayJudgements['todayNG'],
                     'yieldRate' => $counts['yieldRate'],
