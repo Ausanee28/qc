@@ -213,11 +213,11 @@ const doExport = () => {
     border: none;
 }
 .export-btn-primary {
-    background-color: #4F46E5;
+    background-color: #0F172A;
     color: #fff;
 }
 .export-btn-primary:hover {
-    background-color: #4338CA;
+    background-color: #111827;
 }
 .export-btn-outline {
     background-color: #fff;

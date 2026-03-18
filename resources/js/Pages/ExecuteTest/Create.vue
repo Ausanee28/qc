@@ -118,6 +118,41 @@ const restoreResult = (result) => {
         form.patch(route('execute-test.restore', result.detail_id));
     }
 };
+
+const toTwoDigits = (value) => String(value).padStart(2, '0');
+
+const nowParts = () => {
+    const now = new Date();
+    return {
+        date: `${now.getFullYear()}-${toTwoDigits(now.getMonth() + 1)}-${toTwoDigits(now.getDate())}`,
+        time: `${toTwoDigits(now.getHours())}:${toTwoDigits(now.getMinutes())}`,
+    };
+};
+
+const setStartNow = () => {
+    const { date, time } = nowParts();
+    form.start_date = date;
+    form.start_time = time;
+};
+
+const setEndNow = () => {
+    const { date, time } = nowParts();
+    form.end_date = date;
+    form.end_time = time;
+};
+
+const setNowForBoth = () => {
+    const { date, time } = nowParts();
+    form.start_date = date;
+    form.start_time = time;
+    form.end_date = date;
+    form.end_time = time;
+};
+
+const copyStartToEnd = () => {
+    form.end_date = form.start_date || '';
+    form.end_time = form.start_time || '';
+};
 </script>
 
 <template>
@@ -213,7 +248,13 @@ const restoreResult = (result) => {
 
                     <div class="form-grid" style="margin-bottom:24px">
                         <div style="background:#F9FAFB;padding:14px;border-radius:8px;border:1px solid #E5E7EB">
-                            <label class="form-lbl">Start Time *</label>
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                                <label class="form-lbl">Start Time *</label>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                    <button type="button" @click="setStartNow" class="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100">Now</button>
+                                    <button type="button" @click="setNowForBoth" class="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100">Now + End</button>
+                                </div>
+                            </div>
                             <div style="display:flex;gap:8px;margin-top:4px">
                                 <input v-model="form.start_date" type="date" class="form-inp" required>
                                 <input v-model="form.start_time" type="time" class="form-inp" required>
@@ -221,7 +262,13 @@ const restoreResult = (result) => {
                             <div v-if="form.errors.start_date || form.errors.start_time" class="mt-1 text-xs text-red-600">{{ form.errors.start_date || form.errors.start_time }}</div>
                         </div>
                         <div style="background:#F9FAFB;padding:14px;border-radius:8px;border:1px solid #E5E7EB">
-                            <label class="form-lbl">End Time</label>
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                                <label class="form-lbl">End Time</label>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                    <button type="button" @click="setEndNow" class="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100">Now</button>
+                                    <button type="button" @click="copyStartToEnd" class="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100">Use Start</button>
+                                </div>
+                            </div>
                             <div style="display:flex;gap:8px;margin-top:4px">
                                 <input v-model="form.end_date" type="date" class="form-inp">
                                 <input v-model="form.end_time" type="time" class="form-inp">
@@ -238,7 +285,7 @@ const restoreResult = (result) => {
 
                 <div style="padding-top:20px;border-top:1px solid #E5E7EB;display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
                     <button type="button" @click="resetForm" class="btn-outline">Clear</button>
-                    <button type="submit" :disabled="form.processing" class="btn" style="background:linear-gradient(135deg,#059669,#0D9488)">
+                    <button type="submit" :disabled="form.processing" class="btn">
                         <span v-if="form.processing">{{ isEditing ? 'Updating...' : 'Submitting...' }}</span>
                         <span v-else>{{ isEditing ? 'Update Result' : 'Submit Test Result' }}</span>
                     </button>
@@ -275,7 +322,7 @@ const restoreResult = (result) => {
                     </form>
                     <div class="mt-3 flex justify-end gap-2">
                         <button type="button" @click="resetFilters" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Reset</button>
-                        <button type="button" @click="applyFilters" class="rounded-lg bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-black">Apply</button>
+                        <button type="button" @click="applyFilters" class="btn">Apply</button>
                     </div>
                 </div>
 

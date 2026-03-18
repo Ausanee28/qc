@@ -46,7 +46,7 @@ const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-
                     <div><strong>Tests:</strong> {{ j.ok_count + j.ng_count }} — <span style="color:#059669">{{ j.ok_count }} OK</span><span v-if="j.ng_count > 0">, <span style="color:#DC2626">{{ j.ng_count }} NG</span></span></div>
                     <div><strong>Date:</strong> {{ formatDate(j.receive_date) }}</div>
                 </div>
-                <a :href="route('certificates.pdf', j.transaction_id)" target="_blank" class="btn" style="width:100%;background:linear-gradient(135deg,#7C3AED,#6D28D9);display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none">
+                <a :href="route('certificates.pdf', j.transaction_id)" target="_blank" class="btn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none">
                     📄 Download PDF
                 </a>
             </div>

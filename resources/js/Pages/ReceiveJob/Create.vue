@@ -235,7 +235,7 @@ const toggleJobStatus = (job) => {
                     </form>
                     <div class="mt-3 flex justify-end gap-2">
                         <button type="button" @click="resetFilters" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Reset</button>
-                        <button type="button" @click="applyFilters" class="rounded-lg bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-black">Apply</button>
+                        <button type="button" @click="applyFilters" class="btn">Apply</button>
                     </div>
                 </div>
 
