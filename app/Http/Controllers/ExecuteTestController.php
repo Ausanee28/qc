@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\DashboardDataChanged;
 use App\Models\TransactionHeader;
 use App\Models\TransactionDetail;
 use App\Models\TestMethod;
@@ -130,6 +131,7 @@ class ExecuteTestController extends Controller
                 'remark' => $validated['remark'] ?? null,
             ]);
         });
+        event(new DashboardDataChanged());
 
         return redirect()->route('execute-test.create')
             ->with('success', "Test result recorded for Job #{$validated['transaction_id']}!");
@@ -151,6 +153,7 @@ class ExecuteTestController extends Controller
             'judgement' => $validated['judgement'],
             'remark' => $validated['remark'] ?? null,
         ]);
+        event(new DashboardDataChanged());
 
         return redirect()->route('execute-test.create')
             ->with('success', "Test result #{$detail->detail_id} updated successfully!");
@@ -164,6 +167,7 @@ class ExecuteTestController extends Controller
 
         $detail = TransactionDetail::findOrFail($id);
         $detail->delete();
+        event(new DashboardDataChanged());
 
         return redirect()->route('execute-test.create')
             ->with('success', "Test result #{$id} deleted successfully!");
@@ -182,6 +186,7 @@ class ExecuteTestController extends Controller
 
         $detail = TransactionDetail::onlyTrashed()->findOrFail($id);
         $detail->restore();
+        event(new DashboardDataChanged());
 
         return redirect()->route('execute-test.create')
             ->with('success', "Test result #{$id} restored successfully!");

@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Bar, Line, Doughnut } from 'vue-chartjs';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, ArcElement } from 'chart.js';
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, ArcElement);
 
@@ -22,6 +22,20 @@ const props = defineProps({
 
 const selectedPeriod = ref(props.currentPeriod);
 const isLoading = ref(false);
+let realtimeRefreshTimer = null;
+
+const dashboardPayloadKeys = [
+    'currentPeriod',
+    'metrics',
+    'weeklyData',
+    'dailyData',
+    'monthlyData',
+    'equipRank',
+    'failByEquip',
+    'inspectorEff',
+    'recentActivities',
+    'inspectorData',
+];
 
 const periodLabels = {
     today: 'Today',
@@ -38,6 +52,50 @@ watch(selectedPeriod, (val) => {
         preserveScroll: true,
         onFinish: () => { isLoading.value = false; },
     });
+});
+
+const reloadDashboard = () => {
+    if (isLoading.value) {
+        return;
+    }
+
+    isLoading.value = true;
+    router.reload({
+        only: dashboardPayloadKeys,
+        preserveState: true,
+        preserveScroll: true,
+        onFinish: () => { isLoading.value = false; },
+    });
+};
+
+const scheduleRealtimeReload = () => {
+    if (realtimeRefreshTimer !== null) {
+        return;
+    }
+
+    realtimeRefreshTimer = window.setTimeout(() => {
+        realtimeRefreshTimer = null;
+        reloadDashboard();
+    }, 250);
+};
+
+onMounted(() => {
+    if (!window.Echo) {
+        return;
+    }
+
+    window.Echo.private('dashboard.global')
+        .listen('.dashboard.updated', scheduleRealtimeReload);
+});
+
+onBeforeUnmount(() => {
+    if (realtimeRefreshTimer !== null) {
+        window.clearTimeout(realtimeRefreshTimer);
+    }
+
+    if (window.Echo) {
+        window.Echo.leave('private-dashboard.global');
+    }
 });
 
 const totalTests = computed(() => props.metrics.totalTests || 0);

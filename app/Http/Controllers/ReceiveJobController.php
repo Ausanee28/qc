@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\DashboardDataChanged;
 use App\Models\TransactionHeader;
 use App\Models\ExternalUser;
 use App\Models\TransactionDetail;
@@ -103,6 +104,7 @@ class ReceiveJobController extends Controller
             'receive_date' => now(),
             'return_date' => null,
         ]);
+        event(new DashboardDataChanged());
 
         return redirect()->route('receive-job.create')
             ->with('success', "Job #{$job->transaction_id} created successfully!");
@@ -118,6 +120,7 @@ class ReceiveJobController extends Controller
 
         $validated = $this->validatePayload($request);
         $job->update($validated);
+        event(new DashboardDataChanged());
 
         return redirect()->route('receive-job.create')
             ->with('success', "Job #{$job->transaction_id} updated successfully!");
@@ -142,6 +145,7 @@ class ReceiveJobController extends Controller
 
             $job->delete();
         });
+        event(new DashboardDataChanged());
 
         return redirect()->route('receive-job.create')
             ->with('success', "Job #{$id} deleted successfully!");
@@ -168,6 +172,7 @@ class ReceiveJobController extends Controller
                     ->restore();
             }
         });
+        event(new DashboardDataChanged());
 
         return redirect()->route('receive-job.create')
             ->with('success', "Job #{$job->transaction_id} restored successfully!");
@@ -184,6 +189,7 @@ class ReceiveJobController extends Controller
         $job->update([
             'return_date' => now(),
         ]);
+        event(new DashboardDataChanged());
 
         return redirect()->route('receive-job.create')
             ->with('success', "Job #{$job->transaction_id} closed successfully!");
@@ -196,6 +202,7 @@ class ReceiveJobController extends Controller
         $job->update([
             'return_date' => null,
         ]);
+        event(new DashboardDataChanged());
 
         return redirect()->route('receive-job.create')
             ->with('success', "Job #{$job->transaction_id} reopened successfully!");

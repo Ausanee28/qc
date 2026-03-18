@@ -19,8 +19,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Receive Job
     Route::get('/receive-job', [ReceiveJobController::class , 'create'])->name('receive-job.create');
-    Route::post('/receive-job', [ReceiveJobController::class , 'store'])->middleware('throttle:15,1')->name('receive-job.store');
-    Route::put('/receive-job/{id}', [ReceiveJobController::class, 'update'])->middleware('throttle:15,1')->name('receive-job.update');
+    Route::post('/receive-job', [ReceiveJobController::class , 'store'])->middleware('throttle:180,1')->name('receive-job.store');
+    Route::put('/receive-job/{id}', [ReceiveJobController::class, 'update'])->middleware('throttle:180,1')->name('receive-job.update');
     Route::delete('/receive-job/{id}', [ReceiveJobController::class, 'destroy'])->name('receive-job.destroy');
     Route::patch('/receive-job/{id}/restore', [ReceiveJobController::class, 'restore'])->name('receive-job.restore');
     Route::patch('/receive-job/{id}/close', [ReceiveJobController::class, 'close'])->name('receive-job.close');
@@ -29,10 +29,10 @@ Route::middleware(['auth'])->group(function () {
     // Execute Test
     Route::get('/execute-test', [ExecuteTestController::class , 'create'])->name('execute-test.create');
     Route::get('/execute-test/pending-jobs-version', [ExecuteTestController::class, 'pendingJobsVersion'])
-        ->middleware('throttle:120,1')
+        ->middleware('throttle:600,1')
         ->name('execute-test.pending-jobs-version');
-    Route::post('/execute-test', [ExecuteTestController::class , 'store'])->middleware('throttle:15,1')->name('execute-test.store');
-    Route::put('/execute-test/{id}', [ExecuteTestController::class, 'update'])->middleware('throttle:15,1')->name('execute-test.update');
+    Route::post('/execute-test', [ExecuteTestController::class , 'store'])->middleware('throttle:240,1')->name('execute-test.store');
+    Route::put('/execute-test/{id}', [ExecuteTestController::class, 'update'])->middleware('throttle:240,1')->name('execute-test.update');
     Route::delete('/execute-test/{id}', [ExecuteTestController::class, 'destroy'])->name('execute-test.destroy');
     Route::patch('/execute-test/{id}/restore', [ExecuteTestController::class, 'restore'])->name('execute-test.restore');
 
