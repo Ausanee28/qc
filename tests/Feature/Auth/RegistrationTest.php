@@ -34,7 +34,9 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'Password123!',
         ]);
 
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('login', absolute: false));
+        $response->assertSessionHas('status', 'Account created successfully. Please sign in.');
+        $this->assertGuest();
         $this->assertDatabaseHas('Internal_Users', [
             'email' => $email,
         ]);
