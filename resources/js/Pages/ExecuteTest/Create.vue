@@ -1,14 +1,26 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 
-const props = defineProps({ pendingJobs: Array, methods: Array, inspectors: Array, results: Object, filters: Object });
+const props = defineProps({
+    pendingJobs: Array,
+    pendingJobsVersion: String,
+    methods: Array,
+    inspectors: Array,
+    results: Object,
+    filters: Object,
+});
 const flash = usePage().props.flash || {};
 const currentUserRole = usePage().props.auth?.user?.role ?? '';
 const canDelete = currentUserRole === 'admin';
 const submitted = ref(false);
 const isEditing = ref(false);
+const syncingPendingJobs = ref(false);
+const checkingPendingJobsVersion = ref(false);
+const pendingJobsSyncIntervalMs = 1000;
+const currentPendingJobsVersion = ref(props.pendingJobsVersion ?? '');
+let pendingJobsVersionTimer = null;
 
 const form = useForm({
     detail_id: null,
@@ -153,6 +165,72 @@ const copyStartToEnd = () => {
     form.end_date = form.start_date || '';
     form.end_time = form.start_time || '';
 };
+
+const reloadPendingJobs = () => {
+    if (syncingPendingJobs.value || form.processing) {
+        return;
+    }
+
+    router.reload({
+        only: ['pendingJobs', 'pendingJobsVersion'],
+        preserveState: true,
+        preserveScroll: true,
+        onStart: () => {
+            syncingPendingJobs.value = true;
+        },
+        onFinish: () => {
+            syncingPendingJobs.value = false;
+            currentPendingJobsVersion.value = props.pendingJobsVersion ?? currentPendingJobsVersion.value;
+        },
+    });
+};
+
+const checkPendingJobsVersion = async () => {
+    if (checkingPendingJobsVersion.value || syncingPendingJobs.value || form.processing) {
+        return;
+    }
+
+    checkingPendingJobsVersion.value = true;
+
+    try {
+        const { data } = await window.axios.get(route('execute-test.pending-jobs-version'));
+        const latestVersion = String(data?.version ?? '');
+
+        if (latestVersion !== '' && latestVersion !== currentPendingJobsVersion.value) {
+            currentPendingJobsVersion.value = latestVersion;
+            reloadPendingJobs();
+        }
+    } catch (error) {
+        // Ignore transient polling errors and retry on next tick.
+    } finally {
+        checkingPendingJobsVersion.value = false;
+    }
+};
+
+const handlePageFocus = () => {
+    checkPendingJobsVersion();
+};
+
+const handleVisibilityChange = () => {
+    if (!document.hidden) {
+        checkPendingJobsVersion();
+    }
+};
+
+onMounted(() => {
+    pendingJobsVersionTimer = window.setInterval(checkPendingJobsVersion, pendingJobsSyncIntervalMs);
+    window.addEventListener('focus', handlePageFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+});
+
+onBeforeUnmount(() => {
+    if (pendingJobsVersionTimer !== null) {
+        window.clearInterval(pendingJobsVersionTimer);
+    }
+
+    window.removeEventListener('focus', handlePageFocus);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+});
 </script>
 
 <template>
@@ -200,7 +278,9 @@ const copyStartToEnd = () => {
                 <div class="form-grow pt-6">
                     <div class="form-grid" style="margin-bottom:24px">
                         <div>
-                            <label class="form-lbl">Open Job *</label>
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+                                <label class="form-lbl" style="margin-bottom:0">Open Job *</label>
+                            </div>
                             <select v-model="form.transaction_id" required class="form-inp" style="padding:10px 12px">
                                 <option value="" disabled>Select job...</option>
                                 <option v-for="j in pendingJobs" :key="j.transaction_id" :value="j.transaction_id">

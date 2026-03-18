@@ -6,6 +6,7 @@ use App\Models\TransactionHeader;
 use App\Models\TransactionDetail;
 use App\Models\TestMethod;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -38,52 +39,49 @@ class ExecuteTestController extends Controller
             $filters['record_state'] = 'active';
         }
 
-        $pendingJobs = TransactionHeader::whereNull('return_date')
-            ->orderByDesc('receive_date')
-            ->get()
-            ->map(fn ($j) => [
-                'transaction_id' => $j->transaction_id,
-                'dmc' => $j->dmc,
-                'line' => $j->line,
-                'detail' => $j->detail,
-            ]);
-
-        $resultsQuery = TransactionDetail::query()
-            ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
-            ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())
-            ->with([
-            'transactionHeader:transaction_id,dmc,line,detail',
-            'testMethod:method_id,method_name',
-            'inspector:user_id,name',
-        ])
-            ->when($filters['search'] !== '', function ($query) use ($filters) {
-                $search = $filters['search'];
-
-                $query->where(function ($subQuery) use ($search) {
-                    $subQuery->where('detail_id', 'like', "%{$search}%")
-                        ->orWhere('transaction_id', 'like', "%{$search}%")
-                        ->orWhere('remark', 'like', "%{$search}%")
-                        ->orWhereHas('testMethod', fn ($q) => $q->where('method_name', 'like', "%{$search}%"))
-                        ->orWhereHas('inspector', fn ($q) => $q->where('name', 'like', "%{$search}%"))
-                        ->orWhereHas('transactionHeader', function ($q) use ($search) {
-                            $q->where('detail', 'like', "%{$search}%")
-                                ->orWhere('dmc', 'like', "%{$search}%")
-                                ->orWhere('line', 'like', "%{$search}%");
-                        });
-                });
-            })
-            ->when(
-                $filters['judgement'] !== 'all',
-                fn ($query) => $query->where('judgement', $filters['judgement'])
-            )
-            ->when($filters['date_from'] !== '', fn ($query) => $query->whereDate('start_time', '>=', $filters['date_from']))
-            ->when($filters['date_to'] !== '', fn ($query) => $query->whereDate('start_time', '<=', $filters['date_to']));
-
         return Inertia::render('ExecuteTest/Create', [
-            'pendingJobs' => $pendingJobs,
-            'methods' => TestMethod::orderBy('method_name')->get(),
-            'inspectors' => User::orderBy('name')->get(['user_id', 'name']),
-            'results' => $resultsQuery
+            'pendingJobs' => fn () => TransactionHeader::whereNull('return_date')
+                ->orderByDesc('receive_date')
+                ->get()
+                ->map(fn ($job) => [
+                    'transaction_id' => $job->transaction_id,
+                    'dmc' => $job->dmc,
+                    'line' => $job->line,
+                    'detail' => $job->detail,
+                ]),
+            'pendingJobsVersion' => fn () => $this->pendingJobsVersionToken(),
+            'methods' => fn () => TestMethod::orderBy('method_name')->get(),
+            'inspectors' => fn () => User::orderBy('name')->get(['user_id', 'name']),
+            'results' => fn () => TransactionDetail::query()
+                ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
+                ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())
+                ->with([
+                    'transactionHeader:transaction_id,dmc,line,detail',
+                    'testMethod:method_id,method_name',
+                    'inspector:user_id,name',
+                ])
+                ->when($filters['search'] !== '', function ($query) use ($filters) {
+                    $search = $filters['search'];
+
+                    $query->where(function ($subQuery) use ($search) {
+                        $subQuery->where('detail_id', 'like', "%{$search}%")
+                            ->orWhere('transaction_id', 'like', "%{$search}%")
+                            ->orWhere('remark', 'like', "%{$search}%")
+                            ->orWhereHas('testMethod', fn ($q) => $q->where('method_name', 'like', "%{$search}%"))
+                            ->orWhereHas('inspector', fn ($q) => $q->where('name', 'like', "%{$search}%"))
+                            ->orWhereHas('transactionHeader', function ($q) use ($search) {
+                                $q->where('detail', 'like', "%{$search}%")
+                                    ->orWhere('dmc', 'like', "%{$search}%")
+                                    ->orWhere('line', 'like', "%{$search}%");
+                            });
+                    });
+                })
+                ->when(
+                    $filters['judgement'] !== 'all',
+                    fn ($query) => $query->where('judgement', $filters['judgement'])
+                )
+                ->when($filters['date_from'] !== '', fn ($query) => $query->whereDate('start_time', '>=', $filters['date_from']))
+                ->when($filters['date_to'] !== '', fn ($query) => $query->whereDate('start_time', '<=', $filters['date_to']))
                 ->orderByDesc('detail_id')
                 ->paginate($filters['per_page'])
                 ->withQueryString()
@@ -105,6 +103,13 @@ class ExecuteTestController extends Controller
                     'is_deleted' => $supportsDetailSoftDeletes && $detail->trashed(),
                 ]),
             'filters' => $filters,
+        ]);
+    }
+
+    public function pendingJobsVersion(): JsonResponse
+    {
+        return response()->json([
+            'version' => $this->pendingJobsVersionToken(),
         ]);
     }
 
@@ -223,5 +228,37 @@ class ExecuteTestController extends Controller
         $durationSec = $endDt ? strtotime($endDt) - strtotime($startDt) : null;
 
         return [$startDt, $endDt, $durationSec];
+    }
+
+    private function pendingJobsVersionToken(): string
+    {
+        $aggregate = TransactionHeader::query()
+            ->whereNull('return_date')
+            ->selectRaw('
+                COUNT(*) as total,
+                COALESCE(MAX(transaction_id), 0) as max_id,
+                COALESCE(
+                    SUM(
+                        CRC32(
+                            CONCAT_WS(
+                                "|",
+                                transaction_id,
+                                COALESCE(dmc, ""),
+                                COALESCE(line, ""),
+                                COALESCE(detail, ""),
+                                COALESCE(receive_date, "")
+                            )
+                        )
+                    ),
+                    0
+                ) as checksum
+            ')
+            ->first();
+
+        return implode(':', [
+            (string) ($aggregate->total ?? 0),
+            (string) ($aggregate->max_id ?? 0),
+            (string) ($aggregate->checksum ?? 0),
+        ]);
     }
 }

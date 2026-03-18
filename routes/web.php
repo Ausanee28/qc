@@ -28,6 +28,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Execute Test
     Route::get('/execute-test', [ExecuteTestController::class , 'create'])->name('execute-test.create');
+    Route::get('/execute-test/pending-jobs-version', [ExecuteTestController::class, 'pendingJobsVersion'])
+        ->middleware('throttle:120,1')
+        ->name('execute-test.pending-jobs-version');
     Route::post('/execute-test', [ExecuteTestController::class , 'store'])->middleware('throttle:15,1')->name('execute-test.store');
     Route::put('/execute-test/{id}', [ExecuteTestController::class, 'update'])->middleware('throttle:15,1')->name('execute-test.update');
     Route::delete('/execute-test/{id}', [ExecuteTestController::class, 'destroy'])->name('execute-test.destroy');
