@@ -12,7 +12,6 @@ const isEditing = ref(false);
 const filtered = computed(() =>
     props.testMethods.filter(m =>
         m.method_name.toLowerCase().includes(search.value.toLowerCase()) ||
-        (m.tool_name || '').toLowerCase().includes(search.value.toLowerCase()) ||
         (m.equipment?.equipment_name || '').toLowerCase().includes(search.value.toLowerCase())
     )
 );
@@ -20,7 +19,6 @@ const filtered = computed(() =>
 const form = useForm({
     method_id: null,
     method_name: '',
-    tool_name: '',
     equipment_id: ''
 });
 
@@ -36,7 +34,6 @@ const openEditModal = (method) => {
     form.clearErrors();
     form.method_id = method.method_id;
     form.method_name = method.method_name;
-    form.tool_name = method.tool_name || '';
     form.equipment_id = method.equipment_id;
     showModal.value = true;
 };
@@ -95,7 +92,7 @@ const deleteMethod = (id) => {
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     </div>
-                    <input v-model="search" type="text" placeholder="Search method, tool, or equipment..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
+                    <input v-model="search" type="text" placeholder="Search method or equipment..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                 </div>
             </div>
 
@@ -106,21 +103,19 @@ const deleteMethod = (id) => {
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">ID</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Method Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tool Model</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Parent Equipment</th>
                                 <th class="px-6 py-3 text-right pr-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
                             <tr v-if="filtered.length === 0">
-                                <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
+                                <td colspan="4" class="px-6 py-10 text-center text-sm text-gray-500">
                                     {{ search ? 'No results for "' + search + '"' : 'No test methods found.' }}
                                 </td>
                             </tr>
                             <tr v-for="method in filtered" :key="method.method_id" class="hover:bg-gray-50 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">#{{ method.method_id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ method.method_name }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">{{ method.tool_name || '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="inline-flex px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
                                         {{ method.equipment?.equipment_name ?? 'Unknown' }}
@@ -153,11 +148,6 @@ const deleteMethod = (id) => {
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Method Name <span class="text-red-500">*</span></label>
                         <input type="text" v-model="form.method_name" required class="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
                         <div v-if="form.errors.method_name" class="text-xs text-red-600 mt-1.5">{{ form.errors.method_name }}</div>
-                    </div>
-                    <div class="mb-5">
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Tool Name</label>
-                        <input type="text" v-model="form.tool_name" class="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
-                        <div v-if="form.errors.tool_name" class="text-xs text-red-600 mt-1.5">{{ form.errors.tool_name }}</div>
                     </div>
                     <div class="mb-6">
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Link to Equipment <span class="text-red-500">*</span></label>

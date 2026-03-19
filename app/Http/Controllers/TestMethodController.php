@@ -24,7 +24,6 @@ class TestMethodController extends Controller
     {
         $validated = $request->validate([
             'method_name' => 'required|string|max:255',
-            'tool_name' => 'nullable|string|max:255',
             'equipment_id' => 'required|integer|exists:Equipments,equipment_id',
         ]);
 
@@ -39,7 +38,6 @@ class TestMethodController extends Controller
 
         $validated = $request->validate([
             'method_name' => 'required|string|max:255',
-            'tool_name' => 'nullable|string|max:255',
             'equipment_id' => 'required|integer|exists:Equipments,equipment_id',
         ]);
 

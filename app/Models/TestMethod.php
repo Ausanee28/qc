@@ -11,7 +11,7 @@ class TestMethod extends Model
     protected $table = 'Test_Methods';
     protected $primaryKey = 'method_id';
     public $timestamps = false;
-    protected $fillable = ['method_name', 'tool_name', 'equipment_id'];
+    protected $fillable = ['method_name', 'equipment_id'];
 
     public function transactionDetails(): HasMany
     {
