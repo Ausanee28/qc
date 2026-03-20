@@ -33,7 +33,7 @@ class DashboardController extends Controller
 
         $cacheKey = "dashboard.metrics.{$period}." . now()->format('YmdHi');
 
-        $payload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($period, $from, $to) {
+        $basePayload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($period, $from, $to) {
             $counts = $this->metricsService->getCounts($from, $to);
             $todayJudgements = $this->metricsService->getTodayJudgements();
             $pendingCountQuery = DB::table('Transaction_Header')->whereNull('return_date');
@@ -57,18 +57,20 @@ class DashboardController extends Controller
                     'totalTests' => $counts['totalTests'],
                     'testsPerJob' => $this->metricsService->getTestsPerJob($from, $to),
                 ],
-                'weeklyData' => $this->metricsService->getWeeklyTrend(),
-                'dailyData' => $this->metricsService->getDailyTrend(),
-                'monthlyData' => $this->metricsService->getMonthlyTrend(),
-                'equipRank' => $this->metricsService->getEquipmentRanking(5, $from, $to),
-                'failByEquip' => $this->metricsService->getFailuresByEquipment(5, $from, $to),
-                'inspectorEff' => $this->metricsService->getInspectorEfficiency(5, $from, $to),
-                'recentActivities' => $this->metricsService->getRecentActivities(5, $from, $to),
-                'inspectorData' => $this->metricsService->getInspectorData(5, $from, $to),
             ];
         });
 
-        return Inertia::render('Dashboard', $payload);
+        return Inertia::render('Dashboard', [
+            ...$basePayload,
+            'weeklyData' => Inertia::defer(fn () => $this->metricsService->getWeeklyTrend(), 'dashboard-heavy'),
+            'dailyData' => Inertia::defer(fn () => $this->metricsService->getDailyTrend(), 'dashboard-heavy'),
+            'monthlyData' => Inertia::defer(fn () => $this->metricsService->getMonthlyTrend(), 'dashboard-heavy'),
+            'equipRank' => Inertia::defer(fn () => $this->metricsService->getEquipmentRanking(5, $from, $to), 'dashboard-heavy'),
+            'failByEquip' => Inertia::defer(fn () => $this->metricsService->getFailuresByEquipment(5, $from, $to), 'dashboard-heavy'),
+            'inspectorEff' => Inertia::defer(fn () => $this->metricsService->getInspectorEfficiency(5, $from, $to), 'dashboard-heavy'),
+            'recentActivities' => Inertia::defer(fn () => $this->metricsService->getRecentActivities(5, $from, $to), 'dashboard-heavy'),
+            'inspectorData' => Inertia::defer(fn () => $this->metricsService->getInspectorData(5, $from, $to), 'dashboard-heavy'),
+        ]);
     }
 
     private function getDateRange(string $period): array

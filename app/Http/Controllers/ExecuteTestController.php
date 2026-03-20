@@ -7,6 +7,7 @@ use App\Models\TransactionHeader;
 use App\Models\TransactionDetail;
 use App\Models\TestMethod;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -51,8 +52,8 @@ class ExecuteTestController extends Controller
                     'detail' => $job->detail,
                 ]),
             'pendingJobsVersion' => fn () => $this->pendingJobsVersionToken(),
-            'methods' => fn () => TestMethod::orderBy('method_name')->get(),
-            'inspectors' => fn () => User::orderBy('name')->get(['user_id', 'name']),
+            'methods' => fn () => Cache::remember('execute_test.methods', now()->addMinutes(10), fn () => TestMethod::orderBy('method_name')->get()),
+            'inspectors' => fn () => Cache::remember('execute_test.inspectors', now()->addMinutes(10), fn () => User::orderBy('name')->get(['user_id', 'name'])),
             'results' => fn () => TransactionDetail::query()
                 ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
                 ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())

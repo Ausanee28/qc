@@ -9,15 +9,31 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointEleme
 
 const props = defineProps({
     currentPeriod: { type: String, default: 'month' },
-    metrics: Object,
-    weeklyData: Array,
-    dailyData: Array,
-    monthlyData: Array,
-    equipRank: Array,
-    failByEquip: Array,
-    inspectorEff: Array,
-    recentActivities: Array,
-    inspectorData: Array,
+    metrics: {
+        type: Object,
+        default: () => ({
+            todayCount: 0,
+            monthCount: 0,
+            okCount: 0,
+            ngCount: 0,
+            pendingCount: 0,
+            todayOK: 0,
+            todayNG: 0,
+            yieldRate: 0,
+            defectRate: 0,
+            avgTestTime: 0,
+            totalTests: 0,
+            testsPerJob: 0,
+        }),
+    },
+    weeklyData: { type: Array, default: () => [] },
+    dailyData: { type: Array, default: () => [] },
+    monthlyData: { type: Array, default: () => [] },
+    equipRank: { type: Array, default: () => [] },
+    failByEquip: { type: Array, default: () => [] },
+    inspectorEff: { type: Array, default: () => [] },
+    recentActivities: { type: Array, default: () => [] },
+    inspectorData: { type: Array, default: () => [] },
 });
 
 const selectedPeriod = ref(props.currentPeriod);
