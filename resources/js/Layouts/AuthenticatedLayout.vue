@@ -1,44 +1,11 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 
 const showMobileMenu = ref(false);
-const sidebarRef = ref(null);
 const page = usePage();
-
-// Preserve sidebar scroll position across Inertia navigations
-const SCROLL_KEY = 'qc_sidebar_scroll';
-
-const removeBeforeListener = router.on('before', () => {
-    if (sidebarRef.value) {
-        localStorage.setItem(SCROLL_KEY, sidebarRef.value.scrollTop);
-    }
-});
-
-const removeFinishListener = router.on('finish', () => {
-    nextTick(() => {
-        const saved = parseInt(localStorage.getItem(SCROLL_KEY) || '0');
-        if (sidebarRef.value) {
-            sidebarRef.value.scrollTop = saved;
-        }
-    });
-});
-
-onMounted(() => {
-    const saved = parseInt(localStorage.getItem(SCROLL_KEY) || '0');
-    nextTick(() => {
-        if (sidebarRef.value) {
-            sidebarRef.value.scrollTop = saved;
-        }
-    });
-});
-
-onUnmounted(() => {
-    removeBeforeListener();
-    removeFinishListener();
-});
 
 const globalSearch = ref('');
 const handleGlobalSearch = () => {
@@ -100,7 +67,7 @@ const currentDate = computed(() => {
 <template>
     <div class="flex h-screen w-full overflow-hidden bg-gray-50">
         <!-- SIDEBAR -->
-        <aside class="w-[260px] bg-zinc-950 flex flex-col shrink-0 h-screen overflow-y-auto">
+        <aside class="w-[260px] bg-zinc-950 flex flex-col shrink-0 h-screen">
             <div class="p-5 flex items-center gap-3">
                 <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-gray-900 font-bold text-base shadow-sm">Q</div>
                 <div>
@@ -109,7 +76,7 @@ const currentDate = computed(() => {
                 </div>
             </div>
             
-            <div ref="sidebarRef" class="flex-1 overflow-y-auto">
+            <div class="flex-1 overflow-y-auto" scroll-region>
                 <template v-for="(group, gIdx) in groupedNav" :key="gIdx">
                     <div class="px-4" :class="[gIdx === 0 ? 'mt-2 mb-5' : 'mt-6 mb-5']">
                         <div class="px-3 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">{{ group.label }}</div>
@@ -120,7 +87,8 @@ const currentDate = computed(() => {
                                 :href="route(item.route)"
                                 :prefetch="['mount', 'hover']"
                                 :cache-for="300000"
-                                class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-150 decoration-none"
+                                preserve-scroll
+                                class="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-150 decoration-none text-left"
                                 :class="[
                                     route().current(item.route) 
                                     ? 'bg-white text-gray-900 shadow-sm' 
@@ -263,8 +231,9 @@ const currentDate = computed(() => {
                                  :href="route(item.route)"
                                  :prefetch="['mount', 'hover']"
                                  :cache-for="300000"
+                                 preserve-scroll
                                  @click="showMobileMenu = false"
-                                 :class="['flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1', route().current(item.route) ? 'bg-[#EFF6FF] text-[#4F46E5] font-semibold' : 'text-gray-600 hover:bg-gray-50']"
+                                 :class="['flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1 text-left', route().current(item.route) ? 'bg-[#EFF6FF] text-[#4F46E5] font-semibold' : 'text-gray-600 hover:bg-gray-50']"
                              >
                                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
