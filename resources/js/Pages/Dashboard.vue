@@ -1,11 +1,45 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
-import { Bar, Line, Doughnut } from 'vue-chartjs';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, ArcElement } from 'chart.js';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, ArcElement);
+const chartsReady = ref(false);
+const showHeavySections = ref(false);
+let chartBootPromise = null;
+
+const ensureChartRuntime = async () => {
+    if (chartsReady.value) {
+        return;
+    }
+
+    if (!chartBootPromise) {
+        chartBootPromise = import('chart.js').then((chartModule) => {
+            const { Chart, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, ArcElement } = chartModule;
+            Chart.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, ArcElement);
+            chartsReady.value = true;
+        });
+    }
+
+    await chartBootPromise;
+};
+
+const BarChart = defineAsyncComponent(async () => {
+    await ensureChartRuntime();
+    const module = await import('vue-chartjs');
+    return module.Bar;
+});
+
+const LineChart = defineAsyncComponent(async () => {
+    await ensureChartRuntime();
+    const module = await import('vue-chartjs');
+    return module.Line;
+});
+
+const DoughnutChart = defineAsyncComponent(async () => {
+    await ensureChartRuntime();
+    const module = await import('vue-chartjs');
+    return module.Doughnut;
+});
 
 const props = defineProps({
     currentPeriod: { type: String, default: 'month' },
@@ -96,6 +130,28 @@ const scheduleRealtimeReload = () => {
 };
 
 onMounted(() => {
+    const revealHeavySections = () => {
+        showHeavySections.value = true;
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => {
+            revealHeavySections();
+        }, { timeout: 700 });
+    } else {
+        window.setTimeout(revealHeavySections, 180);
+    }
+
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => {
+            ensureChartRuntime();
+        }, { timeout: 1200 });
+    } else {
+        window.setTimeout(() => {
+            ensureChartRuntime();
+        }, 150);
+    }
+
     if (!window.Echo) {
         return;
     }
@@ -318,7 +374,7 @@ const avatarBgs = ['#E0E7FF', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#DBEAFE'];
             <div class="card">
                 <div class="card-title">Weekly Quality Trend (Pass vs Fail)</div>
                 <div class="card-desc">Daily OK and NG judgements over the last 7 days</div>
-                <div style="height:280px"><Bar :data="weeklyChartData" :options="barOpts" /></div>
+                <div style="height:280px"><BarChart :data="weeklyChartData" :options="barOpts" /></div>
             </div>
             <div class="card">
                 <div class="card-title">{{ periodLabels[selectedPeriod] }} Summary</div>
@@ -353,6 +409,7 @@ const avatarBgs = ['#E0E7FF', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#DBEAFE'];
         </div>
 
         <!-- ═══════════════════════════════════════════════ -->
+        <template v-if="showHeavySections">
         <!-- SECTION 3: Equipment & Inspector Analysis       -->
         <!-- ═══════════════════════════════════════════════ -->
         <div class="section-divider"><span class="text">Equipment & Inspector Analysis</span>
@@ -363,17 +420,17 @@ const avatarBgs = ['#E0E7FF', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#DBEAFE'];
             <div class="card">
                 <div class="card-title">Top Equipment Used</div>
                 <div class="card-desc">Most frequently used equipment — {{ periodLabels[selectedPeriod] }}</div>
-                <div style="height:240px"><Bar :data="equipUsageData" :options="equipBarOpts" /></div>
+                <div style="height:240px"><BarChart :data="equipUsageData" :options="equipBarOpts" /></div>
             </div>
             <div class="card">
                 <div class="card-title">Failure by Equipment</div>
                 <div class="card-desc">Which equipment generates the most NG — {{ periodLabels[selectedPeriod] }}</div>
-                <div style="height:240px;display:flex;justify-content:center"><Doughnut :data="failDoughnutData" :options="doughnutOpts" /></div>
+                <div style="height:240px;display:flex;justify-content:center"><DoughnutChart :data="failDoughnutData" :options="doughnutOpts" /></div>
             </div>
             <div class="card">
                 <div class="card-title">Inspector Efficiency</div>
                 <div class="card-desc">Average test duration per inspector (minutes)</div>
-                <div style="height:240px"><Bar :data="inspectorEffData" :options="equipBarOpts" /></div>
+                <div style="height:240px"><BarChart :data="inspectorEffData" :options="equipBarOpts" /></div>
             </div>
         </div>
 
@@ -445,7 +502,7 @@ const avatarBgs = ['#E0E7FF', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#DBEAFE'];
             <div class="card">
                 <div class="card-title">📅 OK vs NG — Daily Trend</div>
                 <div class="card-desc">Day-by-day inspection results for the current month</div>
-                <div style="height:280px"><Line :data="dailyLineData" :options="dualLineOpts" /></div>
+                <div style="height:280px"><LineChart :data="dailyLineData" :options="dualLineOpts" /></div>
             </div>
             <div class="card">
                 <div class="card-title">📋 Today Summary</div>
@@ -496,7 +553,7 @@ const avatarBgs = ['#E0E7FF', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#DBEAFE'];
             <div class="card">
                 <div class="card-title">📊 OK vs NG — Monthly Trend</div>
                 <div class="card-desc">6-month comparison of passed (green) and failed (red) inspections</div>
-                <div style="height:300px"><Line :data="dualLineData" :options="dualLineOpts" /></div>
+                <div style="height:300px"><LineChart :data="dualLineData" :options="dualLineOpts" /></div>
             </div>
             <div class="card">
                 <div class="card-title">📋 Monthly Summary</div>
@@ -540,6 +597,10 @@ const avatarBgs = ['#E0E7FF', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#DBEAFE'];
                     <div><b style="color:#4F46E5">🎯</b> Avg yield <b>{{ avgYield }}%</b> · Target <b>≥ 95%</b></div>
                 </div>
             </div>
+        </div>
+        </template>
+        <div v-else class="mt-8 rounded-xl border border-gray-200 bg-white p-5 text-sm text-gray-500">
+            Loading detailed dashboard sections...
         </div>
     </AuthenticatedLayout>
 </template>

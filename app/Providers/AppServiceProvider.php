@@ -25,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
             return Password::min(8);
         });
 
-        Vite::prefetch(concurrency: 3);
+        if ((bool) env('VITE_PREFETCH', false)) {
+            Vite::prefetch(concurrency: 2);
+        }
     }
 }

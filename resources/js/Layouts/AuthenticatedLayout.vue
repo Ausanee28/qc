@@ -1,8 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
-import Dropdown from '@/Components/Dropdown.vue';
-import DropdownLink from '@/Components/DropdownLink.vue';
 
 const showMobileMenu = ref(false);
 const page = usePage();
@@ -85,8 +83,8 @@ const currentDate = computed(() => {
                                 v-for="item in group.items"
                                 :key="item.route"
                                 :href="route(item.route)"
-                                :prefetch="['mount', 'hover']"
-                                :cache-for="300000"
+                                prefetch="hover"
+                                :cache-for="90000"
                                 preserve-scroll
                                 class="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-150 decoration-none text-left"
                                 :class="[
@@ -229,8 +227,8 @@ const currentDate = computed(() => {
                                  v-for="item in group.items"
                                  :key="item.route"
                                  :href="route(item.route)"
-                                 :prefetch="['mount', 'hover']"
-                                 :cache-for="300000"
+                                 prefetch="hover"
+                                 :cache-for="90000"
                                  preserve-scroll
                                  @click="showMobileMenu = false"
                                  :class="['flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1 text-left', route().current(item.route) ? 'bg-[#EFF6FF] text-[#4F46E5] font-semibold' : 'text-gray-600 hover:bg-gray-50']"

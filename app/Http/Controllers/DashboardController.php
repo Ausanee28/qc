@@ -31,7 +31,7 @@ class DashboardController extends Controller
         // Compute date range based on period
         [$from, $to] = $this->getDateRange($period);
 
-        $cacheKey = "dashboard.metrics.{$period}." . now()->format('YmdHi');
+        $cacheKey = "dashboard.metrics.{$period}";
 
         $basePayload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($period, $from, $to) {
             $counts = $this->metricsService->getCounts($from, $to);
