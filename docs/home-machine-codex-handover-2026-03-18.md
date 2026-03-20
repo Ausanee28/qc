@@ -1,122 +1,97 @@
-﻿# Home Machine Handover (Updated: 2026-03-18)
+﻿# Home Machine Handover (Updated: 2026-03-20)
 
-เอกสารนี้สรุปสิ่งที่ต้องทำบนเครื่องที่บ้านหลัง `git pull` เพื่อให้ระบบทำงานเหมือนเครื่องที่ทำงาน โดยใช้ DB ของเครื่องบ้านเอง
+เอกสารนี้คือ checklist ล่าสุดสำหรับเครื่องที่บ้าน เพื่อให้ตามเครื่องที่ทำงานได้ทันทั้งฟีเจอร์และ performance
 
-## สิ่งใหม่ที่เพิ่มในรอบนี้
+## สิ่งที่เพิ่มจากรอบก่อน
 
-- Dashboard real-time ผ่าน WebSocket (`Laravel Reverb` + `Laravel Echo`)
-- Broadcast event เมื่อข้อมูลเปลี่ยนจากหน้า `Receive Job` / `Execute Test`
-- ปรับ `composer run dev` ให้รองรับ Windows (ตัด `pail` ที่ใช้ `pcntl` ออก)
-- ปรับ throttle ให้เหมาะกับงานหน้างาน ลดโอกาสเจอ `429 Too Many Requests`
+- Dashboard ปรับให้เบาขึ้น (lazy-load chart/realtime และ cache ฝั่ง server)
+- ตัด external font chain เพื่อลด network dependency ตอนหน้าแรกโหลด
+- Execute Test เปลี่ยนเป็น adaptive polling (active/hidden tab)
+- เพิ่มสคริปต์ benchmark: `npm run bench:prodlike`
+- มีโฟลเดอร์ `tools/redis` ใน repo สำหรับใช้ Redis บน Windows (optional)
 
-## Checklist หลัง git pull (เครื่องบ้าน)
+## ขั้นตอนบนเครื่องบ้านหลัง pull
 
-1. ดึงโค้ดล่าสุด
+1. เข้าโฟลเดอร์โปรเจกต์และดึงโค้ดล่าสุดจาก branch ทำงาน
 
 ```powershell
-git pull
+cd C:\qc
+git checkout dev-work
+git pull --ff-only origin dev-work
 ```
 
-2. อัปเดต dependency (รอบนี้จำเป็น)
+2. ติดตั้ง dependency ให้ตรง lock ล่าสุด
 
 ```powershell
 composer install
 npm install
 ```
 
-3. ตั้ง `.env` ให้เป็น DB เครื่องบ้าน
+3. ตั้งค่า `.env` ให้เป็นเครื่องบ้าน
 
 ```powershell
 php switch_db.php home
 php switch_db.php status
 ```
 
-ต้องเห็นว่า profile เป็น `home` และ host/database เป็นของเครื่องบ้าน
+ต้องเห็นว่า `Current Profile` เป็น `home` และ DB host/database เป็นค่าของเครื่องบ้าน
 
-4. ตรวจค่า Reverb ใน `.env`
+4. ตรวจค่าสำคัญใน `.env`
 
 ```env
+APP_URL=http://localhost
+DB_PROFILE=home
 BROADCAST_CONNECTION=reverb
-REVERB_APP_ID=xxxxxx
-REVERB_APP_KEY=xxxxxx
-REVERB_APP_SECRET=xxxxxx
+VITE_PREFETCH=false
+
 REVERB_HOST=127.0.0.1
 REVERB_PORT=8080
 REVERB_SCHEME=http
-
-VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
-VITE_REVERB_HOST="${REVERB_HOST}"
-VITE_REVERB_PORT="${REVERB_PORT}"
-VITE_REVERB_SCHEME="${REVERB_SCHEME}"
 ```
 
-หมายเหตุ: ถ้า pull จาก branch ล่าสุดที่มีไฟล์ `.env.example` ใหม่แล้ว ให้ copy ค่าจากไฟล์นั้นได้
-
-5. เคลียร์แคชแอป
+5. เคลียร์แคชและอัปเดต schema
 
 ```powershell
 php artisan optimize:clear
-```
-
-6. รัน migration (ถ้ามีใหม่)
-
-```powershell
 php artisan migrate
 ```
 
-7. รันระบบ dev แบบครบ (server + queue + vite + reverb)
+6. Build asset หนึ่งรอบเพื่อซิงก์ของใหม่
+
+```powershell
+npm run build
+```
+
+7. รันระบบ dev
 
 ```powershell
 composer run dev
 ```
 
-## วิธีเช็กว่า Real-time ทำงาน
+## Optional: ใช้ Redis บนเครื่องบ้าน
 
-1. เปิด Dashboard 2 แท็บ (หรือ 2 เครื่อง)
-2. ไปที่ `Receive Job` หรือ `Execute Test` แล้วบันทึกข้อมูลใหม่
-3. Dashboard อีกแท็บต้องอัปเดตเองทันทีโดยไม่ต้องรีเฟรช
-
-## ถ้าเจอปัญหา
-
-### 1) เจอ 429 ตอน submit
-
-- ตอนนี้ route ถูกปรับ throttle สูงขึ้นแล้ว
-- ถ้ายังเจอ ให้รัน:
+ถ้าต้องการเปิด Redis ในเครื่องบ้าน สามารถใช้ไฟล์ใน `tools/redis/bin` ได้ทันที
 
 ```powershell
-php artisan optimize:clear
+C:\qc\tools\redis\bin\redis-server.exe C:\qc\tools\redis\bin\redis.windows.conf
 ```
 
-แล้วลองใหม่
+จากนั้นค่อยเปลี่ยน `CACHE_STORE` หรือ `QUEUE_CONNECTION` เป็น redis ตามที่ต้องการ
 
-### 2) `composer run dev` ล้มเพราะ pail/pcntl
+## Smoke Test ให้มั่นใจว่าเท่าเครื่องที่ทำงาน
 
-- สคริปต์ใหม่ตัด `pail` ออกแล้ว
-- ถ้ายังเป็นสคริปต์เก่า ให้ pull ล่าสุดอีกครั้ง
-
-### 3) Dashboard ไม่ real-time
-
-เช็กตามลำดับ:
-
-- `composer run dev` ต้องมี process `reverb` ขึ้น
-- `.env` ต้องเป็น `BROADCAST_CONNECTION=reverb`
-- เปิด browser ใหม่หลังแก้ `.env`
-- ทดสอบด้วยการบันทึกข้อมูลใหม่อีกครั้ง
-
-## คำสั่ง fallback แยกรันทีละตัว (กรณี debug)
+1. เข้า Dashboard, Receive Job, Execute Test ได้ปกติ
+2. ทดสอบบันทึกข้อมูลจาก Receive/Execute แล้ว Dashboard อีกแท็บอัปเดตเอง
+3. เช็กว่าการเปลี่ยนเมนูลื่นและ sidebar ไม่เด้งกลับบนตำแหน่ง scroll เดิม
+4. รัน benchmark คร่าว ๆ
 
 ```powershell
-php artisan serve
-php artisan queue:listen --tries=1 --timeout=0
-npm run dev
-php artisan reverb:start --host=127.0.0.1 --port=8080
+php artisan qc:profile --runs=5
+npm run bench:prodlike
 ```
 
-## ก่อน push จากเครื่องบ้าน
+## Troubleshooting สั้น ๆ
 
-```powershell
-php artisan test
-npm run build
-```
-
-ถ้าผ่านทั้งคู่ค่อย push
+- ถ้าเจอ 429 หรือค่าแปลกหลัง pull: `php artisan optimize:clear`
+- ถ้า Dashboard ไม่ realtime: ตรวจว่า `reverb` process รันอยู่ และค่า `BROADCAST_CONNECTION=reverb` ถูกต้อง
+- ถ้าหน้าเว็บยังใช้ไฟล์เก่า: hard refresh (`Ctrl+F5`) หรือปิดเปิด browser ใหม่
