@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { getEcho } from '@/lib/realtime';
 
 const chartsReady = ref(false);
 const showHeavySections = ref(false);
@@ -73,6 +74,7 @@ const props = defineProps({
 const selectedPeriod = ref(props.currentPeriod);
 const isLoading = ref(false);
 let realtimeRefreshTimer = null;
+let dashboardEcho = null;
 
 const dashboardPayloadKeys = [
     'currentPeriod',
@@ -98,6 +100,8 @@ const periodLabels = {
 watch(selectedPeriod, (val) => {
     isLoading.value = true;
     router.get(route('dashboard'), { period: val }, {
+        only: dashboardPayloadKeys,
+        replace: true,
         preserveState: true,
         preserveScroll: true,
         onFinish: () => { isLoading.value = false; },
@@ -129,7 +133,7 @@ const scheduleRealtimeReload = () => {
     }, 250);
 };
 
-onMounted(() => {
+onMounted(async () => {
     const revealHeavySections = () => {
         showHeavySections.value = true;
     };
@@ -152,11 +156,13 @@ onMounted(() => {
         }, 150);
     }
 
-    if (!window.Echo) {
+    dashboardEcho = await getEcho();
+
+    if (!dashboardEcho) {
         return;
     }
 
-    window.Echo.private('dashboard.global')
+    dashboardEcho.private('dashboard.global')
         .listen('.dashboard.updated', scheduleRealtimeReload);
 });
 
@@ -165,8 +171,9 @@ onBeforeUnmount(() => {
         window.clearTimeout(realtimeRefreshTimer);
     }
 
-    if (window.Echo) {
-        window.Echo.leave('private-dashboard.global');
+    if (dashboardEcho) {
+        dashboardEcho.leave('dashboard.global');
+        dashboardEcho = null;
     }
 });
 

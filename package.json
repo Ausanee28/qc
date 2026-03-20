@@ -4,7 +4,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build --configLoader runner",
-        "dev": "vite --configLoader runner"
+        "dev": "vite --configLoader runner",
+        "bench:prodlike": "powershell -ExecutionPolicy Bypass -File .\\scripts\\benchmark-prodlike.ps1 -Runs 5"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0.0",

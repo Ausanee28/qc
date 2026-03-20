@@ -62,14 +62,14 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard', [
             ...$basePayload,
-            'weeklyData' => Inertia::defer(fn () => $this->metricsService->getWeeklyTrend(), 'dashboard-heavy'),
-            'dailyData' => Inertia::defer(fn () => $this->metricsService->getDailyTrend(), 'dashboard-heavy'),
-            'monthlyData' => Inertia::defer(fn () => $this->metricsService->getMonthlyTrend(), 'dashboard-heavy'),
-            'equipRank' => Inertia::defer(fn () => $this->metricsService->getEquipmentRanking(5, $from, $to), 'dashboard-heavy'),
-            'failByEquip' => Inertia::defer(fn () => $this->metricsService->getFailuresByEquipment(5, $from, $to), 'dashboard-heavy'),
-            'inspectorEff' => Inertia::defer(fn () => $this->metricsService->getInspectorEfficiency(5, $from, $to), 'dashboard-heavy'),
-            'recentActivities' => Inertia::defer(fn () => $this->metricsService->getRecentActivities(5, $from, $to), 'dashboard-heavy'),
-            'inspectorData' => Inertia::defer(fn () => $this->metricsService->getInspectorData(5, $from, $to), 'dashboard-heavy'),
+            'weeklyData' => Inertia::defer(fn () => Cache::remember('dashboard.heavy.weekly', now()->addSeconds(60), fn () => $this->metricsService->getWeeklyTrend()), 'dashboard-heavy'),
+            'dailyData' => Inertia::defer(fn () => Cache::remember('dashboard.heavy.daily', now()->addSeconds(60), fn () => $this->metricsService->getDailyTrend()), 'dashboard-heavy'),
+            'monthlyData' => Inertia::defer(fn () => Cache::remember('dashboard.heavy.monthly', now()->addSeconds(60), fn () => $this->metricsService->getMonthlyTrend()), 'dashboard-heavy'),
+            'equipRank' => Inertia::defer(fn () => Cache::remember("dashboard.heavy.{$period}.equip-rank", now()->addSeconds(60), fn () => $this->metricsService->getEquipmentRanking(5, $from, $to)), 'dashboard-heavy'),
+            'failByEquip' => Inertia::defer(fn () => Cache::remember("dashboard.heavy.{$period}.fail-by-equip", now()->addSeconds(60), fn () => $this->metricsService->getFailuresByEquipment(5, $from, $to)), 'dashboard-heavy'),
+            'inspectorEff' => Inertia::defer(fn () => Cache::remember("dashboard.heavy.{$period}.inspector-eff", now()->addSeconds(60), fn () => $this->metricsService->getInspectorEfficiency(5, $from, $to)), 'dashboard-heavy'),
+            'recentActivities' => Inertia::defer(fn () => Cache::remember("dashboard.heavy.{$period}.recent-activities", now()->addSeconds(30), fn () => $this->metricsService->getRecentActivities(5, $from, $to)), 'dashboard-heavy'),
+            'inspectorData' => Inertia::defer(fn () => Cache::remember("dashboard.heavy.{$period}.inspector-data", now()->addSeconds(60), fn () => $this->metricsService->getInspectorData(5, $from, $to)), 'dashboard-heavy'),
         ]);
     }
 
