@@ -18,7 +18,8 @@ const submitted = ref(false);
 const isEditing = ref(false);
 const syncingPendingJobs = ref(false);
 const checkingPendingJobsVersion = ref(false);
-const pendingJobsSyncIntervalMs = 1000;
+const pendingJobsSyncIntervalActiveMs = 4000;
+const pendingJobsSyncIntervalHiddenMs = 15000;
 const currentPendingJobsVersion = ref(props.pendingJobsVersion ?? '');
 let pendingJobsVersionTimer = null;
 
@@ -185,8 +186,12 @@ const reloadPendingJobs = () => {
     });
 };
 
-const checkPendingJobsVersion = async () => {
+const checkPendingJobsVersion = async ({ force = false } = {}) => {
     if (checkingPendingJobsVersion.value || syncingPendingJobs.value || form.processing) {
+        return;
+    }
+
+    if (!force && document.hidden) {
         return;
     }
 
@@ -208,19 +213,32 @@ const checkPendingJobsVersion = async () => {
 };
 
 const handlePageFocus = () => {
-    checkPendingJobsVersion();
+    checkPendingJobsVersion({ force: true });
 };
 
 const handleVisibilityChange = () => {
     if (!document.hidden) {
-        checkPendingJobsVersion();
+        startPendingJobsPolling(pendingJobsSyncIntervalActiveMs);
+        checkPendingJobsVersion({ force: true });
+        return;
     }
+
+    startPendingJobsPolling(pendingJobsSyncIntervalHiddenMs);
+};
+
+const startPendingJobsPolling = (intervalMs) => {
+    if (pendingJobsVersionTimer !== null) {
+        window.clearInterval(pendingJobsVersionTimer);
+    }
+
+    pendingJobsVersionTimer = window.setInterval(checkPendingJobsVersion, intervalMs);
 };
 
 onMounted(() => {
-    pendingJobsVersionTimer = window.setInterval(checkPendingJobsVersion, pendingJobsSyncIntervalMs);
+    startPendingJobsPolling(document.hidden ? pendingJobsSyncIntervalHiddenMs : pendingJobsSyncIntervalActiveMs);
     window.addEventListener('focus', handlePageFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    checkPendingJobsVersion({ force: true });
 });
 
 onBeforeUnmount(() => {
