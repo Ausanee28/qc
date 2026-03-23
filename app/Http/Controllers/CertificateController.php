@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\SchemaCapabilities;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -14,6 +15,7 @@ class CertificateController extends Controller
     {
         $dateFrom = $request->get('date_from', now()->startOfMonth()->format('Y-m-d'));
         $dateTo = $request->get('date_to', now()->format('Y-m-d'));
+        [$fromDateTime, $toDateTime] = $this->resolveDateRange($dateFrom, $dateTo);
         $hasHeaderDeletedAt = SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at');
         $hasDetailDeletedAt = SchemaCapabilities::hasColumn('Transaction_Detail', 'deleted_at');
 
@@ -32,7 +34,7 @@ class CertificateController extends Controller
         }
 
         $jobs = $jobsQuery
-            ->whereBetween(DB::raw('DATE(TH.receive_date)'), [$dateFrom, $dateTo])
+            ->whereBetween('TH.receive_date', [$fromDateTime, $toDateTime])
             ->select(
             'TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date', 'TH.return_date',
             'EU.external_name as sender', 'TH.detail',
@@ -90,5 +92,13 @@ class CertificateController extends Controller
         $filename = 'QC_Report_' . ($job->dmc ?: $job->transaction_id) . '.pdf';
 
         return $pdf->download($filename);
+    }
+
+    private function resolveDateRange(string $dateFrom, string $dateTo): array
+    {
+        return [
+            Carbon::parse($dateFrom)->startOfDay(),
+            Carbon::parse($dateTo)->endOfDay(),
+        ];
     }
 }

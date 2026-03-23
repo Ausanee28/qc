@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { getEcho } from '@/lib/realtime';
 
 const props = defineProps({
     pendingJobs: Array,
@@ -18,10 +19,12 @@ const submitted = ref(false);
 const isEditing = ref(false);
 const syncingPendingJobs = ref(false);
 const checkingPendingJobsVersion = ref(false);
-const pendingJobsSyncIntervalActiveMs = 4000;
-const pendingJobsSyncIntervalHiddenMs = 15000;
+const pendingJobsSyncIntervalActiveMs = 30000;
+const pendingJobsSyncIntervalHiddenMs = 90000;
 const currentPendingJobsVersion = ref(props.pendingJobsVersion ?? '');
 let pendingJobsVersionTimer = null;
+let pendingJobsEcho = null;
+let usePollingFallback = true;
 
 const form = useForm({
     detail_id: null,
@@ -213,10 +216,18 @@ const checkPendingJobsVersion = async ({ force = false } = {}) => {
 };
 
 const handlePageFocus = () => {
+    if (!usePollingFallback) {
+        return;
+    }
+
     checkPendingJobsVersion({ force: true });
 };
 
 const handleVisibilityChange = () => {
+    if (!usePollingFallback) {
+        return;
+    }
+
     if (!document.hidden) {
         startPendingJobsPolling(pendingJobsSyncIntervalActiveMs);
         checkPendingJobsVersion({ force: true });
@@ -235,10 +246,21 @@ const startPendingJobsPolling = (intervalMs) => {
 };
 
 onMounted(() => {
-    startPendingJobsPolling(document.hidden ? pendingJobsSyncIntervalHiddenMs : pendingJobsSyncIntervalActiveMs);
     window.addEventListener('focus', handlePageFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    checkPendingJobsVersion({ force: true });
+
+    void (async () => {
+        pendingJobsEcho = await getEcho();
+
+        if (pendingJobsEcho) {
+            usePollingFallback = false;
+            pendingJobsEcho.private('dashboard.global').listen('.dashboard.updated', reloadPendingJobs);
+            return;
+        }
+
+        startPendingJobsPolling(document.hidden ? pendingJobsSyncIntervalHiddenMs : pendingJobsSyncIntervalActiveMs);
+        checkPendingJobsVersion({ force: true });
+    })();
 });
 
 onBeforeUnmount(() => {
@@ -248,6 +270,11 @@ onBeforeUnmount(() => {
 
     window.removeEventListener('focus', handlePageFocus);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+    if (pendingJobsEcho) {
+        pendingJobsEcho.leave('dashboard.global');
+        pendingJobsEcho = null;
+    }
 });
 </script>
 

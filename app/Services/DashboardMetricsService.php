@@ -109,32 +109,36 @@ class DashboardMetricsService
     public function getTodayCount(): int
     {
         return $this->headerQuery()
-            ->whereDate('receive_date', today())
+            ->whereBetween('receive_date', [today()->startOfDay(), today()->endOfDay()])
             ->count();
     }
 
     public function getMonthCount(): int
     {
         return $this->headerQuery()
-            ->whereMonth('receive_date', now()->month)
-            ->whereYear('receive_date', now()->year)
+            ->whereBetween('receive_date', [now()->startOfMonth(), now()->endOfDay()])
             ->count();
     }
 
     public function getCounts(Carbon $from, Carbon $to): array
     {
-        $headerIds = $this->headerQuery()
-            ->whereBetween('receive_date', [$from, $to])
-            ->pluck('transaction_id');
+        $query = DB::table('Transaction_Detail')
+            ->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+            ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
+        $this->applyDetailNotDeleted($query, 'Transaction_Detail.deleted_at');
+        $this->applyHeaderNotDeleted($query, 'Transaction_Header.deleted_at');
 
-        $okCount = $this->detailQuery()
-            ->whereIn('transaction_id', $headerIds)
-            ->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
-        $ngCount = $this->detailQuery()
-            ->whereIn('transaction_id', $headerIds)
-            ->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
+        $row = $query->selectRaw(
+                "SUM(CASE WHEN Transaction_Detail.judgement = ? THEN 1 ELSE 0 END) as ok_count,
+                 SUM(CASE WHEN Transaction_Detail.judgement = ? THEN 1 ELSE 0 END) as ng_count,
+                 COUNT(*) as total_tests",
+                [TransactionDetail::JUDGEMENT_OK, TransactionDetail::JUDGEMENT_NG]
+            )
+            ->first();
 
-        $totalTests = $okCount + $ngCount;
+        $okCount = (int) ($row->ok_count ?? 0);
+        $ngCount = (int) ($row->ng_count ?? 0);
+        $totalTests = (int) ($row->total_tests ?? 0);
         $yieldRate = $totalTests > 0 ? round($okCount / $totalTests * 100, 1) : 0;
         $defectRate = $totalTests > 0 ? round($ngCount / $totalTests * 100, 1) : 0;
 
@@ -143,32 +147,36 @@ class DashboardMetricsService
 
     public function getTodayJudgements(): array
     {
-        $todayOK = $this->detailQuery()
-            ->whereHas('transactionHeader', function ($q) {
-                $q->withoutGlobalScopes()->whereDate('receive_date', today());
-                $this->applyHeaderNotDeleted($q);
-            })
-            ->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
-        $todayNG = $this->detailQuery()
-            ->whereHas('transactionHeader', function ($q) {
-                $q->withoutGlobalScopes()->whereDate('receive_date', today());
-                $this->applyHeaderNotDeleted($q);
-            })
-            ->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
+        $query = DB::table('Transaction_Detail')
+            ->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+            ->whereBetween('Transaction_Header.receive_date', [today()->startOfDay(), today()->endOfDay()]);
+        $this->applyDetailNotDeleted($query, 'Transaction_Detail.deleted_at');
+        $this->applyHeaderNotDeleted($query, 'Transaction_Header.deleted_at');
+
+        $row = $query->selectRaw(
+                "SUM(CASE WHEN Transaction_Detail.judgement = ? THEN 1 ELSE 0 END) as today_ok,
+                 SUM(CASE WHEN Transaction_Detail.judgement = ? THEN 1 ELSE 0 END) as today_ng",
+                [TransactionDetail::JUDGEMENT_OK, TransactionDetail::JUDGEMENT_NG]
+            )
+            ->first();
+
+        $todayOK = (int) ($row->today_ok ?? 0);
+        $todayNG = (int) ($row->today_ng ?? 0);
 
         return compact('todayOK', 'todayNG');
     }
 
     public function getAverageTestTimeMinutes(Carbon $from, Carbon $to): float
     {
-        $avgTime = $this->detailQuery()
-            ->whereHas('transactionHeader', function ($q) use ($from, $to) {
-                $q->withoutGlobalScopes()->whereBetween('receive_date', [$from, $to]);
-                $this->applyHeaderNotDeleted($q);
-            })
+        $query = DB::table('Transaction_Detail')
+            ->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+            ->whereBetween('Transaction_Header.receive_date', [$from, $to])
             ->whereNotNull('end_time')
-            ->whereNotNull('start_time')
-            ->selectRaw('AVG(duration_sec) / 60 as avg_min')
+            ->whereNotNull('start_time');
+        $this->applyDetailNotDeleted($query, 'Transaction_Detail.deleted_at');
+        $this->applyHeaderNotDeleted($query, 'Transaction_Header.deleted_at');
+
+        $avgTime = $query->selectRaw('AVG(Transaction_Detail.duration_sec) / 60 as avg_min')
             ->value('avg_min');
 
         return $avgTime ? round($avgTime) : 0;
@@ -385,8 +393,12 @@ class DashboardMetricsService
     {
         if ($from && $to) {
             $totalJobs = $this->headerQuery()->whereBetween('receive_date', [$from, $to])->count();
-            $headerIds = $this->headerQuery()->whereBetween('receive_date', [$from, $to])->pluck('transaction_id');
-            $totalTests = $this->detailQuery()->whereIn('transaction_id', $headerIds)->count();
+            $query = DB::table('Transaction_Detail')
+                ->join('Transaction_Header', 'Transaction_Detail.transaction_id', '=', 'Transaction_Header.transaction_id')
+                ->whereBetween('Transaction_Header.receive_date', [$from, $to]);
+            $this->applyDetailNotDeleted($query, 'Transaction_Detail.deleted_at');
+            $this->applyHeaderNotDeleted($query, 'Transaction_Header.deleted_at');
+            $totalTests = $query->count();
         } else {
             $totalJobs = $this->headerQuery()->count();
             $totalTests = $this->detailQuery()->count();

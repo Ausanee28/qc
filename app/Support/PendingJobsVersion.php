@@ -6,18 +6,20 @@ use Illuminate\Support\Facades\Cache;
 
 class PendingJobsVersion
 {
-    private const CACHE_KEY = 'execute_test.pending_jobs.version';
+    private const CACHE_KEY = 'execute_test.pending_jobs_version';
 
-    public static function current(): int
+    public static function current(): string
     {
-        return (int) Cache::rememberForever(self::CACHE_KEY, fn () => 1);
+        return (string) Cache::rememberForever(self::CACHE_KEY, function () {
+            return now()->format('Uv');
+        });
     }
 
-    public static function bump(): int
+    public static function bump(): string
     {
-        $nextVersion = self::current() + 1;
-        Cache::forever(self::CACHE_KEY, $nextVersion);
+        $token = now()->format('Uv');
+        Cache::forever(self::CACHE_KEY, $token);
 
-        return $nextVersion;
+        return $token;
     }
 }

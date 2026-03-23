@@ -7,6 +7,7 @@ use App\Models\TransactionHeader;
 use App\Models\TransactionDetail;
 use App\Models\TestMethod;
 use App\Models\User;
+use App\Support\PendingJobsVersion;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,7 +45,7 @@ class ExecuteTestController extends Controller
         return Inertia::render('ExecuteTest/Create', [
             'pendingJobs' => fn () => TransactionHeader::whereNull('return_date')
                 ->orderByDesc('receive_date')
-                ->get()
+                ->get(['transaction_id', 'dmc', 'line', 'detail'])
                 ->map(fn ($job) => [
                     'transaction_id' => $job->transaction_id,
                     'dmc' => $job->dmc,
@@ -132,6 +133,7 @@ class ExecuteTestController extends Controller
                 'remark' => $validated['remark'] ?? null,
             ]);
         });
+        $this->forgetPerformanceCaches();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('execute-test.create')
@@ -154,6 +156,7 @@ class ExecuteTestController extends Controller
             'judgement' => $validated['judgement'],
             'remark' => $validated['remark'] ?? null,
         ]);
+        $this->forgetPerformanceCaches();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('execute-test.create')
@@ -168,6 +171,7 @@ class ExecuteTestController extends Controller
 
         $detail = TransactionDetail::findOrFail($id);
         $detail->delete();
+        $this->forgetPerformanceCaches();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('execute-test.create')
@@ -187,6 +191,7 @@ class ExecuteTestController extends Controller
 
         $detail = TransactionDetail::onlyTrashed()->findOrFail($id);
         $detail->restore();
+        $this->forgetPerformanceCaches();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('execute-test.create')
@@ -238,33 +243,12 @@ class ExecuteTestController extends Controller
 
     private function pendingJobsVersionToken(): string
     {
-        $aggregate = TransactionHeader::query()
-            ->whereNull('return_date')
-            ->selectRaw('
-                COUNT(*) as total,
-                COALESCE(MAX(transaction_id), 0) as max_id,
-                COALESCE(
-                    SUM(
-                        CRC32(
-                            CONCAT_WS(
-                                "|",
-                                transaction_id,
-                                COALESCE(dmc, ""),
-                                COALESCE(line, ""),
-                                COALESCE(detail, ""),
-                                COALESCE(receive_date, "")
-                            )
-                        )
-                    ),
-                    0
-                ) as checksum
-            ')
-            ->first();
+        return PendingJobsVersion::current();
+    }
 
-        return implode(':', [
-            (string) ($aggregate->total ?? 0),
-            (string) ($aggregate->max_id ?? 0),
-            (string) ($aggregate->checksum ?? 0),
-        ]);
+    private function forgetPerformanceCaches(): void
+    {
+        Cache::forget('performance.inspectors.30d');
+        Cache::forget('performance.details.30d.recent50');
     }
 }

@@ -1,53 +1,91 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
-const props = defineProps({ results: Array, filters: Object });
+const props = defineProps({ results: Object, summary: Object, filters: Object });
 const dateFrom = ref(props.filters.date_from);
 const dateTo = ref(props.filters.date_to);
 const dmcSearch = ref(props.filters.dmc || '');
+const perPage = ref(String(props.filters.per_page ?? 25));
 
 const search = () => router.get(route('report.index'), {
     date_from: dateFrom.value,
     date_to: dateTo.value,
-    dmc: dmcSearch.value
-}, { preserveState: true });
+    dmc: dmcSearch.value,
+    per_page: perPage.value,
+}, {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+});
 
-const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+const visitPage = (url) => {
+    if (!url) return;
 
-const okCount = computed(() => props.results.filter(r => r.judgement === 'OK').length);
-const ngCount = computed(() => props.results.filter(r => r.judgement === 'NG').length);
+    router.visit(url, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
 
-// -- Selection State --
+const resetFilters = () => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    dateFrom.value = monthStart.toISOString().slice(0, 10);
+    dateTo.value = now.toISOString().slice(0, 10);
+    dmcSearch.value = '';
+    perPage.value = '25';
+    search();
+};
+
+const formatDate = (value) => value
+    ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '-';
+
+const formatTime = (value) => value
+    ? new Date(value).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : '-';
+
+const rows = computed(() => props.results.data ?? []);
+const totalRows = computed(() => props.summary.total_rows ?? props.results.total ?? 0);
+const visibleTransactionIds = computed(() => [...new Set(rows.value.map((row) => row.transaction_id))]);
+
 const selectedIds = ref([]);
-const selectAll = ref(false);
+const isSelected = (id) => selectedIds.value.includes(id);
+const hasSelection = computed(() => selectedIds.value.length > 0);
+const allVisibleSelected = computed(() => visibleTransactionIds.value.length > 0
+    && visibleTransactionIds.value.every((id) => selectedIds.value.includes(id)));
 
-const toggleSelectAll = () => {
-    if (selectAll.value) {
-        selectedIds.value = props.results.map(r => r.transaction_id);
-    } else {
-        selectedIds.value = [];
+const toggleSelectAll = (event) => {
+    const visibleIds = visibleTransactionIds.value;
+
+    if (event.target.checked) {
+        selectedIds.value = [...new Set([...selectedIds.value, ...visibleIds])];
+        return;
     }
+
+    selectedIds.value = selectedIds.value.filter((id) => !visibleIds.includes(id));
 };
 
 const toggleRow = (id) => {
-    const idx = selectedIds.value.indexOf(id);
-    if (idx > -1) {
-        selectedIds.value.splice(idx, 1);
-    } else {
-        selectedIds.value.push(id);
-    }
-    selectAll.value = selectedIds.value.length === props.results.length;
+    selectedIds.value = selectedIds.value.includes(id)
+        ? selectedIds.value.filter((item) => item !== id)
+        : [...selectedIds.value, id];
 };
 
-const isSelected = (id) => selectedIds.value.includes(id);
-const hasSelection = computed(() => selectedIds.value.length > 0);
+watch(
+    () => [props.results.current_page, props.filters.date_from, props.filters.date_to, props.filters.dmc, props.filters.per_page],
+    () => {
+        selectedIds.value = [];
+    },
+);
 
-// -- Export Modal --
 const showExportModal = ref(false);
 const customFilename = ref('');
-const exportMode = ref('all'); // 'all' or 'selected'
+const exportMode = ref('all');
 
 const openExport = (mode) => {
     exportMode.value = mode;
@@ -58,7 +96,8 @@ const openExport = (mode) => {
 const doExport = () => {
     const ids = exportMode.value === 'selected' ? selectedIds.value.join(',') : 'all';
     const name = encodeURIComponent(customFilename.value || 'export');
-    const url = route('report.export') + `?ids=${ids}&date_from=${dateFrom.value}&date_to=${dateTo.value}&filename=${name}`;
+    const dmc = encodeURIComponent(dmcSearch.value || '');
+    const url = route('report.export') + `?ids=${ids}&date_from=${dateFrom.value}&date_to=${dateTo.value}&dmc=${dmc}&filename=${name}`;
     window.location.href = url;
     showExportModal.value = false;
 };
@@ -69,49 +108,67 @@ const doExport = () => {
     <AuthenticatedLayout>
         <template #title>Report</template>
         
-        <div class="pg-header">
+        <div class="space-y-5">
+            <div class="pg-header">
                 <div>
                     <h1 class="pg-title">Report</h1>
-                    <p class="pg-sub">View and export completed test results</p>
-                </div>
-                <div style="display:flex;gap:8px;align-items:end">
-                    <input v-model="dmcSearch" @keyup.enter="search" type="text" placeholder="DMC code..." class="form-inp" style="padding:6px 10px; width:150px">
-                    <input v-model="dateFrom" type="date" class="form-inp" style="padding:6px 10px">
-                    <input v-model="dateTo" type="date" class="form-inp" style="padding:6px 10px">
-                    <button @click="search" class="btn" style="padding:6px 14px">Filter</button>
+                    <p class="pg-sub">Review completed results with lighter table payloads and export only what you need.</p>
                 </div>
             </div>
+
+            <section class="card card-fill report-toolbar">
+                <div class="report-toolbar__intro">
+                    <h2 class="report-toolbar__title">Filtered Result Window</h2>
+                    <p class="report-toolbar__sub">Server-side pagination keeps long date ranges usable without dragging the whole table into the browser.</p>
+                </div>
+
+                <div class="report-toolbar__filters">
+                    <input v-model="dmcSearch" @keyup.enter="search" type="text" placeholder="Search DMC..." class="form-inp report-filter-input">
+                    <input v-model="dateFrom" type="date" class="form-inp report-filter-input">
+                    <input v-model="dateTo" type="date" class="form-inp report-filter-input">
+                    <select v-model="perPage" class="form-inp report-filter-input">
+                        <option value="25">25 / page</option>
+                        <option value="50">50 / page</option>
+                        <option value="100">100 / page</option>
+                        <option value="200">200 / page</option>
+                    </select>
+                    <button @click="resetFilters" class="export-btn export-btn-outline">Reset</button>
+                    <button @click="search" class="export-btn export-btn-primary">Apply</button>
+                </div>
+            </section>
             
-            <!-- Selection toolbar & stats -->
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-                <div style="font-size:12px;color:#a8a29e;display:flex;align-items:center;gap:12px">
-                    <div>Showing <strong style="color:#fafaf9">{{ results.length }}</strong> result(s)</div>
-                    <div v-if="results.length > 0" style="display:flex;gap:8px;font-size:11px;font-weight:600">
-                        <div class="report-summary-pill report-summary-pill-ok">{{ okCount }} OK</div>
-                        <div class="report-summary-pill report-summary-pill-ng">{{ ngCount }} NG</div>
+            <div class="report-meta">
+                <div class="report-meta__stats">
+                    <div>
+                        Showing <strong>{{ props.results.from ?? 0 }}-{{ props.results.to ?? 0 }}</strong> of <strong>{{ totalRows }}</strong> result(s)
+                    </div>
+                    <div v-if="totalRows > 0" class="report-pill-row">
+                        <div class="report-summary-pill report-summary-pill-ok">{{ props.summary.ok_count ?? 0 }} OK</div>
+                        <div class="report-summary-pill report-summary-pill-ng">{{ props.summary.ng_count ?? 0 }} NG</div>
                     </div>
                     <div v-if="hasSelection" class="report-summary-pill report-summary-pill-selected">
-                        {{ selectedIds.length }} selected
+                        {{ selectedIds.length }} job(s) selected
                     </div>
                 </div>
-                <div style="display:flex;gap:6px">
+                <div class="report-meta__actions">
                     <button v-if="hasSelection" @click="openExport('selected')" class="export-btn export-btn-primary">
                         <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        Export Selected ({{ selectedIds.length }})
+                        Export Selected
                     </button>
-                    <button v-if="results.length > 0" @click="openExport('all')" class="export-btn export-btn-outline">
+                    <button v-if="totalRows > 0" @click="openExport('all')" class="export-btn export-btn-outline">
                         <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                         Export All
                     </button>
                 </div>
             </div>
 
-            <div class="tbl" style="margin-bottom:20px">
-                <table v-if="results.length">
+            <section class="card card-fill">
+                <div class="tbl" style="margin-bottom:0">
+                    <table v-if="rows.length">
                     <thead>
                         <tr>
                             <th style="width:36px;text-align:center">
-                                <input type="checkbox" v-model="selectAll" @change="toggleSelectAll" class="row-check" />
+                                <input type="checkbox" :checked="allVisibleSelected" @change="toggleSelectAll" class="row-check" />
                             </th>
                             <th>Line</th>
                             <th>Date</th>
@@ -128,7 +185,7 @@ const doExport = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="r in results" :key="r.transaction_id" :class="{ 'row-selected': isSelected(r.transaction_id) }">
+                        <tr v-for="r in rows" :key="`${r.transaction_id}-${r.method_name}-${r.start_time ?? 'pending'}`" :class="{ 'row-selected': isSelected(r.transaction_id) }">
                             <td style="text-align:center">
                                 <input type="checkbox" :checked="isSelected(r.transaction_id)" @change="toggleRow(r.transaction_id)" class="row-check" />
                             </td>
@@ -154,13 +211,31 @@ const doExport = () => {
                             </td>
                         </tr>
                     </tbody>
-                </table>
-                <div v-if="!results.length" style="padding:40px;text-align:center;color:#a8a29e;font-size:13px;background:rgba(18,18,18,0.92);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
-                    No results found. Try adjusting the date range.
+                    </table>
+                    <div v-else class="report-empty-state">
+                        No results found. Try adjusting the date range or DMC filter.
+                    </div>
                 </div>
-            </div>
 
-        <!-- Export Filename Modal -->
+                <div class="report-pagination">
+                    <div class="report-pagination__summary">
+                        Page {{ props.results.current_page ?? 1 }} of {{ props.results.last_page ?? 1 }}
+                    </div>
+                    <div class="report-pagination__links">
+                        <button
+                            v-for="(link, index) in props.results.links"
+                            :key="index"
+                            :disabled="!link.url"
+                            @click="visitPage(link.url)"
+                            class="pager-btn"
+                            :class="{ 'pager-btn-active': link.active }"
+                            v-html="link.label"
+                        />
+                    </div>
+                </div>
+            </section>
+        </div>
+
         <Teleport to="body">
             <div v-if="showExportModal" class="modal-overlay" @click.self="showExportModal = false">
                 <div class="modal-card">
@@ -174,7 +249,7 @@ const doExport = () => {
                             <input v-model="customFilename" type="text" class="modal-input" placeholder="Enter file name" @keyup.enter="doExport" autofocus />
                             <span class="modal-ext">.csv</span>
                         </div>
-                        <div class="modal-hint">{{ exportMode === 'selected' ? `${selectedIds.length} record(s) selected` : `All ${results.length} record(s)` }}</div>
+                        <div class="modal-hint">{{ exportMode === 'selected' ? `${selectedIds.length} job(s) selected` : `All ${totalRows} result(s)` }}</div>
                     </div>
                     <div class="modal-footer">
                         <button class="export-btn export-btn-outline" @click="showExportModal = false">Cancel</button>
@@ -190,6 +265,78 @@ const doExport = () => {
 </template>
 
 <style scoped>
+.report-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: end;
+}
+
+.report-toolbar__intro {
+    max-width: 540px;
+}
+
+.report-toolbar__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fafaf9;
+}
+
+.report-toolbar__sub {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #a8a29e;
+    line-height: 1.6;
+}
+
+.report-toolbar__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.report-filter-input {
+    min-width: 140px;
+    padding: 8px 12px;
+}
+
+.report-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.report-meta__stats {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    color: #a8a29e;
+    font-size: 12px;
+}
+
+.report-meta__stats strong {
+    color: #fafaf9;
+}
+
+.report-meta__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.report-pill-row {
+    display: flex;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
 .report-summary-pill {
     padding: 2px 8px;
     border-radius: 999px;
@@ -214,6 +361,66 @@ const doExport = () => {
     color: #fdba74;
     font-size: 11px;
     font-weight: 600;
+}
+
+.report-empty-state {
+    padding: 40px;
+    text-align: center;
+    color: #a8a29e;
+    font-size: 13px;
+    background: rgba(18, 18, 18, 0.92);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.report-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.report-pagination__summary {
+    color: #a8a29e;
+    font-size: 12px;
+}
+
+.report-pagination__links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.pager-btn {
+    min-width: 40px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    color: #e7e5e4;
+    font-size: 12px;
+    transition: all 0.15s ease;
+}
+
+.pager-btn:hover:not(:disabled) {
+    background: rgba(251, 146, 60, 0.08);
+    border-color: rgba(251, 146, 60, 0.18);
+}
+
+.pager-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.pager-btn-active {
+    background: linear-gradient(135deg, #fb923c, #ea580c);
+    color: #1c1917;
+    border-color: transparent;
 }
 
 .row-check {
@@ -301,4 +508,22 @@ const doExport = () => {
 .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+@media (max-width: 900px) {
+    .report-toolbar__filters {
+        width: 100%;
+    }
+
+    .report-filter-input {
+        flex: 1 1 160px;
+    }
+
+    .report-pagination {
+        align-items: stretch;
+    }
+
+    .report-pagination__links {
+        justify-content: flex-start;
+    }
+}
 </style>
