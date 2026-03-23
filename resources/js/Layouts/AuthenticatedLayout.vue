@@ -107,8 +107,6 @@ const userRoleLabel = computed(() => (user.value.role === 'admin' ? 'Admin' : 'Q
                                 v-for="item in group.items"
                                 :key="item.route"
                                 :href="route(item.route)"
-                                prefetch="hover"
-                                :cache-for="90000"
                                 preserve-scroll
                                 class="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors duration-150 decoration-none text-left"
                                 :class="desktopNavClass(item.route)"
@@ -228,8 +226,6 @@ const userRoleLabel = computed(() => (user.value.role === 'admin' ? 'Admin' : 'Q
                                  v-for="item in group.items"
                                  :key="item.route"
                                  :href="route(item.route)"
-                                 prefetch="hover"
-                                 :cache-for="90000"
                                  preserve-scroll
                                  @click="showMobileMenu = false"
                                  :class="['flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1 text-left', mobileNavClass(item.route)]"

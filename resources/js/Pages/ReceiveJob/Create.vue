@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 const props = defineProps({ externals: Array, internals: Array, jobs: Object, filters: Object });
 const flash = usePage().props.flash || {};
@@ -9,6 +9,13 @@ const currentUserRole = usePage().props.auth?.user?.role ?? '';
 const canDelete = currentUserRole === 'admin';
 const submitted = ref(false);
 const isEditing = ref(false);
+const defaultFilters = {
+    search: '',
+    status: 'all',
+    date_from: '',
+    date_to: '',
+    per_page: '20',
+};
 
 const form = useForm({
     transaction_id: null,
@@ -19,12 +26,13 @@ const form = useForm({
     line: '',
 });
 
-const filterForm = useForm({
-    search: props.filters?.search ?? '',
-    status: props.filters?.status ?? 'all',
-    date_from: props.filters?.date_from ?? '',
-    date_to: props.filters?.date_to ?? '',
-    per_page: String(props.filters?.per_page ?? 20),
+const filterForm = reactive({
+    ...defaultFilters,
+    search: props.filters?.search ?? defaultFilters.search,
+    status: props.filters?.status ?? defaultFilters.status,
+    date_from: props.filters?.date_from ?? defaultFilters.date_from,
+    date_to: props.filters?.date_to ?? defaultFilters.date_to,
+    per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 
 const jobRows = computed(() => props.jobs?.data ?? []);
@@ -51,8 +59,16 @@ const pagerButtonClass = (link) => link.active
     ? 'border-gray-900 bg-gray-900 text-white'
     : 'border-gray-300 text-gray-700 hover:bg-gray-50';
 
+const filterPayload = () => ({
+    search: filterForm.search,
+    status: filterForm.status,
+    date_from: filterForm.date_from,
+    date_to: filterForm.date_to,
+    per_page: filterForm.per_page,
+});
+
 const applyFilters = () => {
-    router.get(route('receive-job.create'), filterForm.data(), {
+    router.get(route('receive-job.create'), filterPayload(), {
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -60,11 +76,7 @@ const applyFilters = () => {
 };
 
 const resetFilters = () => {
-    filterForm.search = '';
-    filterForm.status = 'all';
-    filterForm.date_from = '';
-    filterForm.date_to = '';
-    filterForm.per_page = '20';
+    Object.assign(filterForm, defaultFilters);
     applyFilters();
 };
 

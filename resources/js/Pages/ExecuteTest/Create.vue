@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { getEcho } from '@/lib/realtime';
 
 const props = defineProps({
@@ -22,6 +22,14 @@ const checkingPendingJobsVersion = ref(false);
 const pendingJobsSyncIntervalActiveMs = 30000;
 const pendingJobsSyncIntervalHiddenMs = 90000;
 const currentPendingJobsVersion = ref(props.pendingJobsVersion ?? '');
+const defaultFilters = {
+    search: '',
+    judgement: 'all',
+    record_state: 'active',
+    date_from: '',
+    date_to: '',
+    per_page: '20',
+};
 let pendingJobsVersionTimer = null;
 let pendingJobsEcho = null;
 let usePollingFallback = true;
@@ -43,13 +51,14 @@ const form = useForm({
     remark: '',
 });
 
-const filterForm = useForm({
-    search: props.filters?.search ?? '',
-    judgement: props.filters?.judgement ?? 'all',
-    record_state: props.filters?.record_state ?? 'active',
-    date_from: props.filters?.date_from ?? '',
-    date_to: props.filters?.date_to ?? '',
-    per_page: String(props.filters?.per_page ?? 20),
+const filterForm = reactive({
+    ...defaultFilters,
+    search: props.filters?.search ?? defaultFilters.search,
+    judgement: props.filters?.judgement ?? defaultFilters.judgement,
+    record_state: props.filters?.record_state ?? defaultFilters.record_state,
+    date_from: props.filters?.date_from ?? defaultFilters.date_from,
+    date_to: props.filters?.date_to ?? defaultFilters.date_to,
+    per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 
 const resultRows = computed(() => props.results?.data ?? []);
@@ -67,8 +76,17 @@ const pagerButtonClass = (link) => link.active
     ? 'border-gray-900 bg-gray-900 text-white'
     : 'border-gray-300 text-gray-700 hover:bg-gray-50';
 
+const filterPayload = () => ({
+    search: filterForm.search,
+    judgement: filterForm.judgement,
+    record_state: filterForm.record_state,
+    date_from: filterForm.date_from,
+    date_to: filterForm.date_to,
+    per_page: filterForm.per_page,
+});
+
 const applyFilters = () => {
-    router.get(route('execute-test.create'), filterForm.data(), {
+    router.get(route('execute-test.create'), filterPayload(), {
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -76,12 +94,7 @@ const applyFilters = () => {
 };
 
 const resetFilters = () => {
-    filterForm.search = '';
-    filterForm.judgement = 'all';
-    filterForm.record_state = 'active';
-    filterForm.date_from = '';
-    filterForm.date_to = '';
-    filterForm.per_page = '20';
+    Object.assign(filterForm, defaultFilters);
     applyFilters();
 };
 
