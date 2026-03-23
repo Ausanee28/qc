@@ -8,11 +8,34 @@ use Inertia\Inertia;
 
 class DepartmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $departments = Department::orderBy('department_name')->get();
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'in:10,20,50,100'],
+        ]);
+
+        $search = trim((string) ($filters['search'] ?? ''));
+        $perPage = (int) ($filters['per_page'] ?? 20);
+
+        $departments = Department::query()
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($departmentQuery) use ($search) {
+                    $departmentQuery
+                        ->where('department_name', 'like', "%{$search}%")
+                        ->orWhere('internal_phone', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('department_name')
+            ->paginate($perPage)
+            ->withQueryString();
+
         return Inertia::render('MasterData/Departments/Index', [
-            'departments' => $departments
+            'departments' => $departments,
+            'filters' => [
+                'search' => $search,
+                'per_page' => (string) $perPage,
+            ],
         ]);
     }
 

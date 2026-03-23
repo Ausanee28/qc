@@ -1,30 +1,66 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import { computed, reactive, ref } from 'vue';
 
-const props = defineProps({ equipments: Array });
+const props = defineProps({ equipments: Object, filters: Object });
 
-const search = ref('');
 const showModal = ref(false);
 const isEditing = ref(false);
-
-const filtered = computed(() =>
-    props.equipments.filter(e =>
-        e.equipment_name.toLowerCase().includes(search.value.toLowerCase())
-    )
-);
+const defaultFilters = {
+    search: '',
+    per_page: '20',
+};
+const filterForm = reactive({
+    ...defaultFilters,
+    search: props.filters?.search ?? defaultFilters.search,
+    per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
+});
+const equipmentRows = computed(() => props.equipments?.data ?? []);
+const equipmentLinks = computed(() => props.equipments?.links ?? []);
+const reloadOnly = ['equipments', 'filters', 'flash'];
 
 const form = useForm({
     equipment_id: null,
     equipment_name: '',
 });
 
+const filterPayload = () => ({
+    search: filterForm.search,
+    per_page: filterForm.per_page,
+});
+
+const applyFilters = () => {
+    router.get(route('master-data.equipments.index'), filterPayload(), {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
+
+const resetFilters = () => {
+    Object.assign(filterForm, defaultFilters);
+    applyFilters();
+};
+
+const visitPage = (url) => {
+    if (!url) return;
+    router.visit(url, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
+
 const openCreateModal = () => {
     isEditing.value = false;
     form.reset();
     form.clearErrors();
     showModal.value = true;
+};
+
+const closeModal = () => {
+    showModal.value = false;
 };
 
 const openEditModal = (eq) => {
@@ -38,18 +74,25 @@ const openEditModal = (eq) => {
 const submit = () => {
     if (isEditing.value) {
         form.put(route('master-data.equipments.update', form.equipment_id), {
-            onSuccess: () => { showModal.value = false; }
+            only: reloadOnly,
+            preserveScroll: true,
+            onSuccess: () => { closeModal(); },
         });
     } else {
         form.post(route('master-data.equipments.store'), {
-            onSuccess: () => { showModal.value = false; }
+            only: reloadOnly,
+            preserveScroll: true,
+            onSuccess: () => { closeModal(); },
         });
     }
 };
 
 const deleteEquipment = (id) => {
     if (confirm('Are you sure you want to delete this equipment?')) {
-        form.delete(route('master-data.equipments.destroy', id));
+        form.delete(route('master-data.equipments.destroy', id), {
+            only: reloadOnly,
+            preserveScroll: true,
+        });
     }
 };
 </script>
@@ -85,12 +128,24 @@ const deleteEquipment = (id) => {
 
             <!-- Search -->
             <div class="mb-4">
-                <div class="relative max-w-sm">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <form @submit.prevent="applyFilters" class="flex flex-col gap-3 sm:flex-row">
+                    <div class="relative max-w-sm flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                        <input v-model="filterForm.search" type="text" placeholder="Search equipment name..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
-                    <input v-model="search" type="text" placeholder="Search equipment name..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
-                </div>
+                    <select v-model="filterForm.per_page" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+                        <option value="10">10 / page</option>
+                        <option value="20">20 / page</option>
+                        <option value="50">50 / page</option>
+                        <option value="100">100 / page</option>
+                    </select>
+                    <div class="flex gap-2">
+                        <button type="button" @click="resetFilters" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">Reset</button>
+                        <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-900 hover:bg-black">Apply</button>
+                    </div>
+                </form>
             </div>
 
             <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
@@ -104,12 +159,12 @@ const deleteEquipment = (id) => {
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
-                            <tr v-if="filtered.length === 0">
+                            <tr v-if="equipmentRows.length === 0">
                                 <td colspan="3" class="px-6 py-10 text-center text-sm text-gray-500">
-                                    {{ search ? 'No results for "' + search + '"' : 'No equipment found.' }}
+                                    {{ filterForm.search ? 'No results for "' + filterForm.search + '"' : 'No equipment found.' }}
                                 </td>
                             </tr>
-                            <tr v-for="eq in filtered" :key="eq.equipment_id" class="hover:bg-gray-50 transition-colors">
+                            <tr v-for="eq in equipmentRows" :key="eq.equipment_id" class="hover:bg-gray-50 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">#{{ eq.equipment_id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ eq.equipment_name }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right pr-6 text-sm font-medium">
@@ -122,15 +177,28 @@ const deleteEquipment = (id) => {
                         </tbody>
                     </table>
                 </div>
-                <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
-                    {{ filtered.length }} of {{ equipments.length }} equipments
+                <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        Showing {{ equipments.from ?? 0 }} to {{ equipments.to ?? 0 }} of {{ equipments.total ?? 0 }} equipments
+                    </div>
+                    <div class="flex flex-wrap justify-end gap-2">
+                        <button
+                            v-for="(link, index) in equipmentLinks"
+                            :key="index"
+                            :disabled="!link.url"
+                            @click="visitPage(link.url)"
+                            class="rounded-md border px-3 py-1.5 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            :class="link.active ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 hover:bg-gray-50'"
+                            v-html="link.label"
+                        />
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Modal -->
         <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" @click="showModal = false"></div>
+            <div class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" @click="closeModal"></div>
             <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md z-10 p-6">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-gray-900 rounded-t-xl"></div>
                 <h2 class="text-xl font-bold text-gray-900 mb-6 mt-2">{{ isEditing ? 'Edit Equipment' : 'New Equipment' }}</h2>
@@ -141,7 +209,7 @@ const deleteEquipment = (id) => {
                         <div v-if="form.errors.equipment_name" class="text-xs text-red-600 mt-1.5">{{ form.errors.equipment_name }}</div>
                     </div>
                     <div class="flex justify-end gap-3">
-                        <button type="button" @click="showModal = false" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">Cancel</button>
+                        <button type="button" @click="closeModal" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">Cancel</button>
                         <button type="submit" :disabled="form.processing" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-900 hover:bg-black disabled:opacity-50">
                             {{ form.processing ? 'Saving...' : 'Save Equipment' }}
                         </button>

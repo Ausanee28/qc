@@ -10,14 +10,38 @@ use Inertia\Inertia;
 
 class ExternalUserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $externalUsers = ExternalUser::with('department')->orderBy('external_name')->get();
-        $departments = Department::orderBy('department_name')->get();
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'in:10,20,50,100'],
+        ]);
+
+        $search = trim((string) ($filters['search'] ?? ''));
+        $perPage = (int) ($filters['per_page'] ?? 20);
+
+        $externalUsers = ExternalUser::query()
+            ->with(['department:department_id,department_name'])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($externalUserQuery) use ($search) {
+                    $externalUserQuery
+                        ->where('external_name', 'like', "%{$search}%")
+                        ->orWhereHas('department', function ($departmentQuery) use ($search) {
+                            $departmentQuery->where('department_name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->orderBy('external_name')
+            ->paginate($perPage)
+            ->withQueryString();
         
         return Inertia::render('MasterData/ExternalUsers/Index', [
             'externalUsers' => $externalUsers,
-            'departments' => $departments
+            'departments' => Inertia::defer(fn () => Department::orderBy('department_name')->get(), 'master-data-options'),
+            'filters' => [
+                'search' => $search,
+                'per_page' => (string) $perPage,
+            ],
         ]);
     }
 

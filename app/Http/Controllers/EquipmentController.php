@@ -9,11 +9,30 @@ use Inertia\Inertia;
 
 class EquipmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $equipments = Equipment::orderBy('equipment_name')->get();
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'in:10,20,50,100'],
+        ]);
+
+        $search = trim((string) ($filters['search'] ?? ''));
+        $perPage = (int) ($filters['per_page'] ?? 20);
+
+        $equipments = Equipment::query()
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where('equipment_name', 'like', "%{$search}%");
+            })
+            ->orderBy('equipment_name')
+            ->paginate($perPage)
+            ->withQueryString();
+
         return Inertia::render('MasterData/Equipments/Index', [
-            'equipments' => $equipments
+            'equipments' => $equipments,
+            'filters' => [
+                'search' => $search,
+                'per_page' => (string) $perPage,
+            ],
         ]);
     }
 

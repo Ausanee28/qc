@@ -1,20 +1,26 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import { computed, reactive, ref } from 'vue';
 
-const props = defineProps({ externalUsers: Array, departments: Array });
+const props = defineProps({ externalUsers: Object, departments: Array, filters: Object });
 
-const search = ref('');
 const showModal = ref(false);
 const isEditing = ref(false);
-
-const filtered = computed(() =>
-    props.externalUsers.filter(u =>
-        u.external_name.toLowerCase().includes(search.value.toLowerCase()) ||
-        (u.department?.department_name || '').toLowerCase().includes(search.value.toLowerCase())
-    )
-);
+const defaultFilters = {
+    search: '',
+    per_page: '20',
+};
+const filterForm = reactive({
+    ...defaultFilters,
+    search: props.filters?.search ?? defaultFilters.search,
+    per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
+});
+const departmentOptions = computed(() => props.departments ?? []);
+const departmentOptionsReady = computed(() => Array.isArray(props.departments));
+const externalUserRows = computed(() => props.externalUsers?.data ?? []);
+const externalUserLinks = computed(() => props.externalUsers?.links ?? []);
+const reloadOnly = ['externalUsers', 'filters', 'flash'];
 
 const form = useForm({
     external_id: null,
@@ -22,11 +28,42 @@ const form = useForm({
     department_id: ''
 });
 
+const filterPayload = () => ({
+    search: filterForm.search,
+    per_page: filterForm.per_page,
+});
+
+const applyFilters = () => {
+    router.get(route('master-data.external-users.index'), filterPayload(), {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
+
+const resetFilters = () => {
+    Object.assign(filterForm, defaultFilters);
+    applyFilters();
+};
+
+const visitPage = (url) => {
+    if (!url) return;
+    router.visit(url, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
+
 const openCreateModal = () => {
     isEditing.value = false;
     form.reset();
     form.clearErrors();
     showModal.value = true;
+};
+
+const closeModal = () => {
+    showModal.value = false;
 };
 
 const openEditModal = (user) => {
@@ -41,18 +78,25 @@ const openEditModal = (user) => {
 const submit = () => {
     if (isEditing.value) {
         form.put(route('master-data.external-users.update', form.external_id), {
-            onSuccess: () => { showModal.value = false; }
+            only: reloadOnly,
+            preserveScroll: true,
+            onSuccess: () => { closeModal(); },
         });
     } else {
         form.post(route('master-data.external-users.store'), {
-            onSuccess: () => { showModal.value = false; }
+            only: reloadOnly,
+            preserveScroll: true,
+            onSuccess: () => { closeModal(); },
         });
     }
 };
 
 const deleteUser = (id) => {
     if (confirm('Are you sure you want to delete this external user?')) {
-        form.delete(route('master-data.external-users.destroy', id));
+        form.delete(route('master-data.external-users.destroy', id), {
+            only: reloadOnly,
+            preserveScroll: true,
+        });
     }
 };
 </script>
@@ -88,12 +132,24 @@ const deleteUser = (id) => {
 
             <!-- Search -->
             <div class="mb-4">
-                <div class="relative max-w-sm">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <form @submit.prevent="applyFilters" class="flex flex-col gap-3 sm:flex-row">
+                    <div class="relative max-w-sm flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                        <input v-model="filterForm.search" type="text" placeholder="Search name or department..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
-                    <input v-model="search" type="text" placeholder="Search name or department..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
-                </div>
+                    <select v-model="filterForm.per_page" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+                        <option value="10">10 / page</option>
+                        <option value="20">20 / page</option>
+                        <option value="50">50 / page</option>
+                        <option value="100">100 / page</option>
+                    </select>
+                    <div class="flex gap-2">
+                        <button type="button" @click="resetFilters" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">Reset</button>
+                        <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-900 hover:bg-black">Apply</button>
+                    </div>
+                </form>
             </div>
 
             <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
@@ -108,12 +164,12 @@ const deleteUser = (id) => {
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
-                            <tr v-if="filtered.length === 0">
+                            <tr v-if="externalUserRows.length === 0">
                                 <td colspan="4" class="px-6 py-10 text-center text-sm text-gray-500">
-                                    {{ search ? 'No results for "' + search + '"' : 'No external users found.' }}
+                                    {{ filterForm.search ? 'No results for "' + filterForm.search + '"' : 'No external users found.' }}
                                 </td>
                             </tr>
-                            <tr v-for="user in filtered" :key="user.external_id" class="hover:bg-gray-50 transition-colors">
+                            <tr v-for="user in externalUserRows" :key="user.external_id" class="hover:bg-gray-50 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">#{{ user.external_id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ user.external_name }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -131,15 +187,28 @@ const deleteUser = (id) => {
                         </tbody>
                     </table>
                 </div>
-                <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
-                    {{ filtered.length }} of {{ externalUsers.length }} users
+                <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        Showing {{ externalUsers.from ?? 0 }} to {{ externalUsers.to ?? 0 }} of {{ externalUsers.total ?? 0 }} users
+                    </div>
+                    <div class="flex flex-wrap justify-end gap-2">
+                        <button
+                            v-for="(link, index) in externalUserLinks"
+                            :key="index"
+                            :disabled="!link.url"
+                            @click="visitPage(link.url)"
+                            class="rounded-md border px-3 py-1.5 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            :class="link.active ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 hover:bg-gray-50'"
+                            v-html="link.label"
+                        />
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Modal -->
         <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" @click="showModal = false"></div>
+            <div class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" @click="closeModal"></div>
             <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md z-10 p-6">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-gray-900 rounded-t-xl"></div>
                 <h2 class="text-xl font-bold text-gray-900 mb-6 mt-2">{{ isEditing ? 'Edit External User' : 'New External User' }}</h2>
@@ -151,14 +220,14 @@ const deleteUser = (id) => {
                     </div>
                     <div class="mb-6">
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Department <span class="text-red-500">*</span></label>
-                        <select v-model="form.department_id" required class="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
-                            <option value="" disabled>Select Department...</option>
-                            <option v-for="dept in departments" :key="dept.department_id" :value="dept.department_id">{{ dept.department_name }}</option>
+                        <select v-model="form.department_id" required :disabled="!departmentOptionsReady" class="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-wait disabled:bg-gray-100">
+                            <option value="" disabled>{{ departmentOptionsReady ? 'Select Department...' : 'Loading departments...' }}</option>
+                            <option v-for="dept in departmentOptions" :key="dept.department_id" :value="dept.department_id">{{ dept.department_name }}</option>
                         </select>
                         <div v-if="form.errors.department_id" class="text-xs text-red-600 mt-1.5">{{ form.errors.department_id }}</div>
                     </div>
                     <div class="flex justify-end gap-3">
-                        <button type="button" @click="showModal = false" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">Cancel</button>
+                        <button type="button" @click="closeModal" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">Cancel</button>
                         <button type="submit" :disabled="form.processing" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-900 hover:bg-black disabled:opacity-50">
                             {{ form.processing ? 'Saving...' : 'Save User' }}
                         </button>

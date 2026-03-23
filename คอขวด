@@ -1,0 +1,34 @@
+ช่วยทำ full performance audit ของเว็บนี้ และหาคอขวดที่ทำให้การใช้งานช้า
+
+เป้าหมาย:
+- หาต้นเหตุจริงของความช้า ทั้งฝั่ง frontend, backend, database, network, rendering, และ query
+- อย่าสรุปแบบกว้าง ๆ ให้ตรวจจาก code และพฤติกรรมจริงใน repo นี้
+- ถ้าพบจุดที่แก้ได้เลย ให้แก้จริง พร้อมบอกผลกระทบ
+- ถ้ายังไม่มีข้อมูลพอ ให้เพิ่มการวัด/benchmark/logging ที่จำเป็น
+
+ขอบเขตที่ต้องตรวจ:
+- หน้า dashboard
+- workflow pages
+- report / certificates / performance
+- auth flow
+- shared layout / shared components
+- Laravel controllers / queries / pagination / eager loading / caching
+- Vue rendering / reactive bottleneck / polling / chart rendering / large table rendering
+- asset size / bundle size / unnecessary reload / duplicate requests
+
+สิ่งที่ต้องทำ:
+- ไล่ตรวจทีละชั้นจาก frontend ไป backend
+- หาจุดที่โหลดช้า, render ช้า, query ช้า, request ซ้ำ, state update เกินจำเป็น
+- วัดก่อนแก้และหลังแก้เท่าที่ทำได้
+- ถ้ามี N+1, query หนัก, polling ถี่เกิน, component re-render เยอะ, bundle ใหญ่, table หนัก, chart หนัก ให้ชี้ชัด
+- ถ้าต้องเพิ่ม benchmark script, logging, profiler hook, หรือ query inspection ให้ทำได้เลย
+- ถ้าเจอ quick win ให้แก้ทันที
+- รัน test/build/benchmark หลังแก้เท่าที่ทำได้
+
+รูปแบบผลลัพธ์ที่ต้องการ:
+- สรุป findings เรียงตาม severity
+- ระบุไฟล์/ตำแหน่งที่เป็นคอขวด
+- บอกสิ่งที่แก้ไปแล้ว
+- บอกสิ่งที่ยังเป็นความเสี่ยงหรือควรทำต่อ
+
+ช่วยหาคอขวดที่ทำให้ผู้ใช้รู้สึกว่าเว็บช้า เช่น หน้าโหลดช้า, table หน่วง, filter ช้า, dashboard กระตุก, form submit ช้า, navigation ช้า และแก้ quick wins ให้ก่อน

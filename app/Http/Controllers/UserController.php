@@ -12,11 +12,38 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::orderBy('name')->get(['user_id', 'user_name', 'name', 'employee_id', 'email', 'role']);
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'in:10,20,50,100'],
+        ]);
+
+        $search = trim((string) ($filters['search'] ?? ''));
+        $perPage = (int) ($filters['per_page'] ?? 20);
+
+        $users = User::query()
+            ->select(['user_id', 'user_name', 'name', 'employee_id', 'email', 'role'])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($userQuery) use ($search) {
+                    $userQuery
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('user_name', 'like', "%{$search}%")
+                        ->orWhere('employee_id', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('role', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->withQueryString();
+
         return Inertia::render('MasterData/Users/Index', [
-            'users' => $users
+            'users' => $users,
+            'filters' => [
+                'search' => $search,
+                'per_page' => (string) $perPage,
+            ],
         ]);
     }
 

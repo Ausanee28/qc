@@ -9,14 +9,38 @@ use Inertia\Inertia;
 
 class TestMethodController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $testMethods = TestMethod::with('equipment')->orderBy('method_name')->get();
-        $equipments = Equipment::orderBy('equipment_name')->get();
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'in:10,20,50,100'],
+        ]);
+
+        $search = trim((string) ($filters['search'] ?? ''));
+        $perPage = (int) ($filters['per_page'] ?? 20);
+
+        $testMethods = TestMethod::query()
+            ->with(['equipment:equipment_id,equipment_name'])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($methodQuery) use ($search) {
+                    $methodQuery
+                        ->where('method_name', 'like', "%{$search}%")
+                        ->orWhereHas('equipment', function ($equipmentQuery) use ($search) {
+                            $equipmentQuery->where('equipment_name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->orderBy('method_name')
+            ->paginate($perPage)
+            ->withQueryString();
         
         return Inertia::render('MasterData/TestMethods/Index', [
             'testMethods' => $testMethods,
-            'equipments' => $equipments
+            'equipments' => Inertia::defer(fn () => Equipment::orderBy('equipment_name')->get(), 'master-data-options'),
+            'filters' => [
+                'search' => $search,
+                'per_page' => (string) $perPage,
+            ],
         ]);
     }
 
