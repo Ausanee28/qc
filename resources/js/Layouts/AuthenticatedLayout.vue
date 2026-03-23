@@ -2,6 +2,52 @@
 import { ref, computed } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 
+const navGroupsConfig = [
+    {
+        label: 'Analytics',
+        items: [
+            { name: 'Dashboard', route: 'dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+        ],
+    },
+    {
+        label: 'Workflow',
+        items: [
+            { name: 'Receive Job', route: 'receive-job.create', icon: 'M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z' },
+            { name: 'Execute Test', route: 'execute-test.create', icon: 'M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
+        ],
+    },
+    {
+        label: 'Documents',
+        items: [
+            { name: 'Certificates', route: 'certificates.index', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+            { name: 'Report', route: 'report.index', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+        ],
+    },
+    {
+        label: 'Analysis',
+        items: [
+            { name: 'Performance', route: 'performance.index', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+        ],
+    },
+    {
+        label: 'Master Data',
+        items: [
+            { name: 'Departments', route: 'master-data.departments.index', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4', adminOnly: true },
+            { name: 'Equipment', route: 'master-data.equipments.index', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z', adminOnly: true },
+            { name: 'Test Methods', route: 'master-data.test-methods.index', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', adminOnly: true },
+            { name: 'Users', route: 'master-data.users.index', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', adminOnly: true },
+            { name: 'External Users', route: 'master-data.external-users.index', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', adminOnly: true },
+        ],
+    },
+];
+
+const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+});
+
 const showMobileMenu = ref(false);
 const page = usePage();
 
@@ -15,51 +61,29 @@ const handleGlobalSearch = () => {
 
 const groupedNav = computed(() => {
     const isAdmin = page.props.auth?.user?.role === 'admin';
-
-    return [
-    {
-        label: 'Analytics',
-        items: [
-            { name: 'Dashboard', route: 'dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' }
-        ]
-    },
-    {
-        label: 'Workflow',
-        items: [
-            { name: 'Receive Job', route: 'receive-job.create', icon: 'M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z' },
-            { name: 'Execute Test', route: 'execute-test.create', icon: 'M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' }
-        ]
-    },
-    {
-        label: 'Documents',
-        items: [
-            { name: 'Certificates', route: 'certificates.index', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-            { name: 'Report', route: 'report.index', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' }
-        ]
-    },
-    {
-        label: 'Analysis',
-        items: [
-            { name: 'Performance', route: 'performance.index', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' }
-        ]
-    },
-    {
-        label: 'Master Data',
-        items: isAdmin ? [
-            { name: 'Departments', route: 'master-data.departments.index', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-            { name: 'Equipment', route: 'master-data.equipments.index', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
-            { name: 'Test Methods', route: 'master-data.test-methods.index', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-            { name: 'Users', route: 'master-data.users.index', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-            { name: 'External Users', route: 'master-data.external-users.index', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' }
-        ] : []
-    }
-].filter(group => group.items.length > 0);
+    return navGroupsConfig
+        .map((group) => ({
+            ...group,
+            items: group.items.filter((item) => !item.adminOnly || isAdmin),
+        }))
+        .filter((group) => group.items.length > 0);
 });
 
-const currentDate = computed(() => {
-    const now = new Date();
-    return now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
-});
+const user = computed(() => page.props.auth?.user ?? { name: '', role: '' });
+const currentDate = dateFormatter.format(new Date());
+const isActiveRoute = (routeName) => route().current(routeName);
+const desktopNavClass = (routeName) => (
+    isActiveRoute(routeName)
+        ? 'border border-orange-500/20 bg-[linear-gradient(135deg,rgba(251,146,60,0.2),rgba(249,115,22,0.1))] text-orange-100 shadow-[0_14px_28px_rgba(0,0,0,0.2)]'
+        : 'text-stone-300 hover:bg-white/5 hover:text-orange-100'
+);
+const mobileNavClass = (routeName) => (
+    isActiveRoute(routeName)
+        ? 'bg-orange-500/15 text-orange-100 font-semibold border border-orange-500/20'
+        : 'text-stone-300 hover:bg-white/5'
+);
+const userInitial = computed(() => user.value.name.charAt(0).toUpperCase());
+const userRoleLabel = computed(() => (user.value.role === 'admin' ? 'Admin' : 'QC Tech'));
 </script>
 
 <template>
@@ -75,7 +99,7 @@ const currentDate = computed(() => {
             </div>
             
             <div class="flex-1 overflow-y-auto" scroll-region>
-                <template v-for="(group, gIdx) in groupedNav" :key="gIdx">
+                <template v-for="(group, gIdx) in groupedNav" :key="group.label">
                     <div class="px-4" :class="[gIdx === 0 ? 'mt-2 mb-5' : 'mt-6 mb-5']">
                         <div class="px-3 text-[11px] font-semibold text-stone-500 uppercase tracking-[0.18em] mb-2">{{ group.label }}</div>
                         <div class="space-y-1">
@@ -87,32 +111,9 @@ const currentDate = computed(() => {
                                 :cache-for="90000"
                                 preserve-scroll
                                 class="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors duration-150 decoration-none text-left"
-                                :class="[
-                                    route().current(item.route) 
-                                    ? 'border border-orange-500/20 bg-[linear-gradient(135deg,rgba(251,146,60,0.2),rgba(249,115,22,0.1))] text-orange-100 shadow-[0_14px_28px_rgba(0,0,0,0.2)]' 
-                                    : 'text-stone-300 hover:bg-white/5 hover:text-orange-100'
-                                ]"
+                                :class="desktopNavClass(item.route)"
                             >
-                                <!-- Hardcode icons based on route name directly to perfectly match redesign -->
-                                <svg class="w-5 h-5 shrink-0 mb-1" v-if="item.name === 'Dashboard'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                                </svg>
-                                <svg class="w-5 h-5 shrink-0 mb-1" v-else-if="item.name === 'Receive Job'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <svg class="w-5 h-5 shrink-0 mb-1" v-else-if="item.name === 'Execute Test'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                                </svg>
-                                <svg class="w-5 h-5 shrink-0 mb-1" v-else-if="item.name === 'Certificates'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <svg class="w-5 h-5 shrink-0 mb-1" v-else-if="item.name === 'Report'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <svg class="w-5 h-5 shrink-0 mb-1" v-else-if="item.name === 'Performance'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <svg class="w-5 h-5 shrink-0 mb-1" v-else fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-5 h-5 shrink-0 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
                                 </svg>
                                 {{ item.name }}
@@ -183,11 +184,11 @@ const currentDate = computed(() => {
                         <!-- User Identity -->
                         <div class="flex items-center gap-3">
                             <div class="flex-col items-end hidden sm:flex leading-tight">
-                                <span class="text-[13px] font-bold text-stone-100 tracking-tight">{{ $page.props.auth.user.name }}</span>
-                                <span class="text-[10px] font-bold text-orange-200/70 uppercase tracking-widest mt-0.5">{{ $page.props.auth.user.role === 'admin' ? 'Admin' : 'QC Tech' }}</span>
+                                <span class="text-[13px] font-bold text-stone-100 tracking-tight">{{ user.name }}</span>
+                                <span class="text-[10px] font-bold text-orange-200/70 uppercase tracking-widest mt-0.5">{{ userRoleLabel }}</span>
                             </div>
                             <div class="w-9 h-9 rounded-full bg-[linear-gradient(135deg,#fb923c,#c2410c)] text-[#120d08] flex items-center justify-center text-[11px] font-bold shadow-[0_8px_20px_rgba(249,115,22,0.28)] cursor-pointer hover:opacity-90 transition-opacity">
-                                {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
+                                {{ userInitial }}
                             </div>
                         </div>
 
@@ -220,7 +221,7 @@ const currentDate = computed(() => {
                 </div>
                 
                 <div class="flex-1 overflow-y-auto px-4">
-                     <template v-for="(group, gIdx) in groupedNav" :key="gIdx">
+                     <template v-for="group in groupedNav" :key="group.label">
                          <div class="mb-6">
                              <div class="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 px-3">{{ group.label }}</div>
                              <Link
@@ -231,7 +232,7 @@ const currentDate = computed(() => {
                                  :cache-for="90000"
                                  preserve-scroll
                                  @click="showMobileMenu = false"
-                                 :class="['flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1 text-left', route().current(item.route) ? 'bg-orange-500/15 text-orange-100 font-semibold border border-orange-500/20' : 'text-stone-300 hover:bg-white/5']"
+                                 :class="['flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1 text-left', mobileNavClass(item.route)]"
                              >
                                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
