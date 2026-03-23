@@ -17,4 +17,35 @@ export default defineConfig({
             },
         }),
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (!id.includes('node_modules')) {
+                        return;
+                    }
+
+                    if (id.includes('chart.js') || id.includes('vue-chartjs')) {
+                        return 'charts-vendor';
+                    }
+
+                    if (id.includes('laravel-echo') || id.includes('pusher-js')) {
+                        return 'realtime-vendor';
+                    }
+
+                    if (id.includes('@inertiajs') || id.includes('/vue/') || id.includes('\\vue\\') || id.includes('@vue')) {
+                        return 'framework-vendor';
+                    }
+
+                    if (id.includes('axios')) {
+                        return 'http-vendor';
+                    }
+
+                    if (id.includes('ziggy')) {
+                        return 'ziggy-vendor';
+                    }
+                },
+            },
+        },
+    },
 });

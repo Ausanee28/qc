@@ -25,6 +25,10 @@ const currentPendingJobsVersion = ref(props.pendingJobsVersion ?? '');
 let pendingJobsVersionTimer = null;
 let pendingJobsEcho = null;
 let usePollingFallback = true;
+const jsonHeaders = {
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+};
 
 const form = useForm({
     detail_id: null,
@@ -216,7 +220,17 @@ const checkPendingJobsVersion = async ({ force = false } = {}) => {
     checkingPendingJobsVersion.value = true;
 
     try {
-        const { data } = await window.axios.get(route('execute-test.pending-jobs-version'));
+        const response = await fetch(route('execute-test.pending-jobs-version'), {
+            method: 'GET',
+            headers: jsonHeaders,
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+            throw new Error(`Pending jobs version request failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
         const latestVersion = String(data?.version ?? '');
 
         if (latestVersion !== '' && latestVersion !== currentPendingJobsVersion.value) {

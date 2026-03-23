@@ -6,45 +6,14 @@ import { getEcho } from '@/lib/realtime';
 
 const chartFontFamily = "'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
 
-const chartsReady = ref(false);
+const showPrimaryCharts = ref(false);
 const showHeavySections = ref(false);
-let chartBootPromise = null;
 let realtimeRefreshTimer = null;
 let dashboardEcho = null;
-
-const ensureChartRuntime = async () => {
-    if (chartsReady.value) {
-        return;
-    }
-
-    if (!chartBootPromise) {
-        chartBootPromise = import('chart.js').then((chartModule) => {
-            const { Chart, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, ArcElement } = chartModule;
-            Chart.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, ArcElement);
-            chartsReady.value = true;
-        });
-    }
-
-    await chartBootPromise;
-};
-
-const BarChart = defineAsyncComponent(async () => {
-    await ensureChartRuntime();
-    const module = await import('vue-chartjs');
-    return module.Bar;
-});
-
-const LineChart = defineAsyncComponent(async () => {
-    await ensureChartRuntime();
-    const module = await import('vue-chartjs');
-    return module.Line;
-});
-
-const DoughnutChart = defineAsyncComponent(async () => {
-    await ensureChartRuntime();
-    const module = await import('vue-chartjs');
-    return module.Doughnut;
-});
+let realtimeBootTimer = null;
+const BarChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Bar));
+const LineChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Line));
+const DoughnutChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Doughnut));
 
 const props = defineProps({
     currentPeriod: { type: String, default: 'month' },
@@ -147,31 +116,47 @@ const scheduleRealtimeReload = () => {
     }, 250);
 };
 
-onMounted(async () => {
+onMounted(() => {
+    const revealPrimaryCharts = () => {
+        showPrimaryCharts.value = true;
+    };
+
     const revealHeavySections = () => {
         showHeavySections.value = true;
     };
 
+    const bootRealtime = async () => {
+        dashboardEcho = await getEcho();
+
+        if (!dashboardEcho) {
+            return;
+        }
+
+        dashboardEcho.private('dashboard.global').listen('.dashboard.updated', scheduleRealtimeReload);
+    };
+
     if (typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(() => revealHeavySections(), { timeout: 700 });
-        window.requestIdleCallback(() => ensureChartRuntime(), { timeout: 1200 });
+        window.requestIdleCallback(() => revealPrimaryCharts(), { timeout: 500 });
+        window.requestIdleCallback(() => revealHeavySections(), { timeout: 1200 });
+        window.requestIdleCallback(() => bootRealtime(), { timeout: 1800 });
     } else {
-        window.setTimeout(revealHeavySections, 180);
-        window.setTimeout(() => ensureChartRuntime(), 150);
+        window.setTimeout(revealPrimaryCharts, 150);
+        window.setTimeout(revealHeavySections, 600);
+        realtimeBootTimer = window.setTimeout(() => {
+            realtimeBootTimer = null;
+            bootRealtime();
+        }, 900);
     }
-
-    dashboardEcho = await getEcho();
-
-    if (!dashboardEcho) {
-        return;
-    }
-
-    dashboardEcho.private('dashboard.global').listen('.dashboard.updated', scheduleRealtimeReload);
 });
 
 onBeforeUnmount(() => {
     if (realtimeRefreshTimer !== null) {
         window.clearTimeout(realtimeRefreshTimer);
+    }
+
+    if (realtimeBootTimer !== null) {
+        window.clearTimeout(realtimeBootTimer);
+        realtimeBootTimer = null;
     }
 
     if (dashboardEcho) {
@@ -248,6 +233,23 @@ const signalCards = computed(() => ([
         label: 'Lead inspector',
         value: leadInspector.value ? leadInspector.value.name : 'No ranking available',
         note: leadInspector.value ? `${formatPercent(leadInspector.value.yield)} yield across ${formatNumber(leadInspector.value.total)} tests` : 'Inspector leaderboard will appear once records are available',
+    },
+]));
+const heroChecklist = computed(() => ([
+    {
+        label: 'Queue pressure',
+        value: Number(props.metrics.pendingCount || 0) <= 5 ? 'In range' : 'Needs watch',
+        note: `${formatNumber(props.metrics.pendingCount)} jobs still open`,
+    },
+    {
+        label: 'Today cadence',
+        value: formatNumber(todayTotal.value),
+        note: `${formatPercent(todayYield.value)} yield for today's output`,
+    },
+    {
+        label: 'Window focus',
+        value: selectedPeriodLabel.value,
+        note: `${props.metrics.avgTestTime || 0} min average test time`,
     },
 ]));
 
@@ -395,9 +397,15 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                             </article>
 
                             <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-                                <div class="dash-kicker">Signals to watch</div>
-                                <div class="mt-4 space-y-4">
-                                    <div v-for="item in signalCards" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4">
+                                <div class="dash-kicker">Launchpad</div>
+                                <div class="mt-3">
+                                    <h2 class="text-2xl font-semibold tracking-tight text-stone-50">Start with the queue and today's pulse</h2>
+                                    <p class="mt-3 text-sm leading-7 text-stone-300/80">
+                                        The first view stays focused on throughput, queue health, and the current reporting window. Deeper drivers load below once the page settles.
+                                    </p>
+                                </div>
+                                <div class="mt-5 space-y-4">
+                                    <div v-for="item in heroChecklist" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4">
                                         <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div>
                                         <div class="mt-2 text-base font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
                                         <div class="mt-2 text-sm leading-6 text-stone-400">{{ item.note }}</div>
@@ -467,7 +475,10 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                         </div>
                         <div class="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-semibold text-orange-200">{{ selectedPeriodLabel }}</div>
                     </div>
-                    <div class="mt-6 h-[320px]"><BarChart :data="weeklyChartData" :options="barOpts" /></div>
+                    <div class="mt-6 h-[320px]">
+                        <BarChart v-if="showPrimaryCharts" :data="weeklyChartData" :options="barOpts" />
+                        <div v-else class="dash-skeleton h-full"></div>
+                    </div>
                 </article>
 
                 <div class="grid gap-6">
@@ -498,6 +509,13 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                         <div><div class="dash-kicker">Performance drivers</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">What is shaping the lab right now</h2></div>
                         <p class="max-w-2xl text-sm leading-7 text-stone-300/80 lg:text-right">Equipment usage, failure concentration, and inspector efficiency for {{ selectedPeriodLabel.toLowerCase() }}.</p>
+                    </div>
+                    <div class="grid gap-4 lg:grid-cols-3">
+                        <article v-for="item in signalCards" :key="item.label" class="dash-panel rounded-[22px] border border-white/10 bg-[#16110d]/92 p-5 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+                            <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div>
+                            <div class="mt-3 text-lg font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
+                            <div class="mt-2 text-sm leading-6 text-stone-400">{{ item.note }}</div>
+                        </article>
                     </div>
                     <div class="grid gap-6 xl:grid-cols-3">
                         <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]"><div class="text-xl font-semibold tracking-tight text-stone-50">Top equipment used</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Usage volume by equipment across the active reporting window.</p><div class="mt-6 h-[260px]"><BarChart :data="equipUsageData" :options="horizontalBarOpts" /></div></article>

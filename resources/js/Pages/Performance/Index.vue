@@ -1,11 +1,28 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
-import { Bar } from 'vue-chartjs';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
+
+const showCharts = ref(false);
+const BarChart = defineAsyncComponent(() => import('@/lib/performance-charts').then((module) => module.Bar));
 
 const props = defineProps({ inspectors: Array, details: Array });
+
+const inspectorRows = computed(() => props.inspectors ?? []);
+const detailRows = computed(() => props.details ?? []);
+
+onMounted(() => {
+    const revealCharts = () => {
+        showCharts.value = true;
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(revealCharts, { timeout: 500 });
+        return;
+    }
+
+    window.setTimeout(revealCharts, 150);
+});
 
 const fmt = (sec) => {
     if (!sec || sec < 0) return '—';
@@ -89,14 +106,14 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
             </div>
         </div>
 
-        <div v-if="!inspectors.length" style="padding:40px;text-align:center;color:#a8a29e;font-size:13px;background:rgba(18,18,18,0.92);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
+        <div v-if="!inspectorRows.length" style="padding:40px;text-align:center;color:#a8a29e;font-size:13px;background:rgba(18,18,18,0.92);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
             No test data yet.
         </div>
 
         <template v-else>
             <!-- Inspector Cards Grid -->
             <div class="perf-grid">
-                <div v-for="insp in inspectors" :key="insp.id" class="card">
+                <div v-for="insp in inspectorRows" :key="insp.id" class="card">
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
                         <div class="avatar">{{ insp.name.charAt(0) }}</div>
                         <div>
@@ -133,17 +150,26 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
                 <div class="card">
                     <div class="card-title" style="color:#fb923c">Average Duration</div>
                     <div class="card-desc">Mean time per test (lower = faster)</div>
-                    <div style="height:180px"><Bar :data="avgChartData()" :options="perfOpts" /></div>
+                    <div style="height:180px">
+                        <BarChart v-if="showCharts" :data="avgChartData()" :options="perfOpts" />
+                        <div v-else class="perf-skeleton"></div>
+                    </div>
                 </div>
                 <div class="card">
                     <div class="card-title" style="color:#fdba74">Fastest Time</div>
                     <div class="card-desc">Best (shortest) test time recorded</div>
-                    <div style="height:180px"><Bar :data="fastChartData()" :options="perfOpts" /></div>
+                    <div style="height:180px">
+                        <BarChart v-if="showCharts" :data="fastChartData()" :options="perfOpts" />
+                        <div v-else class="perf-skeleton"></div>
+                    </div>
                 </div>
                 <div class="card">
                     <div class="card-title" style="color:#e7e5e4">Slowest Time</div>
                     <div class="card-desc">Worst (longest) test time recorded</div>
-                    <div style="height:180px"><Bar :data="slowChartData()" :options="perfOpts" /></div>
+                    <div style="height:180px">
+                        <BarChart v-if="showCharts" :data="slowChartData()" :options="perfOpts" />
+                        <div v-else class="perf-skeleton"></div>
+                    </div>
                 </div>
             </div>
 
@@ -166,7 +192,7 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="d in details" :key="d.detail_id">
+                            <tr v-for="d in detailRows" :key="d.detail_id">
                                 <td style="font-family:monospace;color:#fb923c;font-weight:700">#{{ d.detail_id }}</td>
                                 <td>{{ d.inspector }}</td>
                                 <td>{{ d.dmc || '—' }}</td>
@@ -185,3 +211,23 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
         </template>
     </AuthenticatedLayout>
 </template>
+
+<style scoped>
+.perf-skeleton {
+    height: 100%;
+    border-radius: 18px;
+    background: linear-gradient(90deg, rgba(41, 37, 36, 0.9), rgba(68, 64, 60, 0.95), rgba(41, 37, 36, 0.9));
+    background-size: 200% 100%;
+    animation: perf-shimmer 1.6s linear infinite;
+}
+
+@keyframes perf-shimmer {
+    from {
+        background-position: 200% 0;
+    }
+
+    to {
+        background-position: -200% 0;
+    }
+}
+</style>
