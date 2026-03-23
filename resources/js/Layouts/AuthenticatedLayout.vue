@@ -63,21 +63,21 @@ const currentDate = computed(() => {
 </script>
 
 <template>
-    <div class="flex h-screen w-full overflow-hidden bg-gray-50">
+    <div class="theme-shell flex h-screen w-full overflow-hidden bg-[#090909] text-stone-100">
         <!-- SIDEBAR -->
-        <aside class="w-[260px] bg-zinc-950 flex flex-col shrink-0 h-screen">
-            <div class="p-5 flex items-center gap-3">
-                <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-gray-900 font-bold text-base shadow-sm">Q</div>
+        <aside class="hidden w-[280px] flex-col shrink-0 h-screen border-r border-white/10 bg-[linear-gradient(180deg,#0a0a0a,#18110d_58%,#0b0b0b)] lg:flex">
+            <div class="border-b border-white/10 p-5 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-[linear-gradient(135deg,#fb923c,#ea580c)] text-[#140d08] font-black text-sm shadow-[0_10px_24px_rgba(249,115,22,0.25)]">Q</div>
                 <div>
                     <div class="text-base font-bold text-white leading-tight">QC Lab</div>
-                    <div class="text-[11px] text-zinc-400 font-medium">Quality Control</div>
+                    <div class="text-[11px] text-orange-200/70 font-medium uppercase tracking-[0.18em]">Quality Control</div>
                 </div>
             </div>
             
             <div class="flex-1 overflow-y-auto" scroll-region>
                 <template v-for="(group, gIdx) in groupedNav" :key="gIdx">
                     <div class="px-4" :class="[gIdx === 0 ? 'mt-2 mb-5' : 'mt-6 mb-5']">
-                        <div class="px-3 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">{{ group.label }}</div>
+                        <div class="px-3 text-[11px] font-semibold text-stone-500 uppercase tracking-[0.18em] mb-2">{{ group.label }}</div>
                         <div class="space-y-1">
                             <Link
                                 v-for="item in group.items"
@@ -86,11 +86,11 @@ const currentDate = computed(() => {
                                 prefetch="hover"
                                 :cache-for="90000"
                                 preserve-scroll
-                                class="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-150 decoration-none text-left"
+                                class="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors duration-150 decoration-none text-left"
                                 :class="[
                                     route().current(item.route) 
-                                    ? 'bg-white text-gray-900 shadow-sm' 
-                                    : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                                    ? 'border border-orange-500/20 bg-[linear-gradient(135deg,rgba(251,146,60,0.2),rgba(249,115,22,0.1))] text-orange-100 shadow-[0_14px_28px_rgba(0,0,0,0.2)]' 
+                                    : 'text-stone-300 hover:bg-white/5 hover:text-orange-100'
                                 ]"
                             >
                                 <!-- Hardcode icons based on route name directly to perfectly match redesign -->
@@ -123,8 +123,8 @@ const currentDate = computed(() => {
             </div>
             
             <!-- Mobile Menu Toggle Button (visible on mobile only) -->
-            <div class="md:hidden p-4 border-t border-zinc-800 mt-auto">
-                <button @click="showMobileMenu = true" class="w-full flex justify-center py-2 text-zinc-400 hover:text-white">
+            <div class="md:hidden p-4 border-t border-white/10 mt-auto">
+                <button @click="showMobileMenu = true" class="w-full flex justify-center py-2 text-stone-500 hover:text-orange-200">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
@@ -133,20 +133,20 @@ const currentDate = computed(() => {
         </aside>
 
         <!-- MAIN -->
-        <main class="flex-1 flex flex-col min-w-0 bg-gray-50">
-            <header class="h-16 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 flex items-center justify-between z-10 antialiased shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <main class="flex-1 flex flex-col min-w-0 bg-transparent">
+            <header class="h-16 bg-[#0c0c0c]/92 border-b border-white/10 px-4 sm:px-6 lg:px-8 flex items-center justify-between z-10 antialiased backdrop-blur">
                 
                 <!-- LEFT: Mobile Menu Toggle & Title Area -->
                 <div class="flex items-center gap-3">
-                    <button @click="showMobileMenu = true" class="md:hidden text-gray-500 hover:text-gray-900 focus:outline-none p-1.5 rounded-md hover:bg-gray-100 transition-colors">
+                    <button @click="showMobileMenu = true" class="lg:hidden text-stone-400 hover:text-orange-200 focus:outline-none p-1.5 rounded-md hover:bg-white/5 transition-colors">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
                     <div class="hidden sm:flex items-center text-[13px] font-medium tracking-tight">
-                        <span class="text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">QC Lab</span>
-                        <svg class="w-4 h-4 text-gray-300 mx-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-                        <span class="text-gray-900 font-semibold"><slot name="title">Workspace</slot></span>
+                        <span class="text-stone-500 hover:text-orange-200 transition-colors cursor-pointer">QC Lab</span>
+                        <svg class="w-4 h-4 text-stone-700 mx-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                        <span class="text-stone-100 font-semibold"><slot name="title">Workspace</slot></span>
                     </div>
                 </div>
 
@@ -156,43 +156,43 @@ const currentDate = computed(() => {
                     <!-- Search Input (Linear style) -->
                     <div class="relative group hidden md:block">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg class="h-4 w-4 text-stone-500 group-focus-within:text-orange-200 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
                         <input 
                             v-model="globalSearch" 
                             @keyup.enter="handleGlobalSearch" 
-                            class="block w-[260px] lg:w-[320px] pl-9 pr-12 py-1.5 border border-gray-200 rounded-md leading-5 bg-gray-50/50 text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-900 focus:border-gray-900 sm:text-[13px] transition-all focus:shadow-sm"
+                            class="block w-[240px] lg:w-[300px] pl-9 pr-12 py-2 border border-white/10 rounded-xl leading-5 bg-white/5 text-stone-100 placeholder-stone-500 focus:outline-none focus:bg-black/30 focus:ring-1 focus:ring-orange-400/30 focus:border-orange-400/30 sm:text-[13px] transition-all"
                             placeholder="Search DMC code..." 
                             type="text" 
                             autocomplete="off"
                         />
                         <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-                            <span class="text-gray-400 text-[10px] font-mono font-medium border border-gray-200 rounded px-1.5 py-0.5 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.04)]">⌘K</span>
+                            <span class="rounded border border-white/10 bg-black/40 px-1.5 py-0.5 text-[10px] font-mono font-medium text-stone-400 shadow-[0_1px_1px_rgba(0,0,0,0.2)]">CTRL+K</span>
                         </div>
                     </div>
 
                     <!-- Separator -->
-                    <div class="hidden lg:block h-5 w-px bg-gray-200"></div>
+                    <div class="hidden lg:block h-5 w-px bg-white/10"></div>
 
                     <!-- User Actions Row -->
                     <div class="flex items-center gap-3 sm:gap-4">
-                        <span class="text-[12px] text-gray-500 font-medium hidden xl:block tracking-wide bg-gray-50 px-2 py-1 rounded-md border border-gray-100">{{ currentDate }}</span>
+                        <span class="text-[12px] text-stone-400 font-medium hidden xl:block tracking-wide bg-white/5 px-2 py-1 rounded-md border border-white/10">{{ currentDate }}</span>
                         
                         <!-- User Identity -->
                         <div class="flex items-center gap-3">
                             <div class="flex-col items-end hidden sm:flex leading-tight">
-                                <span class="text-[13px] font-bold text-gray-900 tracking-tight">{{ $page.props.auth.user.name }}</span>
-                                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">{{ $page.props.auth.user.role === 'admin' ? 'Admin' : 'QC Tech' }}</span>
+                                <span class="text-[13px] font-bold text-stone-100 tracking-tight">{{ $page.props.auth.user.name }}</span>
+                                <span class="text-[10px] font-bold text-orange-200/70 uppercase tracking-widest mt-0.5">{{ $page.props.auth.user.role === 'admin' ? 'Admin' : 'QC Tech' }}</span>
                             </div>
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white flex items-center justify-center text-[11px] font-bold ring-2 ring-white shadow-[0_2px_4px_rgba(0,0,0,0.1)] cursor-pointer hover:opacity-90 transition-opacity">
+                            <div class="w-9 h-9 rounded-full bg-[linear-gradient(135deg,#fb923c,#c2410c)] text-[#120d08] flex items-center justify-center text-[11px] font-bold shadow-[0_8px_20px_rgba(249,115,22,0.28)] cursor-pointer hover:opacity-90 transition-opacity">
                                 {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
                             </div>
                         </div>
 
                         <!-- Logout Icon Button -->
-                        <Link :href="route('logout')" method="post" as="button" class="text-gray-400 hover:text-gray-900 p-1.5 rounded-lg hover:bg-gray-100 transition-colors ml-1" title="Log out">
+                        <Link :href="route('logout')" method="post" as="button" class="text-stone-500 hover:text-orange-200 p-1.5 rounded-lg hover:bg-white/5 transition-colors ml-1" title="Log out">
                             <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                         </Link>
                     </div>
@@ -207,14 +207,14 @@ const currentDate = computed(() => {
         </main>
 
         <!-- Mobile Menu Overlay -->
-        <div v-if="showMobileMenu" class="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" @click="showMobileMenu = false">
-            <div class="w-[240px] h-full bg-white flex flex-col pt-4" @click.stop>
+        <div v-if="showMobileMenu" class="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" @click="showMobileMenu = false">
+            <div class="w-[260px] h-full bg-[linear-gradient(180deg,#0b0b0b,#18110d)] border-r border-white/10 flex flex-col pt-4" @click.stop>
                 <div class="flex items-center justify-between px-6 mb-6">
                      <div class="flex items-center gap-3">
-                         <div class="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white font-bold text-base shadow-sm">Q</div>
-                         <h2 class="font-bold text-gray-900" style="font-size:16px;font-weight:700">QC Lab</h2>
+                         <div class="w-8 h-8 bg-[linear-gradient(135deg,#fb923c,#ea580c)] rounded-lg flex items-center justify-center text-[#140d08] font-bold text-base shadow-sm">Q</div>
+                         <h2 class="font-bold text-white" style="font-size:16px;font-weight:700">QC Lab</h2>
                      </div>
-                     <button @click="showMobileMenu = false" class="text-gray-400 hover:text-gray-900">
+                     <button @click="showMobileMenu = false" class="text-stone-500 hover:text-orange-200">
                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                      </button>
                 </div>
@@ -222,7 +222,7 @@ const currentDate = computed(() => {
                 <div class="flex-1 overflow-y-auto px-4">
                      <template v-for="(group, gIdx) in groupedNav" :key="gIdx">
                          <div class="mb-6">
-                             <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-3">{{ group.label }}</div>
+                             <div class="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 px-3">{{ group.label }}</div>
                              <Link
                                  v-for="item in group.items"
                                  :key="item.route"
@@ -231,7 +231,7 @@ const currentDate = computed(() => {
                                  :cache-for="90000"
                                  preserve-scroll
                                  @click="showMobileMenu = false"
-                                 :class="['flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1 text-left', route().current(item.route) ? 'bg-[#EFF6FF] text-[#4F46E5] font-semibold' : 'text-gray-600 hover:bg-gray-50']"
+                                 :class="['flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1 text-left', route().current(item.route) ? 'bg-orange-500/15 text-orange-100 font-semibold border border-orange-500/20' : 'text-stone-300 hover:bg-white/5']"
                              >
                                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />

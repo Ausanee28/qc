@@ -31,7 +31,7 @@ const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-
             <div v-for="j in jobs" :key="j.transaction_id" class="cert-card">
                 <div style="display:flex;justify-content:space-between;margin-bottom:12px">
                     <div>
-                        <span style="font-size:10px;font-family:monospace;color:#9CA3AF">#{{ j.transaction_id }}</span>
+                        <span style="font-size:10px;font-family:monospace;color:#78716c">#{{ j.transaction_id }}</span>
                         <!-- Status Pills (simplified based on OK/NG count logic) -->
                         <span v-if="j.ng_count > 0" class="pill pill-r" style="font-size:9px;margin-left:6px">NG</span>
                         <span v-else-if="j.ok_count > 0" class="pill pill-g" style="font-size:9px;margin-left:6px">OK</span>
@@ -40,17 +40,17 @@ const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-
                         <h3 style="font-size:15px;font-weight:700;margin-top:4px">{{ j.detail }}</h3>
                     </div>
                 </div>
-                <div style="font-size:12px;color:#6B7280;display:flex;flex-direction:column;gap:4px;margin-bottom:14px">
+                <div style="font-size:12px;color:#a8a29e;display:flex;flex-direction:column;gap:4px;margin-bottom:14px">
                     <div v-if="j.dmc"><strong>DMC:</strong> {{ j.dmc }}</div>
                     <div><strong>Sender:</strong> {{ j.sender }}</div>
-                    <div><strong>Tests:</strong> {{ j.ok_count + j.ng_count }} — <span style="color:#059669">{{ j.ok_count }} OK</span><span v-if="j.ng_count > 0">, <span style="color:#DC2626">{{ j.ng_count }} NG</span></span></div>
+                    <div><strong>Tests:</strong> {{ j.ok_count + j.ng_count }} — <span style="color:#fdba74">{{ j.ok_count }} OK</span><span v-if="j.ng_count > 0">, <span style="color:#e7e5e4">{{ j.ng_count }} NG</span></span></div>
                     <div><strong>Date:</strong> {{ formatDate(j.receive_date) }}</div>
                 </div>
                 <a :href="route('certificates.pdf', j.transaction_id)" target="_blank" class="btn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none">
-                    📄 Download PDF
+                    Download PDF
                 </a>
             </div>
-            <div v-if="!jobs.length" style="grid-column:1/-1;text-align:center;padding:40px;color:#9CA3AF;font-size:13px;background:#fff;border-radius:10px;border:1px solid #E5E7EB">
+            <div v-if="!jobs.length" style="grid-column:1/-1;text-align:center;padding:40px;color:#a8a29e;font-size:13px;background:rgba(18,18,18,0.92);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
                 No certificates found for this period.
             </div>
         </div>

@@ -11,9 +11,9 @@ const isEditing = ref(false);
 
 const roleLabels = { admin: 'Admin', engineer: 'Engineer', inspector: 'Inspector' };
 const roleBadge = {
-    admin: 'bg-purple-100 text-purple-700 border-purple-200',
-    engineer: 'bg-blue-100 text-blue-700 border-blue-200',
-    inspector: 'bg-green-100 text-green-700 border-green-200',
+    admin: 'bg-orange-100 text-orange-700 border-orange-200',
+    engineer: 'bg-amber-100 text-amber-700 border-amber-200',
+    inspector: 'bg-stone-800 text-stone-100 border-white/10',
 };
 
 const filtered = computed(() =>
@@ -139,7 +139,7 @@ const deleteUser = (id) => {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">#{{ user.user_id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#fb923c,#c2410c)] text-xs font-bold text-[#140d08]">
                                             {{ (user.name || user.user_name).charAt(0).toUpperCase() }}
                                         </div>
                                         <div>

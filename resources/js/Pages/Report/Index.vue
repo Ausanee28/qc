@@ -84,13 +84,13 @@ const doExport = () => {
             
             <!-- Selection toolbar & stats -->
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-                <div style="font-size:12px;color:#6B7280;display:flex;align-items:center;gap:12px">
-                    <div>Showing <strong style="color:#111827">{{ results.length }}</strong> result(s)</div>
+                <div style="font-size:12px;color:#a8a29e;display:flex;align-items:center;gap:12px">
+                    <div>Showing <strong style="color:#fafaf9">{{ results.length }}</strong> result(s)</div>
                     <div v-if="results.length > 0" style="display:flex;gap:8px;font-size:11px;font-weight:600">
-                        <div style="background:#ECFDF5;color:#065F46;padding:2px 8px;border-radius:12px;border:1px solid #A7F3D0">{{ okCount }} OK</div>
-                        <div style="background:#FEF2F2;color:#991B1B;padding:2px 8px;border-radius:12px;border:1px solid #FECACA">{{ ngCount }} NG</div>
+                        <div class="report-summary-pill report-summary-pill-ok">{{ okCount }} OK</div>
+                        <div class="report-summary-pill report-summary-pill-ng">{{ ngCount }} NG</div>
                     </div>
-                    <div v-if="hasSelection" style="font-size:11px;font-weight:600;color:#4F46E5;background:#EEF2FF;padding:2px 8px;border-radius:12px;border:1px solid #C7D2FE">
+                    <div v-if="hasSelection" class="report-summary-pill report-summary-pill-selected">
                         {{ selectedIds.length }} selected
                     </div>
                 </div>
@@ -146,16 +146,16 @@ const doExport = () => {
                                 <span v-else-if="r.judgement === 'NG'" class="pill pill-r">NG</span>
                                 <span v-else class="pill pill-y">{{ r.judgement }}</span>
                             </td>
-                            <td style="font-size:11px;color:#9CA3AF">{{ r.remark || '' }}</td>
+                            <td style="font-size:11px;color:#78716c">{{ r.remark || '' }}</td>
                             <td>
-                                <a :href="route('certificates.pdf', r.transaction_id)" target="_blank" class="btn-outline" style="padding:2px 6px;font-size:10px;text-decoration:none">
-                                    📄
+                                <a :href="route('certificates.pdf', r.transaction_id)" target="_blank" class="btn-outline" style="padding:2px 8px;font-size:10px;text-decoration:none">
+                                    PDF
                                 </a>
                             </td>
                         </tr>
                     </tbody>
                 </table>
-                <div v-if="!results.length" style="padding:40px;text-align:center;color:#9CA3AF;font-size:13px;background:#fff;border-radius:8px">
+                <div v-if="!results.length" style="padding:40px;text-align:center;color:#a8a29e;font-size:13px;background:rgba(18,18,18,0.92);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
                     No results found. Try adjusting the date range.
                 </div>
             </div>
@@ -165,8 +165,8 @@ const doExport = () => {
             <div v-if="showExportModal" class="modal-overlay" @click.self="showExportModal = false">
                 <div class="modal-card">
                     <div class="modal-header">
-                        <h3 class="modal-title">📄 Export to CSV</h3>
-                        <button class="modal-close" @click="showExportModal = false">✕</button>
+                        <h3 class="modal-title">Export to CSV</h3>
+                        <button class="modal-close" @click="showExportModal = false">×</button>
                     </div>
                     <div class="modal-body">
                         <label class="modal-label">File name</label>
@@ -190,15 +190,43 @@ const doExport = () => {
 </template>
 
 <style scoped>
+.report-summary-pill {
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.report-summary-pill-ok {
+    background: rgba(251, 146, 60, 0.12);
+    border-color: rgba(251, 146, 60, 0.2);
+    color: #fdba74;
+}
+
+.report-summary-pill-ng {
+    background: rgba(41, 37, 36, 0.88);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #e7e5e4;
+}
+
+.report-summary-pill-selected {
+    background: rgba(251, 146, 60, 0.14);
+    border-color: rgba(251, 146, 60, 0.2);
+    color: #fdba74;
+    font-size: 11px;
+    font-weight: 600;
+}
+
 .row-check {
     width: 16px;
     height: 16px;
-    accent-color: #4F46E5;
+    accent-color: #f97316;
     cursor: pointer;
 }
+
 .row-selected {
-    background-color: #EEF2FF !important;
+    background: linear-gradient(90deg, rgba(251, 146, 60, 0.12), rgba(15, 15, 15, 0.92)) !important;
 }
+
 .export-btn {
     display: inline-flex;
     align-items: center;
@@ -210,58 +238,67 @@ const doExport = () => {
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s ease;
-    border: none;
+    border: 1px solid transparent;
+    border-radius: 999px;
 }
+
 .export-btn-primary {
-    background-color: #0F172A;
-    color: #fff;
+    background: linear-gradient(135deg, #fb923c, #ea580c);
+    color: #1c1917;
+    box-shadow: 0 14px 26px rgba(249, 115, 22, 0.2);
 }
+
 .export-btn-primary:hover {
-    background-color: #111827;
+    transform: translateY(-1px);
+    box-shadow: 0 18px 30px rgba(249, 115, 22, 0.24);
 }
+
 .export-btn-outline {
-    background-color: #fff;
-    color: #374151;
-    border: 1px solid #D1D5DB;
+    background: rgba(255, 255, 255, 0.03);
+    color: #f5f5f4;
+    border-color: rgba(255, 255, 255, 0.1);
 }
+
 .export-btn-outline:hover {
-    background-color: #F9FAFB;
-    border-color: #9CA3AF;
+    background: rgba(251, 146, 60, 0.08);
+    border-color: rgba(251, 146, 60, 0.2);
 }
 
 /* Modal */
 .modal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 9999;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.68); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999;
     animation: fadeIn 0.15s ease;
 }
 .modal-card {
-    background: #fff; border-radius: 12px; width: 420px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    background: linear-gradient(180deg, rgba(22, 22, 22, 0.98), rgba(12, 12, 12, 0.98));
+    border: 1px solid rgba(251, 146, 60, 0.14);
+    border-radius: 20px; width: 420px; max-width: 90vw; box-shadow: 0 28px 70px rgba(0,0,0,0.45);
     animation: slideUp 0.2s ease;
 }
 .modal-header {
-    display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #F3F4F6;
+    display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
 }
-.modal-title { font-size: 15px; font-weight: 600; color: #111; margin: 0; }
+.modal-title { font-size: 15px; font-weight: 600; color: #fafaf9; margin: 0; }
 .modal-close {
-    background: none; border: none; font-size: 16px; color: #9CA3AF; cursor: pointer; width: 28px; height: 28px; border-radius: 6px;
+    background: none; border: none; font-size: 16px; color: #a8a29e; cursor: pointer; width: 28px; height: 28px; border-radius: 999px;
     display: flex; align-items: center; justify-content: center;
 }
-.modal-close:hover { background: #F3F4F6; color: #374151; }
+.modal-close:hover { background: rgba(251, 146, 60, 0.08); color: #fdba74; }
 .modal-body { padding: 20px; }
-.modal-label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; }
+.modal-label { display: block; font-size: 13px; font-weight: 500; color: #d6d3d1; margin-bottom: 6px; }
 .modal-input {
-    flex: 1; height: 40px; padding: 0 12px; font-size: 14px; font-family: inherit; color: #111;
-    background: #FAFAFA; border: 1px solid #EAEAEA; border-radius: 8px 0 0 8px; outline: none;
+    flex: 1; height: 40px; padding: 0 12px; font-size: 14px; font-family: inherit; color: #fafaf9;
+    background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px 0 0 12px; outline: none;
     transition: border-color 0.15s; box-sizing: border-box;
 }
-.modal-input:focus { border-color: #4F46E5; background: #fff; }
+.modal-input:focus { border-color: rgba(251,146,60,0.38); background: rgba(0,0,0,0.45); }
 .modal-ext {
-    height: 40px; padding: 0 12px; background: #F3F4F6; border: 1px solid #EAEAEA; border-left: none;
-    border-radius: 0 8px 8px 0; font-size: 13px; font-weight: 500; color: #6B7280;
+    height: 40px; padding: 0 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-left: none;
+    border-radius: 0 12px 12px 0; font-size: 13px; font-weight: 500; color: #a8a29e;
     display: flex; align-items: center; box-sizing: border-box;
 }
-.modal-hint { font-size: 11px; color: #9CA3AF; margin-top: 8px; }
-.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid #F3F4F6; }
+.modal-hint { font-size: 11px; color: #78716c; margin-top: 8px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>

@@ -139,7 +139,7 @@ const toggleJobStatus = (job) => {
             </div>
 
             <transition enter-active-class="transition-all duration-300" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition-all duration-300" leave-from-class="opacity-100" leave-to-class="opacity-0">
-                <div v-if="flash.success || submitted" class="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
+                <div v-if="flash.success || submitted" class="rounded-xl border border-orange-500/20 bg-orange-500/10 px-5 py-4 text-sm text-orange-100">
                     {{ flash.success || 'Job saved successfully.' }}
                 </div>
             </transition>
@@ -200,7 +200,7 @@ const toggleJobStatus = (job) => {
                     </div>
                 </div>
 
-                <div style="padding-top:20px;border-top:1px solid #E5E7EB;display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
+                <div style="padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
                     <button type="button" @click="resetForm" class="btn-outline">Clear</button>
                     <button type="submit" :disabled="form.processing" class="btn">
                         <span v-if="form.processing">{{ isEditing ? 'Updating...' : 'Submitting...' }}</span>
@@ -267,7 +267,7 @@ const toggleJobStatus = (job) => {
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ job.detail || '-' }}</td>
                                 <td class="px-6 py-4 text-sm">
-                                    <span :class="job.is_deleted ? 'bg-gray-200 text-gray-700' : (job.is_closed ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
+                                    <span :class="job.is_deleted ? 'bg-stone-800 text-stone-100 border border-white/10' : (job.is_closed ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-orange-100 text-orange-700 border border-orange-200')" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
                                         {{ job.is_deleted ? 'Deleted' : (job.is_closed ? 'Closed' : 'Open') }}
                                     </span>
                                     <div v-if="job.return_date && !job.is_deleted" class="mt-2 text-xs text-gray-500">Closed: {{ job.return_date }}</div>
@@ -280,7 +280,7 @@ const toggleJobStatus = (job) => {
                                         <button :disabled="job.is_deleted || (!job.is_closed && job.details_count === 0)" @click="toggleJobStatus(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!job.is_closed && job.details_count === 0 ? 'Need at least 1 test result before closing' : ''">
                                             {{ job.is_closed ? 'Reopen' : 'Close' }}
                                         </button>
-                                        <button :disabled="!job.is_deleted || !canDelete" @click="restoreJob(job)" class="rounded-lg border border-emerald-300 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
+                                        <button :disabled="!job.is_deleted || !canDelete" @click="restoreJob(job)" class="rounded-lg border border-orange-200 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
                                     </div>
                                 </td>
                             </tr>

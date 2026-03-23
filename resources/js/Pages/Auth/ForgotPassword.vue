@@ -49,34 +49,34 @@ const submit = () => {
 
 <style scoped>
 .ent-header { text-align: center; margin-bottom: 28px; }
-.ent-title { font-size: 22px; font-weight: 600; color: #111; letter-spacing: -0.03em; margin-bottom: 6px; }
-.ent-subtitle { font-size: 14px; color: #666; line-height: 1.5; }
-.ent-status { padding: 12px 16px; margin-bottom: 20px; font-size: 13px; font-weight: 500; color: #065f46; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; text-align: center; }
+.ent-title { font-size: 22px; font-weight: 600; color: #f5f5f4; letter-spacing: -0.03em; margin-bottom: 6px; }
+.ent-subtitle { font-size: 14px; color: #a8a29e; line-height: 1.5; }
+.ent-status { padding: 12px 16px; margin-bottom: 20px; font-size: 13px; font-weight: 500; color: #fdba74; background-color: rgba(251,146,60,0.1); border: 1px solid rgba(251,146,60,0.2); border-radius: 12px; text-align: center; }
 .ent-form { display: flex; flex-direction: column; gap: 16px; }
 .ent-field-group { display: flex; flex-direction: column; }
-.ent-label { display: inline-block; font-size: 13px; font-weight: 500; color: #444; margin-bottom: 6px; }
+.ent-label { display: inline-block; font-size: 13px; font-weight: 500; color: #d6d3d1; margin-bottom: 6px; }
 .ent-input-wrapper { position: relative; width: 100%; }
 .ent-input {
-    width: 100%; height: 44px; padding: 0 14px; font-size: 14px; font-family: inherit; color: #111;
-    background-color: #FAFAFA; border: 1px solid #EAEAEA; border-radius: 8px; transition: all 0.2s ease; box-sizing: border-box;
+    width: 100%; height: 44px; padding: 0 14px; font-size: 14px; font-family: inherit; color: #f5f5f4;
+    background-color: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; transition: all 0.2s ease; box-sizing: border-box;
 }
-.ent-input::placeholder { color: #A1A1AA; }
-.ent-input:hover { border-color: #D4D4D8; }
-.ent-input:focus { outline: none; background-color: #FFFFFF; border-color: #000; box-shadow: 0 0 0 1px #000; }
-.ent-input.has-error { border-color: #EF4444; background-color: #FEF2F2; }
-.ent-error { margin-top: 4px; font-size: 12px; color: #EF4444; }
+.ent-input::placeholder { color: #8d847d; }
+.ent-input:hover { border-color: rgba(251,146,60,0.24); }
+.ent-input:focus { outline: none; background-color: rgba(255,255,255,0.06); border-color: #fb923c; box-shadow: 0 0 0 3px rgba(251,146,60,0.14); }
+.ent-input.has-error { border-color: #f87171; background-color: rgba(127,29,29,0.16); }
+.ent-error { margin-top: 4px; font-size: 12px; color: #fca5a5; }
 .ent-submit-btn {
-    width: 100%; height: 44px; margin-top: 4px; background-color: #000; color: #FFFFFF; border: none; border-radius: 8px;
+    width: 100%; height: 44px; margin-top: 4px; background: linear-gradient(135deg,#fb923c,#f97316 72%,#c2410c); color: #140d08; border: none; border-radius: 12px;
     font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: background-color 0.2s, transform 0.1s; box-shadow: 0 12px 24px rgba(249,115,22,0.24);
 }
-.ent-submit-btn:hover:not(:disabled) { background-color: #1A1A1A; }
+.ent-submit-btn:hover:not(:disabled) { filter: brightness(1.06); }
 .ent-submit-btn:active:not(:disabled) { transform: scale(0.98); }
-.ent-submit-btn:disabled { background-color: #EAEAEA; color: #A1A1AA; cursor: not-allowed; }
+.ent-submit-btn:disabled { background: rgba(255,255,255,0.08); color: #78716c; cursor: not-allowed; }
 .ent-loading { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .ent-spinner { width: 16px; height: 16px; animation: entSpin 0.7s linear infinite; }
 @keyframes entSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.ent-footer-link { text-align: center; font-size: 13px; color: #666; margin-top: 4px; }
-.ent-link { color: #000; font-weight: 600; text-decoration: none; }
+.ent-footer-link { text-align: center; font-size: 13px; color: #a8a29e; margin-top: 4px; }
+.ent-link { color: #fdba74; font-weight: 600; text-decoration: none; }
 .ent-link:hover { text-decoration: underline; }
 </style>

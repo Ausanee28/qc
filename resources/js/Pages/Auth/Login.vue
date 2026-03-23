@@ -30,24 +30,24 @@ const submit = () => {
 
         <div class="rounded-[24px] p-4 sm:p-5">
             <div class="mb-8">
-                <div class="inline-flex rounded-full border border-zinc-300/90 bg-zinc-100/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-800">
+                <div class="inline-flex rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-100">
                     Factory QC
                 </div>
-                <h1 class="mt-4 font-['Sora'] text-4xl font-semibold leading-[0.95] tracking-[-0.04em] text-slate-900 sm:text-5xl">
+                <h1 class="mt-4 font-['Sora'] text-4xl font-semibold leading-[0.95] tracking-[-0.04em] text-stone-50 sm:text-5xl">
                     Welcome Back
                 </h1>
-                <p class="mt-4 max-w-sm text-sm leading-6 text-slate-600">
+                <p class="mt-4 max-w-sm text-sm leading-6 text-stone-400">
                     Sign in to continue with job intake, test execution, and quality reporting.
                 </p>
             </div>
 
-            <div v-if="status" class="mb-5 rounded-2xl border border-zinc-300 bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-700">
+            <div v-if="status" class="mb-5 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-sm font-medium text-orange-100">
                 {{ status }}
             </div>
 
             <form @submit.prevent="submit" class="space-y-5">
                 <div>
-                    <label for="user_name" class="mb-2 block text-sm font-semibold text-zinc-700">Username</label>
+                    <label for="user_name" class="mb-2 block text-sm font-semibold text-stone-300">Username</label>
                     <input
                         id="user_name"
                         v-model="form.user_name"
@@ -55,14 +55,14 @@ const submit = () => {
                         required
                         autofocus
                         placeholder="e.g. admin"
-                        class="h-12 w-full rounded-2xl border border-zinc-300/90 bg-white/95 px-4 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200"
+                        class="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-stone-100 outline-none transition focus:border-orange-400/40 focus:ring-4 focus:ring-orange-300/15"
                         :class="{ 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-rose-100': form.errors.user_name }"
                     />
                     <InputError class="mt-2 text-sm" :message="form.errors.user_name" />
                 </div>
 
                 <div>
-                    <label for="password" class="mb-2 block text-sm font-semibold text-zinc-700">Password</label>
+                    <label for="password" class="mb-2 block text-sm font-semibold text-stone-300">Password</label>
                     <div class="relative">
                         <input
                             id="password"
@@ -70,12 +70,12 @@ const submit = () => {
                             :type="showPassword ? 'text' : 'password'"
                             required
                             placeholder="Enter your password"
-                            class="h-12 w-full rounded-2xl border border-zinc-300/90 bg-white/95 px-4 pr-12 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-4 focus:ring-zinc-200"
+                            class="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 pr-12 text-sm text-stone-100 outline-none transition focus:border-orange-400/40 focus:ring-4 focus:ring-orange-300/15"
                             :class="{ 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-rose-100': form.errors.password }"
                         />
                         <button
                             type="button"
-                            class="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+                            class="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-stone-500 transition hover:bg-orange-500/10 hover:text-orange-100"
                             @click="showPassword = !showPassword"
                             aria-label="Toggle password visibility"
                         >
@@ -91,19 +91,19 @@ const submit = () => {
                     <InputError class="mt-2 text-sm" :message="form.errors.password" />
                 </div>
 
-                <div class="flex flex-col gap-3 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-col gap-3 text-sm text-stone-400 sm:flex-row sm:items-center sm:justify-between">
                     <label class="flex items-center gap-3">
-                        <input v-model="form.remember" type="checkbox" class="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-300" />
+                        <input v-model="form.remember" type="checkbox" class="h-4 w-4 rounded border-white/10 bg-white/5 text-orange-500 focus:ring-orange-300/20" />
                         <span>Remember me</span>
                     </label>
-                    <Link v-if="canResetPassword" :href="route('password.request')" class="font-semibold text-zinc-700 transition hover:text-zinc-900">
+                    <Link v-if="canResetPassword" :href="route('password.request')" class="font-semibold text-stone-300 transition hover:text-orange-100">
                         Forgot password?
                     </Link>
                 </div>
 
                 <button
                     type="submit"
-                    class="flex h-12 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#09090b,#27272a,#09090b)] px-4 text-sm font-semibold uppercase tracking-[0.18em] text-white shadow-[0_16px_30px_rgba(0,0,0,0.25)] transition hover:translate-y-[-1px] hover:brightness-110 hover:shadow-[0_20px_34px_rgba(0,0,0,0.3)] disabled:cursor-not-allowed disabled:opacity-60"
+                    class="flex h-12 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#fb923c,#f97316_72%,#c2410c)] px-4 text-sm font-semibold uppercase tracking-[0.18em] text-[#140d08] shadow-[0_16px_30px_rgba(249,115,22,0.24)] transition hover:translate-y-[-1px] hover:brightness-110 hover:shadow-[0_20px_34px_rgba(249,115,22,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
                     :disabled="form.processing"
                 >
                     <span v-if="!form.processing">Sign In</span>
@@ -116,9 +116,9 @@ const submit = () => {
                     </span>
                 </button>
 
-                <div class="pt-1 text-center text-sm text-zinc-600">
+                <div class="pt-1 text-center text-sm text-stone-400">
                     New here?
-                    <Link :href="route('register')" class="font-semibold text-zinc-900 transition hover:text-black">
+                    <Link :href="route('register')" class="font-semibold text-orange-100 transition hover:text-orange-200">
                         Create account
                     </Link>
                 </div>

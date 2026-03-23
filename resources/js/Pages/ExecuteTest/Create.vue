@@ -267,7 +267,7 @@ onBeforeUnmount(() => {
             <div v-if="pendingJobs.length" class="info-bar" style="margin-bottom:0">
                 <div style="display:flex;align-items:center;gap:10px">
                     <div style="width:8px;height:8px;border-radius:50%;background:#F59E0B;animation:pulse 2s infinite"></div>
-                    <div class="text-[13px] font-bold text-blue-900">
+                    <div class="text-[13px] font-bold text-orange-100">
                         {{ pendingJobs.length }} open job{{ pendingJobs.length > 1 ? 's' : '' }} available for testing
                     </div>
                 </div>
@@ -275,7 +275,7 @@ onBeforeUnmount(() => {
             </div>
 
             <transition enter-active-class="transition-all duration-300" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition-all duration-300" leave-from-class="opacity-100" leave-to-class="opacity-0">
-                <div v-if="flash.success || submitted" class="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
+                <div v-if="flash.success || submitted" class="rounded-xl border border-orange-500/20 bg-orange-500/10 px-5 py-4 text-sm text-orange-100">
                     {{ flash.success || 'Test result saved successfully.' }}
                 </div>
             </transition>
@@ -331,13 +331,13 @@ onBeforeUnmount(() => {
                             <div class="radio-grp">
                                 <label :class="['radio-card', form.judgement === 'OK' ? 'ok' : '']" style="cursor:pointer">
                                     <input type="radio" v-model="form.judgement" value="OK" class="sr-only" required style="display:none" />
-                                    <div style="width:20px;height:20px;border-radius:50%;background:#10B981;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">OK</div>
+                                    <div style="width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#ea580c);color:#140d08;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">OK</div>
                                     <span style="font-size:13px;font-weight:600">OK</span>
                                 </label>
                                 <label :class="['radio-card', form.judgement === 'NG' ? 'ng' : '']" style="cursor:pointer">
                                     <input type="radio" v-model="form.judgement" value="NG" class="sr-only" style="display:none" />
-                                    <div style="width:20px;height:20px;border-radius:50%;background:#EF4444;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">NG</div>
-                                    <span style="font-size:13px;font-weight:600;color:#EF4444">NG</span>
+                                    <div style="width:20px;height:20px;border-radius:50%;background:#44403c;color:#f5f5f4;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">NG</div>
+                                    <span style="font-size:13px;font-weight:600;color:#f5f5f4">NG</span>
                                 </label>
                             </div>
                             <div v-if="form.errors.judgement" class="mt-1 text-xs text-red-600">{{ form.errors.judgement }}</div>
@@ -345,12 +345,12 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div class="form-grid" style="margin-bottom:24px">
-                        <div style="background:#F9FAFB;padding:14px;border-radius:8px;border:1px solid #E5E7EB">
+                        <div style="background:rgba(255,255,255,0.03);padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,0.08)">
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
                                 <label class="form-lbl">Start Time *</label>
                                 <div style="display:flex;gap:6px;flex-wrap:wrap">
-                                    <button type="button" @click="setStartNow" class="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100">Now</button>
-                                    <button type="button" @click="setNowForBoth" class="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100">Now + End</button>
+                                    <button type="button" @click="setStartNow" class="rounded-md border border-white/10 px-2 py-1 text-xs text-stone-200 hover:bg-orange-500/10">Now</button>
+                                    <button type="button" @click="setNowForBoth" class="rounded-md border border-white/10 px-2 py-1 text-xs text-stone-200 hover:bg-orange-500/10">Now + End</button>
                                 </div>
                             </div>
                             <div style="display:flex;gap:8px;margin-top:4px">
@@ -359,12 +359,12 @@ onBeforeUnmount(() => {
                             </div>
                             <div v-if="form.errors.start_date || form.errors.start_time" class="mt-1 text-xs text-red-600">{{ form.errors.start_date || form.errors.start_time }}</div>
                         </div>
-                        <div style="background:#F9FAFB;padding:14px;border-radius:8px;border:1px solid #E5E7EB">
+                        <div style="background:rgba(255,255,255,0.03);padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,0.08)">
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
                                 <label class="form-lbl">End Time</label>
                                 <div style="display:flex;gap:6px;flex-wrap:wrap">
-                                    <button type="button" @click="setEndNow" class="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100">Now</button>
-                                    <button type="button" @click="copyStartToEnd" class="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100">Use Start</button>
+                                    <button type="button" @click="setEndNow" class="rounded-md border border-white/10 px-2 py-1 text-xs text-stone-200 hover:bg-orange-500/10">Now</button>
+                                    <button type="button" @click="copyStartToEnd" class="rounded-md border border-white/10 px-2 py-1 text-xs text-stone-200 hover:bg-orange-500/10">Use Start</button>
                                 </div>
                             </div>
                             <div style="display:flex;gap:8px;margin-top:4px">
@@ -381,7 +381,7 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div style="padding-top:20px;border-top:1px solid #E5E7EB;display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
+                <div style="padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
                     <button type="button" @click="resetForm" class="btn-outline">Clear</button>
                     <button type="submit" :disabled="form.processing" class="btn">
                         <span v-if="form.processing">{{ isEditing ? 'Updating...' : 'Submitting...' }}</span>
@@ -465,7 +465,7 @@ onBeforeUnmount(() => {
                                     <div class="flex flex-wrap justify-end gap-2">
                                         <button :disabled="result.is_deleted" @click="editResult(result)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
                                         <button :disabled="!canDelete || result.is_deleted" @click="deleteResult(result)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can delete' : ''">Delete</button>
-                                        <button :disabled="!canDelete || !result.is_deleted" @click="restoreResult(result)" class="rounded-lg border border-emerald-300 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
+                                        <button :disabled="!canDelete || !result.is_deleted" @click="restoreResult(result)" class="rounded-lg border border-orange-200 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
                                     </div>
                                 </td>
                             </tr>
