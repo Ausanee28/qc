@@ -11,6 +11,7 @@ use App\Support\PendingJobsVersion;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -58,11 +59,13 @@ class ExecuteTestController extends Controller
             'results' => fn () => TransactionDetail::query()
                 ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
                 ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())
-                ->with([
-                    'transactionHeader:transaction_id,dmc,line,detail',
-                    'testMethod:method_id,method_name',
-                    'inspector:user_id,name',
-                ])
+                ->leftJoin('Transaction_Header as TH', 'Transaction_Detail.transaction_id', '=', 'TH.transaction_id')
+                ->leftJoin('Test_Methods as TM', 'Transaction_Detail.method_id', '=', 'TM.method_id')
+                ->leftJoin('Internal_Users as IU', 'Transaction_Detail.internal_id', '=', 'IU.user_id')
+                ->select('Transaction_Detail.*')
+                ->selectRaw('TH.detail as job_detail')
+                ->selectRaw('TM.method_name as joined_method_name')
+                ->selectRaw('IU.name as joined_inspector_name')
                 ->when($filters['search'] !== '', function ($query) use ($filters) {
                     $search = $filters['search'];
 
@@ -70,22 +73,20 @@ class ExecuteTestController extends Controller
                         $subQuery->where('detail_id', 'like', "%{$search}%")
                             ->orWhere('transaction_id', 'like', "%{$search}%")
                             ->orWhere('remark', 'like', "%{$search}%")
-                            ->orWhereHas('testMethod', fn ($q) => $q->where('method_name', 'like', "%{$search}%"))
-                            ->orWhereHas('inspector', fn ($q) => $q->where('name', 'like', "%{$search}%"))
-                            ->orWhereHas('transactionHeader', function ($q) use ($search) {
-                                $q->where('detail', 'like', "%{$search}%")
-                                    ->orWhere('dmc', 'like', "%{$search}%")
-                                    ->orWhere('line', 'like', "%{$search}%");
-                            });
+                            ->orWhere('TM.method_name', 'like', "%{$search}%")
+                            ->orWhere('IU.name', 'like', "%{$search}%")
+                            ->orWhere('TH.detail', 'like', "%{$search}%")
+                            ->orWhere('TH.dmc', 'like', "%{$search}%")
+                            ->orWhere('TH.line', 'like', "%{$search}%");
                     });
                 })
                 ->when(
                     $filters['judgement'] !== 'all',
                     fn ($query) => $query->where('judgement', $filters['judgement'])
                 )
-                ->when($filters['date_from'] !== '', fn ($query) => $query->whereDate('start_time', '>=', $filters['date_from']))
-                ->when($filters['date_to'] !== '', fn ($query) => $query->whereDate('start_time', '<=', $filters['date_to']))
-                ->orderByDesc('detail_id')
+                ->when($filters['date_from'] !== '', fn ($query) => $query->where('start_time', '>=', Carbon::parse($filters['date_from'])->startOfDay()))
+                ->when($filters['date_to'] !== '', fn ($query) => $query->where('start_time', '<=', Carbon::parse($filters['date_to'])->endOfDay()))
+                ->orderByDesc('Transaction_Detail.detail_id')
                 ->paginate($filters['per_page'])
                 ->withQueryString()
                 ->through(fn (TransactionDetail $detail) => [
@@ -100,9 +101,9 @@ class ExecuteTestController extends Controller
                     'end_date' => optional($detail->end_time)->format('Y-m-d'),
                     'end_time' => optional($detail->end_time)->format('H:i'),
                     'deleted_at' => $supportsDetailSoftDeletes ? optional($detail->deleted_at)->format('Y-m-d H:i') : null,
-                    'job_label' => '#' . $detail->transaction_id . ' - ' . ($detail->transactionHeader?->detail ?: 'No detail'),
-                    'method_name' => $detail->testMethod?->method_name,
-                    'inspector_name' => $detail->inspector?->name,
+                    'job_label' => '#' . $detail->transaction_id . ' - ' . ($detail->job_detail ?: 'No detail'),
+                    'method_name' => $detail->joined_method_name,
+                    'inspector_name' => $detail->joined_inspector_name,
                     'is_deleted' => $supportsDetailSoftDeletes && $detail->trashed(),
                 ]),
             'filters' => $filters,

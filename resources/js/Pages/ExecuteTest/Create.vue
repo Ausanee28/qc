@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { getEcho } from '@/lib/realtime';
 
 const props = defineProps({
@@ -47,6 +47,21 @@ const filterForm = useForm({
     date_to: props.filters?.date_to ?? '',
     per_page: String(props.filters?.per_page ?? 20),
 });
+
+const resultRows = computed(() => props.results?.data ?? []);
+const resultLinks = computed(() => props.results?.links ?? []);
+
+const judgementClass = (result) => result.judgement === 'OK'
+    ? 'bg-emerald-100 text-emerald-700'
+    : 'bg-rose-100 text-rose-700';
+
+const canEditResult = (result) => !result.is_deleted;
+const canDeleteResult = (result) => canDelete && !result.is_deleted;
+const canRestoreResult = (result) => canDelete && result.is_deleted;
+
+const pagerButtonClass = (link) => link.active
+    ? 'border-gray-900 bg-gray-900 text-white'
+    : 'border-gray-300 text-gray-700 hover:bg-gray-50';
 
 const applyFilters = () => {
     router.get(route('execute-test.create'), filterForm.data(), {
@@ -464,10 +479,10 @@ onBeforeUnmount(() => {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 bg-white">
-                            <tr v-if="results.data.length === 0">
+                            <tr v-if="resultRows.length === 0">
                                 <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">No test results found.</td>
                             </tr>
-                            <tr v-for="result in results.data" :key="result.detail_id" class="align-top">
+                            <tr v-for="result in resultRows" :key="result.detail_id" class="align-top">
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <div class="font-mono font-semibold text-gray-900">#{{ result.detail_id }}</div>
                                     <div class="mt-1 text-xs text-gray-500">Job #{{ result.transaction_id }}</div>
@@ -483,16 +498,16 @@ onBeforeUnmount(() => {
                                     <div class="mt-1 text-xs text-gray-500">{{ result.end_date ? `${result.end_date} ${result.end_time}` : 'End time not set' }}</div>
                                 </td>
                                 <td class="px-6 py-4 text-sm">
-                                    <span :class="result.judgement === 'OK' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
+                                    <span :class="judgementClass(result)" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
                                         {{ result.judgement }}
                                     </span>
                                     <div v-if="result.remark" class="mt-2 text-xs text-gray-500">{{ result.remark }}</div>
                                 </td>
                                 <td class="px-6 py-4 text-right text-sm">
                                     <div class="flex flex-wrap justify-end gap-2">
-                                        <button :disabled="result.is_deleted" @click="editResult(result)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
-                                        <button :disabled="!canDelete || result.is_deleted" @click="deleteResult(result)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can delete' : ''">Delete</button>
-                                        <button :disabled="!canDelete || !result.is_deleted" @click="restoreResult(result)" class="rounded-lg border border-orange-200 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
+                                        <button :disabled="!canEditResult(result)" @click="editResult(result)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
+                                        <button :disabled="!canDeleteResult(result)" @click="deleteResult(result)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can delete' : ''">Delete</button>
+                                        <button :disabled="!canRestoreResult(result)" @click="restoreResult(result)" class="rounded-lg border border-orange-200 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
                                     </div>
                                 </td>
                             </tr>
@@ -506,12 +521,12 @@ onBeforeUnmount(() => {
                     </div>
                     <div class="flex flex-wrap justify-end gap-2">
                         <button
-                            v-for="(link, index) in results.links"
+                            v-for="(link, index) in resultLinks"
                             :key="index"
                             :disabled="!link.url"
                             @click="visitPage(link.url)"
                             class="rounded-md border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
-                            :class="link.active ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+                            :class="pagerButtonClass(link)"
                             v-html="link.label"
                         />
                     </div>

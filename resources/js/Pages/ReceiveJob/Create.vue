@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({ externals: Array, internals: Array, jobs: Object, filters: Object });
 const flash = usePage().props.flash || {};
@@ -26,6 +26,30 @@ const filterForm = useForm({
     date_to: props.filters?.date_to ?? '',
     per_page: String(props.filters?.per_page ?? 20),
 });
+
+const jobRows = computed(() => props.jobs?.data ?? []);
+const jobLinks = computed(() => props.jobs?.links ?? []);
+
+const statusLabel = (job) => {
+    if (job.is_deleted) return 'Deleted';
+    return job.is_closed ? 'Closed' : 'Open';
+};
+
+const statusClass = (job) => {
+    if (job.is_deleted) {
+        return 'bg-stone-800 text-stone-100 border border-white/10';
+    }
+
+    return 'bg-orange-100 text-orange-700 border border-orange-200';
+};
+
+const canEditJob = (job) => !job.is_deleted && !(job.details_count > 0 && !job.is_closed);
+const canDeleteJob = (job) => !job.is_deleted && canDelete && !(job.details_count > 0 && !job.is_closed);
+const canToggleJobStatus = (job) => !job.is_deleted && (job.is_closed || job.details_count > 0);
+
+const pagerButtonClass = (link) => link.active
+    ? 'border-gray-900 bg-gray-900 text-white'
+    : 'border-gray-300 text-gray-700 hover:bg-gray-50';
 
 const applyFilters = () => {
     router.get(route('receive-job.create'), filterForm.data(), {
@@ -251,10 +275,10 @@ const toggleJobStatus = (job) => {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 bg-white">
-                            <tr v-if="jobs.data.length === 0">
+                            <tr v-if="jobRows.length === 0">
                                 <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">No jobs found.</td>
                             </tr>
-                            <tr v-for="job in jobs.data" :key="job.transaction_id" class="align-top">
+                            <tr v-for="job in jobRows" :key="job.transaction_id" class="align-top">
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <div class="font-mono font-semibold text-gray-900">#{{ job.transaction_id }}</div>
                                     <div class="mt-1 text-xs text-gray-500">{{ job.receive_date }}</div>
@@ -267,17 +291,17 @@ const toggleJobStatus = (job) => {
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-700">{{ job.detail || '-' }}</td>
                                 <td class="px-6 py-4 text-sm">
-                                    <span :class="job.is_deleted ? 'bg-stone-800 text-stone-100 border border-white/10' : (job.is_closed ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-orange-100 text-orange-700 border border-orange-200')" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
-                                        {{ job.is_deleted ? 'Deleted' : (job.is_closed ? 'Closed' : 'Open') }}
+                                    <span :class="statusClass(job)" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
+                                        {{ statusLabel(job) }}
                                     </span>
                                     <div v-if="job.return_date && !job.is_deleted" class="mt-2 text-xs text-gray-500">Closed: {{ job.return_date }}</div>
                                     <div v-if="job.deleted_at" class="mt-2 text-xs text-gray-500">Deleted: {{ job.deleted_at }}</div>
                                 </td>
                                 <td class="px-6 py-4 text-right text-sm">
                                     <div class="flex flex-wrap justify-end gap-2">
-                                        <button :disabled="job.is_deleted || (job.details_count > 0 && !job.is_closed)" @click="editJob(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
-                                        <button :disabled="job.is_deleted || !canDelete || (job.details_count > 0 && !job.is_closed)" @click="deleteJob(job)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can delete' : ''">Delete</button>
-                                        <button :disabled="job.is_deleted || (!job.is_closed && job.details_count === 0)" @click="toggleJobStatus(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!job.is_closed && job.details_count === 0 ? 'Need at least 1 test result before closing' : ''">
+                                        <button :disabled="!canEditJob(job)" @click="editJob(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
+                                        <button :disabled="!canDeleteJob(job)" @click="deleteJob(job)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can delete' : ''">Delete</button>
+                                        <button :disabled="!canToggleJobStatus(job)" @click="toggleJobStatus(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!job.is_closed && job.details_count === 0 ? 'Need at least 1 test result before closing' : ''">
                                             {{ job.is_closed ? 'Reopen' : 'Close' }}
                                         </button>
                                         <button :disabled="!job.is_deleted || !canDelete" @click="restoreJob(job)" class="rounded-lg border border-orange-200 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
@@ -294,12 +318,12 @@ const toggleJobStatus = (job) => {
                     </div>
                     <div class="flex flex-wrap justify-end gap-2">
                         <button
-                            v-for="(link, index) in jobs.links"
+                            v-for="(link, index) in jobLinks"
                             :key="index"
                             :disabled="!link.url"
                             @click="visitPage(link.url)"
                             class="rounded-md border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
-                            :class="link.active ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+                            :class="pagerButtonClass(link)"
                             v-html="link.label"
                         />
                     </div>

@@ -9,6 +9,7 @@ use App\Models\TransactionDetail;
 use App\Support\PendingJobsVersion;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -39,7 +40,12 @@ class ReceiveJobController extends Controller
             $filters['status'] = 'all';
         }
 
-        $jobsQuery = TransactionHeader::with(['externalUser:external_id,external_name', 'internalUser:user_id,name'])
+        $jobsQuery = TransactionHeader::query()
+            ->leftJoin('External_Users as EU', 'Transaction_Header.external_id', '=', 'EU.external_id')
+            ->leftJoin('Internal_Users as IU', 'Transaction_Header.internal_id', '=', 'IU.user_id')
+            ->select('Transaction_Header.*')
+            ->selectRaw('EU.external_name as external_name')
+            ->selectRaw('IU.name as internal_name')
             ->withCount('details')
             ->when($filters['search'] !== '', function ($query) use ($filters) {
                 $search = $filters['search'];
@@ -49,15 +55,15 @@ class ReceiveJobController extends Controller
                         ->orWhere('dmc', 'like', "%{$search}%")
                         ->orWhere('line', 'like', "%{$search}%")
                         ->orWhere('transaction_id', 'like', "%{$search}%")
-                        ->orWhereHas('externalUser', fn ($q) => $q->where('external_name', 'like', "%{$search}%"))
-                        ->orWhereHas('internalUser', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+                        ->orWhere('EU.external_name', 'like', "%{$search}%")
+                        ->orWhere('IU.name', 'like', "%{$search}%");
                 });
             })
             ->when($supportsHeaderSoftDeletes && $filters['status'] === 'deleted', fn ($query) => $query->onlyTrashed())
             ->when($filters['status'] === 'open', fn ($query) => $query->whereNull('return_date'))
             ->when($filters['status'] === 'closed', fn ($query) => $query->whereNotNull('return_date'))
-            ->when($filters['date_from'] !== '', fn ($query) => $query->whereDate('receive_date', '>=', $filters['date_from']))
-            ->when($filters['date_to'] !== '', fn ($query) => $query->whereDate('receive_date', '<=', $filters['date_to']));
+            ->when($filters['date_from'] !== '', fn ($query) => $query->where('receive_date', '>=', Carbon::parse($filters['date_from'])->startOfDay()))
+            ->when($filters['date_to'] !== '', fn ($query) => $query->where('receive_date', '<=', Carbon::parse($filters['date_to'])->endOfDay()));
 
         $externals = Cache::remember('receive_job.externals', now()->addMinutes(10), function () {
             return ExternalUser::orderBy('external_name')
@@ -73,7 +79,7 @@ class ReceiveJobController extends Controller
             'externals' => $externals,
             'internals' => $internals,
             'jobs' => $jobsQuery
-                ->orderByDesc('receive_date')
+                ->orderByDesc('Transaction_Header.receive_date')
                 ->paginate($filters['per_page'])
                 ->withQueryString()
                 ->through(fn (TransactionHeader $job) => [
@@ -87,8 +93,8 @@ class ReceiveJobController extends Controller
                     'return_date' => optional($job->return_date)->format('Y-m-d H:i'),
                     'deleted_at' => $supportsHeaderSoftDeletes ? optional($job->deleted_at)->format('Y-m-d H:i') : null,
                     'details_count' => $job->details_count,
-                    'external_name' => $job->externalUser?->external_name,
-                    'internal_name' => $job->internalUser?->name,
+                    'external_name' => $job->external_name,
+                    'internal_name' => $job->internal_name,
                     'is_closed' => $job->return_date !== null,
                     'is_deleted' => $supportsHeaderSoftDeletes && $job->trashed(),
                 ]),
