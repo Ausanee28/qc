@@ -234,6 +234,7 @@ const selectedPeriodLabel = computed(() => periodLabels[selectedPeriod.value] ||
 const leadEquipment = computed(() => props.equipRank?.[0] ?? null);
 const leadFailure = computed(() => props.failByEquip?.[0] ?? null);
 const leadInspector = computed(() => props.inspectorData?.[0] ?? null);
+const pendingJobs = computed(() => Number(props.metrics.pendingCount || 0));
 
 const healthSummary = computed(() => {
     if (!totalTests.value) {
@@ -295,8 +296,8 @@ const signalCards = computed(() => ([
 const heroChecklist = computed(() => ([
     {
         label: 'Queue pressure',
-        value: Number(props.metrics.pendingCount || 0) <= 5 ? 'In range' : 'Needs watch',
-        note: `${formatNumber(props.metrics.pendingCount)} jobs still open`,
+        value: pendingJobs.value <= 5 ? 'In range' : 'Needs watch',
+        note: `${formatNumber(pendingJobs.value)} jobs still open`,
     },
     {
         label: 'Today cadence',
@@ -309,6 +310,80 @@ const heroChecklist = computed(() => ([
         note: `${props.metrics.avgTestTime || 0} min average test time`,
     },
 ]));
+const snapshotMetrics = computed(() => ([
+    { label: 'Pass records', value: formatNumber(props.metrics.okCount), note: 'Accepted inspections in this window' },
+    { label: 'Fail records', value: formatNumber(props.metrics.ngCount), note: 'Records marked NG' },
+    { label: 'Pending jobs', value: formatNumber(pendingJobs.value), note: 'Jobs still waiting to close' },
+    { label: 'Avg test time', value: `${props.metrics.avgTestTime || 0} min`, note: `${props.metrics.testsPerJob || 0} tests per job` },
+]));
+const attentionItems = computed(() => {
+    if (!totalTests.value) {
+        return [
+            {
+                title: 'Start by registering incoming work',
+                detail: 'The dashboard will become much more useful once the first jobs and test results are recorded.',
+                tone: 'ink',
+            },
+            {
+                title: 'Keep an eye on the open queue',
+                detail: `${formatNumber(pendingJobs.value)} jobs are currently waiting to be returned or completed.`,
+                tone: 'amber',
+            },
+            {
+                title: 'Use the launch actions on the right',
+                detail: 'Receive Job and Execute Test are the fastest paths to populate today’s operational picture.',
+                tone: 'orange',
+            },
+        ];
+    }
+
+    const items = [
+        pendingJobs.value <= 5
+            ? {
+                title: 'Queue is under control',
+                detail: `${formatNumber(pendingJobs.value)} jobs remain open, which keeps the lab in a manageable range.`,
+                tone: 'orange',
+            }
+            : {
+                title: 'Queue needs attention',
+                detail: `${formatNumber(pendingJobs.value)} jobs remain open. Clearing the backlog should be the first priority.`,
+                tone: 'amber',
+            },
+        yieldPct.value >= 95
+            ? {
+                title: 'Yield is holding above target',
+                detail: `${formatPercent(yieldPct.value)} yield across ${formatNumber(totalTests.value)} tests in the selected window.`,
+                tone: 'orange',
+            }
+            : {
+                title: 'Quality drift needs review',
+                detail: `${formatPercent(defectPct.value)} defect rate is dragging yield down in the selected window.`,
+                tone: 'ember',
+            },
+    ];
+
+    if (leadFailure.value) {
+        items.push({
+            title: 'Most frequent failure source',
+            detail: `${leadFailure.value.name} is responsible for ${formatNumber(leadFailure.value.count)} NG results.`,
+            tone: 'ember',
+        });
+    } else if (leadEquipment.value) {
+        items.push({
+            title: 'Main workload driver',
+            detail: `${leadEquipment.value.name} handled ${formatNumber(leadEquipment.value.count)} tests in this window.`,
+            tone: 'ink',
+        });
+    } else {
+        items.push({
+            title: 'Trend signals are still building',
+            detail: 'As more results come in, this panel will highlight the biggest operational risk automatically.',
+            tone: 'ink',
+        });
+    }
+
+    return items;
+});
 
 const monthlyHighlights = computed(() => {
     const withData = props.monthlyData.filter((month) => Number(month.total || 0) > 0);
@@ -391,14 +466,14 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 
         <div class="space-y-8">
             <section class="dash-hero reveal-section p-6 sm:p-8">
-                <div class="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_340px]">
+                <div class="grid gap-6 xl:items-start xl:grid-cols-[minmax(0,1.7fr)_340px]">
                     <div class="space-y-6">
                         <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                             <div class="max-w-3xl">
                                 <div class="dash-kicker">Operations Dashboard</div>
-                                <h1 class="dash-heading mt-2">Quality control at a glance</h1>
+                                <h1 class="dash-heading mt-2">Start with what needs attention now</h1>
                                 <p class="mt-3 text-sm leading-7 text-stone-300/80 sm:text-base">
-                                    A cleaner snapshot of throughput, yield, queue pressure, and team performance for {{ selectedPeriodLabel.toLowerCase() }}.
+                                    The dashboard should answer four questions quickly: how much work is moving, whether quality is healthy, what looks risky, and where the team should go next for {{ selectedPeriodLabel.toLowerCase() }}.
                                 </p>
                             </div>
 
@@ -416,6 +491,28 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                             </div>
                         </div>
 
+                        <article class="rounded-[28px] border border-white/10 p-6 text-white shadow-[0_20px_50px_rgba(15,23,42,0.18)]" :class="{
+                                'bg-[linear-gradient(160deg,#0a0a0a,#1c1917)]': healthSummary.tone === 'ink',
+                                'bg-[linear-gradient(160deg,#1c0f05,#9a3412)]': healthSummary.tone === 'orange',
+                                'bg-[linear-gradient(160deg,#20120a,#b45309)]': healthSummary.tone === 'amber',
+                                'bg-[linear-gradient(160deg,#130d08,#7c2d12)]': healthSummary.tone === 'ember'
+                            }">
+                            <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                                <div class="max-w-2xl">
+                                    <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">Operational pulse</div>
+                                    <h2 class="mt-3 text-3xl font-semibold tracking-tight">{{ healthSummary.title }}</h2>
+                                    <p class="mt-3 text-sm leading-7 text-white/72">{{ healthSummary.text }}</p>
+                                </div>
+                                <div class="grid gap-3 sm:grid-cols-3">
+                                    <div v-for="item in heroChecklist" :key="item.label" class="rounded-2xl border border-white/10 bg-white/10 p-4">
+                                        <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">{{ item.label }}</div>
+                                        <div class="mt-2 text-2xl font-semibold tracking-tight">{{ item.value }}</div>
+                                        <div class="mt-2 text-sm text-white/70">{{ item.note }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            </article>
+
                         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                             <article v-for="stat in overviewStats" :key="stat.label" class="dash-stat rounded-[22px] border border-white/10 bg-[#18120e]/88 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]" :data-tone="stat.tone">
                                 <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{{ stat.label }}</div>
@@ -423,99 +520,32 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                                 <div class="mt-2 text-sm leading-6 text-stone-400">{{ stat.note }}</div>
                             </article>
                         </div>
-
-                        <div class="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
-                            <article class="rounded-[24px] border border-white/10 p-6 text-white shadow-[0_20px_50px_rgba(15,23,42,0.18)]" :class="{
-                                'bg-[linear-gradient(160deg,#0a0a0a,#1c1917)]': healthSummary.tone === 'ink',
-                                'bg-[linear-gradient(160deg,#1c0f05,#9a3412)]': healthSummary.tone === 'orange',
-                                'bg-[linear-gradient(160deg,#20120a,#b45309)]': healthSummary.tone === 'amber',
-                                'bg-[linear-gradient(160deg,#130d08,#7c2d12)]': healthSummary.tone === 'ember'
-                            }">
-                                <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">Operational pulse</div>
-                                <h2 class="mt-3 text-2xl font-semibold tracking-tight">{{ healthSummary.title }}</h2>
-                                <p class="mt-3 text-sm leading-7 text-white/72">{{ healthSummary.text }}</p>
-                                <div class="mt-5 grid gap-3 sm:grid-cols-3">
-                                    <div class="rounded-2xl border border-white/10 bg-white/10 p-4">
-                                        <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">Today</div>
-                                        <div class="mt-2 text-2xl font-semibold tracking-tight">{{ formatNumber(todayTotal) }}</div>
-                                        <div class="mt-2 text-sm text-white/70">inspections completed</div>
-                                    </div>
-                                    <div class="rounded-2xl border border-white/10 bg-white/10 p-4">
-                                        <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">Yield</div>
-                                        <div class="mt-2 text-2xl font-semibold tracking-tight">{{ formatPercent(todayYield) }}</div>
-                                        <div class="mt-2 text-sm text-white/70">for today's output</div>
-                                    </div>
-                                    <div class="rounded-2xl border border-white/10 bg-white/10 p-4">
-                                        <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">Tests / Job</div>
-                                        <div class="mt-2 text-2xl font-semibold tracking-tight">{{ props.metrics.testsPerJob || 0 }}</div>
-                                        <div class="mt-2 text-sm text-white/70">average workload depth</div>
-                                    </div>
-                                </div>
-                            </article>
-
-                            <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-                                <div class="dash-kicker">Launchpad</div>
-                                <div class="mt-3">
-                                    <h2 class="text-2xl font-semibold tracking-tight text-stone-50">Start with the queue and today's pulse</h2>
-                                    <p class="mt-3 text-sm leading-7 text-stone-300/80">
-                                        The first view stays focused on throughput, queue health, and the current reporting window. Deeper drivers load below once the page settles.
-                                    </p>
-                                </div>
-                                <div class="mt-5 space-y-4">
-                                    <div v-for="item in heroChecklist" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4">
-                                        <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div>
-                                        <div class="mt-2 text-base font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
-                                        <div class="mt-2 text-sm leading-6 text-stone-400">{{ item.note }}</div>
-                                    </div>
-                                </div>
-                            </article>
-                        </div>
                     </div>
+
                     <aside class="space-y-4">
                         <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-                            <div class="dash-kicker">Period snapshot</div>
-                            <div class="mt-4 flex items-end justify-between gap-4">
-                                <div>
-                                    <div class="text-sm font-medium text-stone-400">{{ selectedPeriodLabel }}</div>
-                                    <div class="mt-1 text-4xl font-semibold tracking-tight text-stone-50">{{ formatNumber(totalTests) }}</div>
-                                </div>
-                                <div class="rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-200">{{ formatPercent(yieldPct) }} yield</div>
+                            <div class="dash-kicker">Focus now</div>
+                            <div class="mt-3">
+                                <h2 class="text-2xl font-semibold tracking-tight text-stone-50">What should the team look at first</h2>
+                                <p class="mt-3 text-sm leading-7 text-stone-300/80">
+                                    These are the most important signals for the current window, ordered so the team can decide what to do next without scanning the whole page.
+                                </p>
                             </div>
                             <div class="mt-5 space-y-3">
-                                <div>
-                                    <div class="mb-2 flex items-center justify-between text-xs font-semibold text-stone-400">
-                                        <span>Quality mix</span>
-                                        <span>{{ formatPercent(defectPct) }} defect</span>
-                                    </div>
-                                    <div class="flex h-3 overflow-hidden rounded-full bg-white/10">
-                                        <div class="bg-gradient-to-r from-orange-500 to-amber-300" :style="{ width: `${yieldPct}%` }"></div>
-                                        <div class="bg-gradient-to-r from-[#5b2d12] to-[#9a3412]" :style="{ width: `${defectPct}%` }"></div>
-                                    </div>
+                                <div v-for="item in attentionItems" :key="item.title" class="rounded-2xl border p-4" :class="{
+                                    'border-orange-500/20 bg-orange-500/10': item.tone === 'orange',
+                                    'border-amber-500/20 bg-amber-500/10': item.tone === 'amber',
+                                    'border-[#9a3412]/30 bg-[#9a3412]/15': item.tone === 'ember',
+                                    'border-white/10 bg-black/25': item.tone === 'ink',
+                                }">
+                                    <div class="text-[11px] font-bold uppercase tracking-[0.16em]" :class="{
+                                        'text-orange-200/80': item.tone === 'orange',
+                                        'text-amber-200/80': item.tone === 'amber',
+                                        'text-orange-100/80': item.tone === 'ember',
+                                        'text-stone-500': item.tone === 'ink',
+                                    }">{{ item.title }}</div>
+                                    <div class="mt-2 text-sm leading-6" :class="item.tone === 'ink' ? 'text-stone-400' : 'text-stone-100/80'">{{ item.detail }}</div>
                                 </div>
-                                <div class="grid gap-3 sm:grid-cols-2">
-                                    <div class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Pass</div><div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ formatNumber(props.metrics.okCount) }}</div></div>
-                                    <div class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Fail</div><div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ formatNumber(props.metrics.ngCount) }}</div></div>
-                                    <div class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Pending</div><div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ formatNumber(props.metrics.pendingCount) }}</div></div>
-                                    <div class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Avg time</div><div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ props.metrics.avgTestTime || 0 }} min</div></div>
-                                </div>
-                            </div>
-                        </article>
-
-                        <article class="rounded-[24px] border border-orange-500/15 bg-[linear-gradient(160deg,#090909,#22140a)] p-6 text-white shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
-                            <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-300/70">Quick actions</div>
-                            <div class="mt-4 space-y-3">
-                                <Link :href="route('receive-job.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
-                                    <div><div class="text-base font-semibold tracking-tight">Receive new job</div><div class="mt-1 text-sm text-white/70">Open intake and register incoming work.</div></div>
-                                    <span class="text-white/60">></span>
-                                </Link>
-                                <Link :href="route('execute-test.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
-                                    <div><div class="text-base font-semibold tracking-tight">Record test result</div><div class="mt-1 text-sm text-white/70">Jump straight to active inspections.</div></div>
-                                    <span class="text-white/60">></span>
-                                </Link>
-                                <Link :href="route('report.index')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
-                                    <div><div class="text-base font-semibold tracking-tight">Open reporting</div><div class="mt-1 text-sm text-white/70">Review history and export filtered reports.</div></div>
-                                    <span class="text-white/60">></span>
-                                </Link>
                             </div>
                         </article>
                     </aside>
@@ -526,9 +556,9 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                 <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <div class="dash-kicker">Quality overview</div>
-                            <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Weekly pass vs fail movement</h2>
-                            <p class="mt-3 text-sm leading-7 text-stone-300/80">A fast read on how the lab has performed across the last seven days.</p>
+                            <div class="dash-kicker">Movement</div>
+                            <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">How work is moving across the last seven days</h2>
+                            <p class="mt-3 text-sm leading-7 text-stone-300/80">Use this chart to judge whether the queue is flowing cleanly or whether fail volume is starting to change the pattern.</p>
                         </div>
                         <div class="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-semibold text-orange-200">{{ selectedPeriodLabel }}</div>
                     </div>
@@ -539,23 +569,51 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                 </article>
 
                 <div class="grid gap-6">
-                    <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-                        <div class="dash-kicker">Result split</div>
-                        <div class="mt-4 grid gap-4 sm:grid-cols-2">
-                            <div class="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-200/80">OK records</div><div class="mt-2 text-2xl font-semibold tracking-tight text-orange-100">{{ formatNumber(props.metrics.okCount) }}</div><div class="mt-2 text-sm text-orange-100/70">{{ formatPercent(yieldPct) }} of total results</div></div>
-                            <div class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">NG records</div><div class="mt-2 text-2xl font-semibold tracking-tight text-stone-100">{{ formatNumber(props.metrics.ngCount) }}</div><div class="mt-2 text-sm text-stone-400">{{ formatPercent(defectPct) }} of total results</div></div>
+                    <article class="rounded-[24px] border border-orange-500/15 bg-[linear-gradient(160deg,#090909,#22140a)] p-6 text-white shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+                        <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-300/70">Quick actions</div>
+                        <div class="mt-4 space-y-3">
+                            <Link :href="route('receive-job.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
+                                <div><div class="text-base font-semibold tracking-tight">Receive new job</div><div class="mt-1 text-sm text-white/70">Open intake and register incoming work.</div></div>
+                                <span class="text-white/60">></span>
+                            </Link>
+                            <Link :href="route('execute-test.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
+                                <div><div class="text-base font-semibold tracking-tight">Record test result</div><div class="mt-1 text-sm text-white/70">Jump straight to active inspections.</div></div>
+                                <span class="text-white/60">></span>
+                            </Link>
+                            <Link :href="route('report.index')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
+                                <div><div class="text-base font-semibold tracking-tight">Open reporting</div><div class="mt-1 text-sm text-white/70">Review history and export filtered reports.</div></div>
+                                <span class="text-white/60">></span>
+                            </Link>
                         </div>
                     </article>
 
                     <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-                        <div class="dash-kicker">Today</div>
-                        <div class="mt-3 flex items-end justify-between gap-4">
-                            <div><div class="text-4xl font-semibold tracking-tight text-stone-50">{{ formatNumber(todayTotal) }}</div><div class="mt-1 text-sm text-stone-400">completed inspections</div></div>
-                            <div class="text-right"><div class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Yield</div><div class="mt-1 text-2xl font-semibold text-orange-300">{{ formatPercent(todayYield) }}</div></div>
+                        <div class="dash-kicker">Window snapshot</div>
+                        <div class="mt-4 flex items-end justify-between gap-4">
+                            <div>
+                                <div class="text-sm font-medium text-stone-400">{{ selectedPeriodLabel }}</div>
+                                <div class="mt-1 text-4xl font-semibold tracking-tight text-stone-50">{{ formatNumber(totalTests) }}</div>
+                            </div>
+                            <div class="rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-200">{{ formatPercent(yieldPct) }} yield</div>
                         </div>
-                        <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                            <div class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">OK today</div><div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ formatNumber(props.metrics.todayOK) }}</div></div>
-                            <div class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">NG today</div><div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ formatNumber(props.metrics.todayNG) }}</div></div>
+                        <div class="mt-5 space-y-3">
+                            <div>
+                                <div class="mb-2 flex items-center justify-between text-xs font-semibold text-stone-400">
+                                    <span>Quality mix</span>
+                                    <span>{{ formatPercent(defectPct) }} defect</span>
+                                </div>
+                                <div class="flex h-3 overflow-hidden rounded-full bg-white/10">
+                                    <div class="bg-gradient-to-r from-orange-500 to-amber-300" :style="{ width: `${yieldPct}%` }"></div>
+                                    <div class="bg-gradient-to-r from-[#5b2d12] to-[#9a3412]" :style="{ width: `${defectPct}%` }"></div>
+                                </div>
+                            </div>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <div v-for="item in snapshotMetrics" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4">
+                                    <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div>
+                                    <div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
+                                    <div class="mt-2 text-sm text-stone-400">{{ item.note }}</div>
+                                </div>
+                            </div>
                         </div>
                     </article>
                 </div>
