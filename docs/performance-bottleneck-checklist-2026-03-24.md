@@ -17,7 +17,7 @@ See also: [performance-summary-2026-03-24.md](./performance-summary-2026-03-24.m
 - [x] Reduce `/execute-test/pending-jobs-version` load with cache-backed version token
 - [x] Push report export filtering into SQL and stream the result set
 - [x] Cache analytics hotspots such as `performance`
-- [ ] Re-check `certificate / report / performance` queries on a larger dataset
+- [x] Re-check `certificate / report / performance` queries on a larger dataset
 
 ## Workflow Pages
 
@@ -42,7 +42,7 @@ See also: [performance-summary-2026-03-24.md](./performance-summary-2026-03-24.m
 - [x] Reduce `AuthenticatedLayout` size
 - [x] Consolidate nav config and remove repeated branching
 - [x] Remove sidebar/mobile nav hover prefetch noise
-- [ ] Review shared components that still carry avoidable state or logic
+- [x] Review shared components that still carry avoidable state or logic
 
 ## Master Data
 
@@ -50,15 +50,15 @@ See also: [performance-summary-2026-03-24.md](./performance-summary-2026-03-24.m
 - [x] Move master-data lists to server-side search + pagination
 - [x] Use partial reload after create/update/delete
 - [x] Defer modal-only option lists in `Test Methods` and `External Users`
-- [ ] Reduce any remaining master-data modal/form payload if needed
+- [x] Reduce any remaining master-data modal/form payload if needed
 - [x] Extract duplicated modal/form shell into a shared component
 
 ## Bundle And Frontend Delivery
 
 - [x] Split `framework`, `charts`, `realtime`, and `http` into vendor chunks
 - [x] Reduce the `app.js` main entry to essentials
-- [ ] Investigate whether `framework-vendor` can be reduced further
-- [ ] Audit shared CSS/utility payload for first-load weight
+- [x] Investigate whether `framework-vendor` can be reduced further
+- [x] Audit shared CSS/utility payload for first-load weight
 
 ## Final Verification
 
@@ -69,7 +69,6 @@ See also: [performance-summary-2026-03-24.md](./performance-summary-2026-03-24.m
 
 ## Suggested Next Steps
 
-1. Review shared component/state paths for regression after the benchmark pass.
-2. Re-run query analysis on a larger dataset for `certificate / report / performance`.
-3. Inspect `framework-vendor` and shared CSS if another optimization round is planned.
-4. Run an optional physical-device sanity check if you want hardware-level confirmation beyond viewport emulation.
+1. Run an optional physical-device sanity check if you want hardware-level confirmation beyond viewport emulation.
+2. Re-benchmark `certificates` on production-like data if the monthly range grows beyond the current local sample.
+3. Keep watching `framework-vendor` only when a dependency change lands, because the remaining weight is core Vue + Inertia runtime.

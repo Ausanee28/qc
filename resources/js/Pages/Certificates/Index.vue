@@ -1,13 +1,35 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
-const props = defineProps({ jobs: Array, filters: Object });
+const props = defineProps({ jobs: Object, filters: Object });
 const dateFrom = ref(props.filters.date_from);
 const dateTo = ref(props.filters.date_to);
-const search = () => router.get(route('certificates.index'), { date_from: dateFrom.value, date_to: dateTo.value }, { preserveState: true });
+const perPage = ref(String(props.filters.per_page ?? 12));
+
+const search = () => router.get(route('certificates.index'), {
+    date_from: dateFrom.value,
+    date_to: dateTo.value,
+    per_page: perPage.value,
+}, {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+});
+
+const visitPage = (url) => {
+    if (!url) return;
+
+    router.visit(url, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
+
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+const jobRows = computed(() => props.jobs.data ?? []);
 </script>
 
 <template>
@@ -18,17 +40,22 @@ const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-
         <div class="pg-header">
             <div>
                 <h1 class="pg-title">Certificates</h1>
-                <p class="pg-sub">Generate and download QC test certificates as PDF</p>
+                <p class="pg-sub">Generate and download QC test certificates as PDF without loading the whole period at once.</p>
             </div>
-            <div style="display:flex;gap:8px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <input v-model="dateFrom" type="date" class="form-inp" style="padding:6px 10px">
                 <input v-model="dateTo" type="date" class="form-inp" style="padding:6px 10px">
+                <select v-model="perPage" class="form-inp" style="padding:6px 10px">
+                    <option value="12">12 / page</option>
+                    <option value="24">24 / page</option>
+                    <option value="48">48 / page</option>
+                </select>
                 <button @click="search" class="btn" style="padding:6px 14px">Filter</button>
             </div>
         </div>
 
         <div class="cert-grid">
-            <div v-for="j in jobs" :key="j.transaction_id" class="cert-card">
+            <div v-for="j in jobRows" :key="j.transaction_id" class="cert-card">
                 <div style="display:flex;justify-content:space-between;margin-bottom:12px">
                     <div>
                         <span style="font-size:10px;font-family:monospace;color:#78716c">#{{ j.transaction_id }}</span>
@@ -50,8 +77,25 @@ const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-
                     Download PDF
                 </a>
             </div>
-            <div v-if="!jobs.length" style="grid-column:1/-1;text-align:center;padding:40px;color:#a8a29e;font-size:13px;background:rgba(18,18,18,0.92);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
+            <div v-if="!jobRows.length" style="grid-column:1/-1;text-align:center;padding:40px;color:#a8a29e;font-size:13px;background:rgba(18,18,18,0.92);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
                 No certificates found for this period.
+            </div>
+        </div>
+
+        <div v-if="(props.jobs.links?.length ?? 0) > 3" class="mt-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 px-5 py-4 text-sm text-stone-300 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                Showing {{ jobRows.length }} certificate job(s) on page {{ props.jobs.current_page ?? 1 }}
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button
+                    v-for="(link, index) in props.jobs.links"
+                    :key="index"
+                    :disabled="!link.url"
+                    @click="visitPage(link.url)"
+                    class="rounded-md border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                    :class="link.active ? 'border-orange-400 bg-orange-500/20 text-orange-100' : 'border-white/10 text-stone-300 hover:bg-white/5'"
+                    v-html="link.label"
+                />
             </div>
         </div>
     </AuthenticatedLayout>

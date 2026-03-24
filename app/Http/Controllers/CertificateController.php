@@ -13,8 +13,15 @@ class CertificateController extends Controller
 {
     public function index(Request $request)
     {
-        $dateFrom = $request->get('date_from', now()->startOfMonth()->format('Y-m-d'));
-        $dateTo = $request->get('date_to', now()->format('Y-m-d'));
+        $filters = $request->validate([
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'per_page' => ['nullable', 'integer', 'in:12,24,48'],
+        ]);
+
+        $dateFrom = (string) ($filters['date_from'] ?? now()->startOfMonth()->format('Y-m-d'));
+        $dateTo = (string) ($filters['date_to'] ?? now()->format('Y-m-d'));
+        $perPage = (int) ($filters['per_page'] ?? 12);
         [$fromDateTime, $toDateTime] = $this->resolveDateRange($dateFrom, $dateTo);
         $hasHeaderDeletedAt = SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at');
         $hasDetailDeletedAt = SchemaCapabilities::hasColumn('Transaction_Detail', 'deleted_at');
@@ -36,20 +43,30 @@ class CertificateController extends Controller
         $jobs = $jobsQuery
             ->whereBetween('TH.receive_date', [$fromDateTime, $toDateTime])
             ->select(
-            'TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date', 'TH.return_date',
-            'EU.external_name as sender', 'TH.detail',
-            DB::raw('COUNT(TD.detail_id) as test_count'),
-            DB::raw("SUM(CASE WHEN TD.judgement = 'OK' THEN 1 ELSE 0 END) as ok_count"),
-            DB::raw("SUM(CASE WHEN TD.judgement = 'NG' THEN 1 ELSE 0 END) as ng_count")
-        )
+                'TH.transaction_id',
+                'TH.dmc',
+                'TH.line',
+                'TH.receive_date',
+                'TH.return_date',
+                'EU.external_name as sender',
+                'TH.detail',
+                DB::raw('COUNT(TD.detail_id) as test_count'),
+                DB::raw("SUM(CASE WHEN TD.judgement = 'OK' THEN 1 ELSE 0 END) as ok_count"),
+                DB::raw("SUM(CASE WHEN TD.judgement = 'NG' THEN 1 ELSE 0 END) as ng_count")
+            )
             ->groupBy('TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date', 'TH.return_date',
-            'EU.external_name', 'TH.detail')
+                'EU.external_name', 'TH.detail')
             ->orderByDesc('TH.receive_date')
-            ->get();
+            ->simplePaginate($perPage)
+            ->withQueryString();
 
         return Inertia::render('Certificates/Index', [
             'jobs' => $jobs,
-            'filters' => ['date_from' => $dateFrom, 'date_to' => $dateTo],
+            'filters' => [
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
+                'per_page' => (string) $perPage,
+            ],
         ]);
     }
 

@@ -19,6 +19,7 @@ class DepartmentController extends Controller
         $perPage = (int) ($filters['per_page'] ?? 20);
 
         $departments = Department::query()
+            ->select(['department_id', 'department_name', 'internal_phone'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($departmentQuery) use ($search) {
                     $departmentQuery

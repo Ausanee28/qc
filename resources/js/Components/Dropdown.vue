@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps({
     align: {
@@ -22,9 +22,6 @@ const closeOnEscape = (e) => {
     }
 };
 
-onMounted(() => document.addEventListener('keydown', closeOnEscape));
-onUnmounted(() => document.removeEventListener('keydown', closeOnEscape));
-
 const widthClass = computed(() => {
     return {
         48: 'w-48',
@@ -42,6 +39,17 @@ const alignmentClasses = computed(() => {
 });
 
 const open = ref(false);
+
+watch(open, (isOpen) => {
+    if (isOpen) {
+        document.addEventListener('keydown', closeOnEscape);
+        return;
+    }
+
+    document.removeEventListener('keydown', closeOnEscape);
+}, { immediate: true });
+
+onUnmounted(() => document.removeEventListener('keydown', closeOnEscape));
 </script>
 
 <template>

@@ -20,6 +20,7 @@ class EquipmentController extends Controller
         $perPage = (int) ($filters['per_page'] ?? 20);
 
         $equipments = Equipment::query()
+            ->select(['equipment_id', 'equipment_name'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where('equipment_name', 'like', "%{$search}%");
             })

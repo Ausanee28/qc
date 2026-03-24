@@ -47,17 +47,26 @@ Comparison below uses the 3-run route profile so it lines up with the saved befo
 - A viewport-based hydration audit was completed and saved in [dashboard-hydration-audit-2026-03-24.md](./dashboard-hydration-audit-2026-03-24.md).
 - That audit found no horizontal overflow on desktop, tablet, or mobile, and confirmed that the deferred `Trend archive` section stays out of the initial render and loads when scrolled into view.
 
+## Final Completion Pass
+
+- `Certificates`
+  - moved the list to server-side pagination and then to `simplePaginate()` so the grouped query does not pay a full count cost on every filter change
+  - route profile for `/certificates` after the change: `124.91ms avg`, `25.35ms DB`, `1.7 queries`
+- `Shared components`
+  - `Modal` and `Dropdown` now attach their Escape listeners only while open, instead of leaving document-level listeners active on every page
+- `Master data`
+  - trimmed remaining list payloads by selecting only table columns and modal option labels that the pages actually render
+- `Shared CSS`
+  - removed unused legacy dashboard/layout selectors from `app.css`
+  - built CSS dropped from roughly `84.30 kB` to `81.12 kB`
+- `framework-vendor`
+  - audited for another reduction pass and did not find a safe quick win beyond the existing chunk split
+  - the remaining weight is primarily the Vue + Inertia runtime that the app shell requires on every page
+
 ## Remaining Backlog
 
-### Quick Wins
+### Optional Follow-Up
 
-- Review shared components that still carry avoidable state or logic
-- Check whether any remaining master-data form payload can be deferred further
 - Run a manual physical-device smoke test if you want hardware-level confirmation beyond viewport emulation
-
-### Long-Term Work
-
-- Re-check `certificate / report / performance` queries on a larger dataset
-- Investigate whether `framework-vendor` can be reduced further
-- Audit shared CSS and utility payload for first-load weight
-- Reduce or defer additional dashboard sections if first-load interaction still feels heavy under production data volume
+- Re-check `/certificates` with a larger production-like month range if data volume grows significantly
+- Revisit `framework-vendor` only when dependency choices change, not as a blind size-only exercise

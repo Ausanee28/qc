@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps({
     show: {
@@ -19,24 +19,34 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 const dialog = ref();
 const showSlot = ref(props.show);
+let hideTimer = null;
 
 watch(
     () => props.show,
-    () => {
+    (isOpen) => {
+        if (hideTimer !== null) {
+            window.clearTimeout(hideTimer);
+            hideTimer = null;
+        }
+
         if (props.show) {
             document.body.style.overflow = 'hidden';
             showSlot.value = true;
+            document.addEventListener('keydown', closeOnEscape);
 
             dialog.value?.showModal();
         } else {
             document.body.style.overflow = '';
+            document.removeEventListener('keydown', closeOnEscape);
 
-            setTimeout(() => {
+            hideTimer = window.setTimeout(() => {
                 dialog.value?.close();
                 showSlot.value = false;
+                hideTimer = null;
             }, 200);
         }
     },
+    { immediate: true },
 );
 
 const close = () => {
@@ -55,11 +65,13 @@ const closeOnEscape = (e) => {
     }
 };
 
-onMounted(() => document.addEventListener('keydown', closeOnEscape));
-
 onUnmounted(() => {
-    document.removeEventListener('keydown', closeOnEscape);
+    if (hideTimer !== null) {
+        window.clearTimeout(hideTimer);
+        hideTimer = null;
+    }
 
+    document.removeEventListener('keydown', closeOnEscape);
     document.body.style.overflow = '';
 });
 

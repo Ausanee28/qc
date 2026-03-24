@@ -21,6 +21,7 @@ class TestMethodController extends Controller
         $perPage = (int) ($filters['per_page'] ?? 20);
 
         $testMethods = TestMethod::query()
+            ->select(['method_id', 'method_name', 'equipment_id'])
             ->with(['equipment:equipment_id,equipment_name'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($methodQuery) use ($search) {
@@ -37,7 +38,7 @@ class TestMethodController extends Controller
         
         return Inertia::render('MasterData/TestMethods/Index', [
             'testMethods' => $testMethods,
-            'equipments' => Inertia::defer(fn () => Equipment::orderBy('equipment_name')->get(), 'master-data-options'),
+            'equipments' => Inertia::defer(fn () => Equipment::query()->select(['equipment_id', 'equipment_name'])->orderBy('equipment_name')->get(), 'master-data-options'),
             'filters' => [
                 'search' => $search,
                 'per_page' => (string) $perPage,

@@ -21,6 +21,7 @@ class ExternalUserController extends Controller
         $perPage = (int) ($filters['per_page'] ?? 20);
 
         $externalUsers = ExternalUser::query()
+            ->select(['external_id', 'external_name', 'department_id'])
             ->with(['department:department_id,department_name'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($externalUserQuery) use ($search) {
@@ -37,7 +38,7 @@ class ExternalUserController extends Controller
         
         return Inertia::render('MasterData/ExternalUsers/Index', [
             'externalUsers' => $externalUsers,
-            'departments' => Inertia::defer(fn () => Department::orderBy('department_name')->get(), 'master-data-options'),
+            'departments' => Inertia::defer(fn () => Department::query()->select(['department_id', 'department_name'])->orderBy('department_name')->get(), 'master-data-options'),
             'filters' => [
                 'search' => $search,
                 'per_page' => (string) $perPage,
