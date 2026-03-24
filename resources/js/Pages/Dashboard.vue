@@ -8,9 +8,13 @@ const chartFontFamily = "'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
 
 const showPrimaryCharts = ref(false);
 const showHeavySections = ref(false);
+const showTrendArchive = ref(false);
+const trendArchiveSentinel = ref(null);
 let realtimeRefreshTimer = null;
 let dashboardEcho = null;
 let realtimeBootTimer = null;
+let trendArchiveFallbackTimer = null;
+let trendArchiveObserver = null;
 const BarChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Bar));
 const LineChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Line));
 const DoughnutChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Doughnut));
@@ -125,6 +129,45 @@ onMounted(() => {
         showHeavySections.value = true;
     };
 
+    const revealTrendArchive = () => {
+        showTrendArchive.value = true;
+
+        if (trendArchiveFallbackTimer !== null) {
+            window.clearTimeout(trendArchiveFallbackTimer);
+            trendArchiveFallbackTimer = null;
+        }
+
+        if (trendArchiveObserver) {
+            trendArchiveObserver.disconnect();
+            trendArchiveObserver = null;
+        }
+    };
+
+    const setupTrendArchiveReveal = () => {
+        if (showTrendArchive.value) {
+            return;
+        }
+
+        const compactViewport = window.matchMedia('(max-width: 767px)').matches;
+
+        if (typeof window.IntersectionObserver === 'function' && trendArchiveSentinel.value) {
+            trendArchiveObserver = new window.IntersectionObserver((entries) => {
+                if (!entries.some((entry) => entry.isIntersecting)) {
+                    return;
+                }
+
+                revealTrendArchive();
+            }, {
+                rootMargin: compactViewport ? '320px 0px' : '220px 0px',
+                threshold: 0.01,
+            });
+
+            trendArchiveObserver.observe(trendArchiveSentinel.value);
+        }
+
+        trendArchiveFallbackTimer = window.setTimeout(revealTrendArchive, compactViewport ? 2600 : 1900);
+    };
+
     const bootRealtime = async () => {
         dashboardEcho = await getEcho();
 
@@ -137,11 +180,13 @@ onMounted(() => {
 
     if (typeof window.requestIdleCallback === 'function') {
         window.requestIdleCallback(() => revealPrimaryCharts(), { timeout: 500 });
-        window.requestIdleCallback(() => revealHeavySections(), { timeout: 1200 });
+        window.requestIdleCallback(() => revealHeavySections(), { timeout: 1000 });
+        window.requestIdleCallback(() => setupTrendArchiveReveal(), { timeout: 1400 });
         window.requestIdleCallback(() => bootRealtime(), { timeout: 1800 });
     } else {
         window.setTimeout(revealPrimaryCharts, 150);
-        window.setTimeout(revealHeavySections, 600);
+        window.setTimeout(revealHeavySections, 500);
+        window.setTimeout(setupTrendArchiveReveal, 900);
         realtimeBootTimer = window.setTimeout(() => {
             realtimeBootTimer = null;
             bootRealtime();
@@ -157,6 +202,16 @@ onBeforeUnmount(() => {
     if (realtimeBootTimer !== null) {
         window.clearTimeout(realtimeBootTimer);
         realtimeBootTimer = null;
+    }
+
+    if (trendArchiveFallbackTimer !== null) {
+        window.clearTimeout(trendArchiveFallbackTimer);
+        trendArchiveFallbackTimer = null;
+    }
+
+    if (trendArchiveObserver) {
+        trendArchiveObserver.disconnect();
+        trendArchiveObserver = null;
     }
 
     if (dashboardEcho) {
@@ -218,6 +273,8 @@ const overviewStats = computed(() => ([
     { label: 'Defect rate', value: formatPercent(defectPct.value), note: `${formatNumber(props.metrics.ngCount)} NG records`, tone: 'ember' },
     { label: 'Pending jobs', value: formatNumber(props.metrics.pendingCount), note: `${props.metrics.avgTestTime || 0} min avg test time`, tone: 'amber' },
 ]));
+const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
+const recentActivityPreview = computed(() => props.recentActivities.slice(0, 5));
 const signalCards = computed(() => ([
     {
         label: 'Top equipment load',
@@ -505,6 +562,8 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
             </section>
 
             <template v-if="showHeavySections">
+                <div ref="trendArchiveSentinel" class="h-px w-full"></div>
+
                 <section class="space-y-4 reveal-section">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                         <div><div class="dash-kicker">Performance drivers</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">What is shaping the lab right now</h2></div>
@@ -528,7 +587,7 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                     <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
                         <div class="flex items-start justify-between gap-3"><div><div class="dash-kicker">Team activity</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Inspector leaderboard</h2><p class="mt-3 text-sm leading-7 text-stone-300/80">A quick comparison of throughput and pass rate by inspector.</p></div><div class="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-semibold text-orange-200">Top 5</div></div>
                         <div class="mt-5 space-y-3">
-                            <div v-for="(inspector, index) in (inspectorData || []).slice(0, 5)" :key="`${inspector.name}-${index}`" class="flex items-center gap-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+                            <div v-for="(inspector, index) in topInspectors" :key="`${inspector.name}-${index}`" class="flex items-center gap-4 rounded-2xl border border-white/10 bg-black/25 p-4">
                                 <div class="flex h-9 w-9 items-center justify-center rounded-full bg-orange-500/15 text-sm font-bold text-orange-200">{{ index + 1 }}</div>
                                 <div class="min-w-0 flex-1"><div class="text-base font-semibold tracking-tight text-stone-50">{{ inspector.name }}</div><div class="mt-1 text-sm text-stone-400">{{ formatNumber(inspector.total) }} tests, {{ formatNumber(inspector.ok) }} OK, {{ formatNumber(inspector.ng) }} NG</div></div>
                                 <div class="text-right text-xl font-semibold tracking-tight text-orange-300">{{ formatPercent(inspector.yield) }}</div>
@@ -543,7 +602,7 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                             <table class="w-full border-collapse">
                                 <thead><tr class="border-b border-white/10"><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">ID</th><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">DMC</th><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Detail</th><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Status</th></tr></thead>
                                 <tbody>
-                                    <tr v-for="activity in recentActivities.slice(0, 5)" :key="activity.id" class="border-b border-white/5">
+                                    <tr v-for="activity in recentActivityPreview" :key="activity.id" class="border-b border-white/5">
                                         <td class="px-3 py-4 font-mono text-sm font-semibold text-stone-50">#{{ activity.id }}</td>
                                         <td class="px-3 py-4 text-sm text-stone-200">{{ activity.dmcCode || '-' }}</td>
                                         <td class="px-3 py-4 text-sm text-stone-300">{{ activity.detail || '-' }}</td>
@@ -556,26 +615,36 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                     </article>
                 </section>
 
-                <section class="space-y-4 reveal-section">
-                    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                        <div><div class="dash-kicker">Trend archive</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Daily and monthly quality context</h2></div>
-                        <p class="max-w-2xl text-sm leading-7 text-stone-300/80 lg:text-right">Pair the current pulse with broader trends to see whether recent movement is a short-term issue or part of a longer shift.</p>
-                    </div>
-                    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)]">
-                        <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-                            <div class="text-xl font-semibold tracking-tight text-stone-50">Monthly pass vs fail trend</div>
-                            <p class="mt-2 text-sm leading-7 text-stone-300/80">A six-month view of pass/fail movement for the lab.</p>
-                            <div class="mt-6 h-[320px]"><LineChart :data="monthlyLineData" :options="lineOpts" /></div>
-                            <div class="mt-6 grid gap-3 md:grid-cols-3">
-                                <div v-for="item in monthlyHighlights" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div><div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ item.value }}</div><div class="mt-2 text-sm text-stone-400">{{ item.note }}</div></div>
-                            </div>
-                        </article>
-                        <div class="grid gap-6">
-                            <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]"><div class="text-xl font-semibold tracking-tight text-stone-50">Daily trend</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Current-month day-by-day inspection movement.</p><div class="mt-6 h-[220px]"><LineChart :data="dailyLineData" :options="lineOpts" /></div></article>
-                            <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]"><div class="text-xl font-semibold tracking-tight text-stone-50">Six-month totals</div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-200/80">Total OK</div><div class="mt-2 text-2xl font-semibold tracking-tight text-orange-100">{{ formatNumber(monthlyTotalOK) }}</div><div class="mt-2 text-sm text-orange-100/70">Across reported months</div></div><div class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Total NG</div><div class="mt-2 text-2xl font-semibold tracking-tight text-stone-100">{{ formatNumber(monthlyTotalNG) }}</div><div class="mt-2 text-sm text-stone-400">Across reported months</div></div></div></article>
+                <template v-if="showTrendArchive">
+                    <section class="space-y-4 reveal-section">
+                        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                            <div><div class="dash-kicker">Trend archive</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Daily and monthly quality context</h2></div>
+                            <p class="max-w-2xl text-sm leading-7 text-stone-300/80 lg:text-right">Pair the current pulse with broader trends to see whether recent movement is a short-term issue or part of a longer shift.</p>
                         </div>
-                    </div>
-                </section>
+                        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)]">
+                            <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+                                <div class="text-xl font-semibold tracking-tight text-stone-50">Monthly pass vs fail trend</div>
+                                <p class="mt-2 text-sm leading-7 text-stone-300/80">A six-month view of pass/fail movement for the lab.</p>
+                                <div class="mt-6 h-[320px]"><LineChart :data="monthlyLineData" :options="lineOpts" /></div>
+                                <div class="mt-6 grid gap-3 md:grid-cols-3">
+                                    <div v-for="item in monthlyHighlights" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div><div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ item.value }}</div><div class="mt-2 text-sm text-stone-400">{{ item.note }}</div></div>
+                                </div>
+                            </article>
+                            <div class="grid gap-6">
+                                <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]"><div class="text-xl font-semibold tracking-tight text-stone-50">Daily trend</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Current-month day-by-day inspection movement.</p><div class="mt-6 h-[220px]"><LineChart :data="dailyLineData" :options="lineOpts" /></div></article>
+                                <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]"><div class="text-xl font-semibold tracking-tight text-stone-50">Six-month totals</div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-200/80">Total OK</div><div class="mt-2 text-2xl font-semibold tracking-tight text-orange-100">{{ formatNumber(monthlyTotalOK) }}</div><div class="mt-2 text-sm text-orange-100/70">Across reported months</div></div><div class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Total NG</div><div class="mt-2 text-2xl font-semibold tracking-tight text-stone-100">{{ formatNumber(monthlyTotalNG) }}</div><div class="mt-2 text-sm text-stone-400">Across reported months</div></div></div></article>
+                            </div>
+                        </div>
+                    </section>
+                </template>
+                <template v-else>
+                    <section class="dash-panel reveal-section rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+                        <div class="dash-kicker">Trend archive</div>
+                        <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Trend archive loads when you reach it</h2>
+                        <p class="mt-3 text-sm leading-7 text-stone-300/80">Monthly and daily history stay deferred until this part of the dashboard approaches the viewport, which keeps the first paint lighter on both mobile and desktop.</p>
+                        <div class="mt-5 grid gap-3 sm:grid-cols-3"><div class="dash-skeleton"></div><div class="dash-skeleton"></div><div class="dash-skeleton"></div></div>
+                    </section>
+                </template>
             </template>
 
             <section v-else class="dash-panel reveal-section rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">

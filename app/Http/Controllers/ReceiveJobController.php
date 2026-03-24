@@ -65,19 +65,19 @@ class ReceiveJobController extends Controller
             ->when($filters['date_from'] !== '', fn ($query) => $query->where('receive_date', '>=', Carbon::parse($filters['date_from'])->startOfDay()))
             ->when($filters['date_to'] !== '', fn ($query) => $query->where('receive_date', '<=', Carbon::parse($filters['date_to'])->endOfDay()));
 
-        $externals = Cache::remember('receive_job.externals', now()->addMinutes(10), function () {
-            return ExternalUser::orderBy('external_name')
-                ->get(['external_id', 'external_name']);
-        });
-
-        $internals = Cache::remember('receive_job.internals', now()->addMinutes(10), function () {
-            return User::orderBy('name')
-                ->get(['user_id', 'name']);
-        });
-
         return Inertia::render('ReceiveJob/Create', [
-            'externals' => $externals,
-            'internals' => $internals,
+            'externals' => Inertia::defer(function () {
+                return Cache::remember('receive_job.externals', now()->addMinutes(10), function () {
+                    return ExternalUser::orderBy('external_name')
+                        ->get(['external_id', 'external_name']);
+                });
+            }, 'workflow-options'),
+            'internals' => Inertia::defer(function () {
+                return Cache::remember('receive_job.internals', now()->addMinutes(10), function () {
+                    return User::orderBy('name')
+                        ->get(['user_id', 'name']);
+                });
+            }, 'workflow-options'),
             'jobs' => $jobsQuery
                 ->orderByDesc('Transaction_Header.receive_date')
                 ->paginate($filters['per_page'])

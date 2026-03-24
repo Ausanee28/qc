@@ -67,6 +67,7 @@ class UserController extends Controller
             'role'          => $request->role,
         ]);
         Cache::forget('receive_job.internals');
+        Cache::forget('execute_test.inspectors');
 
         return redirect()->back()->with('success', 'User created successfully.');
     }
@@ -98,6 +99,7 @@ class UserController extends Controller
 
         $user->update($data);
         Cache::forget('receive_job.internals');
+        Cache::forget('execute_test.inspectors');
 
         return redirect()->back()->with('success', 'User updated successfully.');
     }
@@ -136,6 +138,7 @@ class UserController extends Controller
 
         $user->delete();
         Cache::forget('receive_job.internals');
+        Cache::forget('execute_test.inspectors');
 
         return redirect()->back()->with('success', 'User deleted successfully.');
     }

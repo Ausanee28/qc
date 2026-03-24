@@ -44,18 +44,28 @@ class ExecuteTestController extends Controller
         }
 
         return Inertia::render('ExecuteTest/Create', [
-            'pendingJobs' => fn () => TransactionHeader::whereNull('return_date')
-                ->orderByDesc('receive_date')
-                ->get(['transaction_id', 'dmc', 'line', 'detail'])
-                ->map(fn ($job) => [
-                    'transaction_id' => $job->transaction_id,
-                    'dmc' => $job->dmc,
-                    'line' => $job->line,
-                    'detail' => $job->detail,
-                ]),
+            'pendingJobs' => Inertia::defer(
+                fn () => TransactionHeader::whereNull('return_date')
+                    ->orderByDesc('receive_date')
+                    ->get(['transaction_id', 'dmc', 'line', 'detail'])
+                    ->map(fn ($job) => [
+                        'transaction_id' => $job->transaction_id,
+                        'dmc' => $job->dmc,
+                        'line' => $job->line,
+                        'detail' => $job->detail,
+                    ]),
+                'workflow-options'
+            ),
+            'pendingJobsCount' => fn () => TransactionHeader::whereNull('return_date')->count(),
             'pendingJobsVersion' => fn () => $this->pendingJobsVersionToken(),
-            'methods' => fn () => Cache::remember('execute_test.methods', now()->addMinutes(10), fn () => TestMethod::orderBy('method_name')->get()),
-            'inspectors' => fn () => Cache::remember('execute_test.inspectors', now()->addMinutes(10), fn () => User::orderBy('name')->get(['user_id', 'name'])),
+            'methods' => Inertia::defer(
+                fn () => Cache::remember('execute_test.methods', now()->addMinutes(10), fn () => TestMethod::orderBy('method_name')->get()),
+                'workflow-options'
+            ),
+            'inspectors' => Inertia::defer(
+                fn () => Cache::remember('execute_test.inspectors', now()->addMinutes(10), fn () => User::orderBy('name')->get(['user_id', 'name'])),
+                'workflow-options'
+            ),
             'results' => fn () => TransactionDetail::query()
                 ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
                 ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())

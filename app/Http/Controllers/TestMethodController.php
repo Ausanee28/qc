@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\TestMethod;
 use App\Models\Equipment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class TestMethodController extends Controller
@@ -52,6 +53,7 @@ class TestMethodController extends Controller
         ]);
 
         TestMethod::create($validated);
+        Cache::forget('execute_test.methods');
 
         return redirect()->back()->with('success', 'Test Method created successfully.');
     }
@@ -66,6 +68,7 @@ class TestMethodController extends Controller
         ]);
 
         $method->update($validated);
+        Cache::forget('execute_test.methods');
 
         return redirect()->back()->with('success', 'Test Method updated successfully.');
     }
@@ -79,6 +82,7 @@ class TestMethodController extends Controller
         }
 
         $method->delete();
+        Cache::forget('execute_test.methods');
 
         return redirect()->back()->with('success', 'Test Method deleted successfully.');
     }

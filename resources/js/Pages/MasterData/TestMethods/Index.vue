@@ -1,4 +1,5 @@
 <script setup>
+import CrudFormModal from '@/Components/CrudFormModal.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
@@ -206,34 +207,28 @@ const deleteMethod = (id) => {
             </div>
         </div>
 
-        <!-- Modal -->
-        <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" @click="closeModal"></div>
-            <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md z-10 p-6">
-                <div class="absolute top-0 left-0 right-0 h-1 bg-gray-900 rounded-t-xl"></div>
-                <h2 class="text-xl font-bold text-gray-900 mb-6 mt-2">{{ isEditing ? 'Edit Method' : 'New Method' }}</h2>
-                <form @submit.prevent="submit">
-                    <div class="mb-5">
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Method Name <span class="text-red-500">*</span></label>
-                        <input type="text" v-model="form.method_name" required class="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
-                        <div v-if="form.errors.method_name" class="text-xs text-red-600 mt-1.5">{{ form.errors.method_name }}</div>
-                    </div>
-                    <div class="mb-6">
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Link to Equipment <span class="text-red-500">*</span></label>
-                        <select v-model="form.equipment_id" required :disabled="!equipmentOptionsReady" class="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:cursor-wait disabled:bg-gray-100">
-                            <option value="" disabled>{{ equipmentOptionsReady ? 'Select Equipment...' : 'Loading equipment...' }}</option>
-                            <option v-for="eq in equipmentOptions" :key="eq.equipment_id" :value="eq.equipment_id">{{ eq.equipment_name }}</option>
-                        </select>
-                        <div v-if="form.errors.equipment_id" class="text-xs text-red-600 mt-1.5">{{ form.errors.equipment_id }}</div>
-                    </div>
-                    <div class="flex justify-end gap-3">
-                        <button type="button" @click="closeModal" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">Cancel</button>
-                        <button type="submit" :disabled="form.processing" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-900 hover:bg-black disabled:opacity-50">
-                            {{ form.processing ? 'Saving...' : 'Save Method' }}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <CrudFormModal :show="showModal" :title="isEditing ? 'Edit Method' : 'New Method'" @close="closeModal">
+            <form @submit.prevent="submit">
+                <div class="mb-5">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-stone-300 mb-2">Method Name <span class="text-rose-400">*</span></label>
+                    <input type="text" v-model="form.method_name" required class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
+                    <div v-if="form.errors.method_name" class="mt-1.5 text-xs text-rose-400">{{ form.errors.method_name }}</div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-stone-300 mb-2">Link to Equipment <span class="text-rose-400">*</span></label>
+                    <select v-model="form.equipment_id" required :disabled="!equipmentOptionsReady" class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50 disabled:cursor-wait disabled:bg-white/10">
+                        <option value="" disabled>{{ equipmentOptionsReady ? 'Select Equipment...' : 'Loading equipment...' }}</option>
+                        <option v-for="eq in equipmentOptions" :key="eq.equipment_id" :value="eq.equipment_id">{{ eq.equipment_name }}</option>
+                    </select>
+                    <div v-if="form.errors.equipment_id" class="mt-1.5 text-xs text-rose-400">{{ form.errors.equipment_id }}</div>
+                </div>
+            </form>
+            <template #actions>
+                <button type="button" @click="closeModal" class="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-stone-300 hover:bg-white/5">Cancel</button>
+                <button type="button" @click="submit" :disabled="form.processing" class="rounded-lg bg-[linear-gradient(135deg,#fb923c,#ea580c)] px-4 py-2 text-sm font-medium text-[#140d08] disabled:opacity-50">
+                    {{ form.processing ? 'Saving...' : 'Save Method' }}
+                </button>
+            </template>
+        </CrudFormModal>
     </AuthenticatedLayout>
 </template>

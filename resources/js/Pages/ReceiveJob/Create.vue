@@ -35,8 +35,13 @@ const filterForm = reactive({
     per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 
+const externalOptions = computed(() => props.externals ?? []);
+const internalOptions = computed(() => props.internals ?? []);
+const externalOptionsReady = computed(() => Array.isArray(props.externals));
+const internalOptionsReady = computed(() => Array.isArray(props.internals));
 const jobRows = computed(() => props.jobs?.data ?? []);
 const jobLinks = computed(() => props.jobs?.links ?? []);
+const workflowReloadOnly = ['jobs', 'filters', 'flash'];
 
 const statusLabel = (job) => {
     if (job.is_deleted) return 'Deleted';
@@ -98,6 +103,8 @@ const resetForm = () => {
 
 const submit = () => {
     const options = {
+        only: workflowReloadOnly,
+        preserveScroll: true,
         onSuccess: () => {
             resetForm();
             submitted.value = true;
@@ -131,7 +138,11 @@ const deleteJob = (job) => {
     }
 
     if (confirm(`Delete job #${job.transaction_id}?`)) {
-        form.delete(route('receive-job.destroy', job.transaction_id));
+        form.delete(route('receive-job.destroy', job.transaction_id), {
+            only: workflowReloadOnly,
+            preserveScroll: true,
+            onSuccess: resetForm,
+        });
     }
 };
 
@@ -141,7 +152,10 @@ const restoreJob = (job) => {
     }
 
     if (confirm(`Restore job #${job.transaction_id}?`)) {
-        form.patch(route('receive-job.restore', job.transaction_id));
+        form.patch(route('receive-job.restore', job.transaction_id), {
+            only: workflowReloadOnly,
+            preserveScroll: true,
+        });
     }
 };
 
@@ -153,11 +167,17 @@ const toggleJobStatus = (job) => {
     }
 
     if (job.is_closed) {
-        form.patch(route('receive-job.reopen', job.transaction_id));
+        form.patch(route('receive-job.reopen', job.transaction_id), {
+            only: workflowReloadOnly,
+            preserveScroll: true,
+        });
         return;
     }
 
-    form.patch(route('receive-job.close', job.transaction_id));
+    form.patch(route('receive-job.close', job.transaction_id), {
+        only: workflowReloadOnly,
+        preserveScroll: true,
+    });
 };
 </script>
 
@@ -197,17 +217,17 @@ const toggleJobStatus = (job) => {
                     <div class="form-grid" style="margin-bottom:24px">
                         <div>
                             <label class="form-lbl">Sender (External) *</label>
-                            <select v-model="form.external_id" required class="form-inp" style="padding:10px 12px">
-                                <option value="" disabled>-- Select Sender --</option>
-                                <option v-for="e in externals" :key="e.external_id" :value="e.external_id">{{ e.external_name }}</option>
+                            <select v-model="form.external_id" required :disabled="!externalOptionsReady" class="form-inp" style="padding:10px 12px">
+                                <option value="" disabled>{{ externalOptionsReady ? '-- Select Sender --' : 'Loading senders...' }}</option>
+                                <option v-for="e in externalOptions" :key="e.external_id" :value="e.external_id">{{ e.external_name }}</option>
                             </select>
                             <div v-if="form.errors.external_id" class="mt-1 text-xs text-red-600">{{ form.errors.external_id }}</div>
                         </div>
                         <div>
                             <label class="form-lbl">Receiver (Internal) *</label>
-                            <select v-model="form.internal_id" required class="form-inp" style="padding:10px 12px">
-                                <option value="" disabled>-- Select Receiver --</option>
-                                <option v-for="u in internals" :key="u.user_id" :value="u.user_id">{{ u.name }}</option>
+                            <select v-model="form.internal_id" required :disabled="!internalOptionsReady" class="form-inp" style="padding:10px 12px">
+                                <option value="" disabled>{{ internalOptionsReady ? '-- Select Receiver --' : 'Loading receivers...' }}</option>
+                                <option v-for="u in internalOptions" :key="u.user_id" :value="u.user_id">{{ u.name }}</option>
                             </select>
                             <div v-if="form.errors.internal_id" class="mt-1 text-xs text-red-600">{{ form.errors.internal_id }}</div>
                         </div>

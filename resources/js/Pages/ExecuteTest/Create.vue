@@ -6,6 +6,7 @@ import { getEcho } from '@/lib/realtime';
 
 const props = defineProps({
     pendingJobs: Array,
+    pendingJobsCount: Number,
     pendingJobsVersion: String,
     methods: Array,
     inspectors: Array,
@@ -61,8 +62,16 @@ const filterForm = reactive({
     per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 
+const pendingJobOptions = computed(() => props.pendingJobs ?? []);
+const pendingJobsReady = computed(() => Array.isArray(props.pendingJobs));
+const openJobCount = computed(() => Number(props.pendingJobsCount ?? pendingJobOptions.value.length ?? 0));
+const methodOptions = computed(() => props.methods ?? []);
+const inspectorOptions = computed(() => props.inspectors ?? []);
+const methodOptionsReady = computed(() => Array.isArray(props.methods));
+const inspectorOptionsReady = computed(() => Array.isArray(props.inspectors));
 const resultRows = computed(() => props.results?.data ?? []);
 const resultLinks = computed(() => props.results?.links ?? []);
+const workflowReloadOnly = ['pendingJobs', 'pendingJobsCount', 'pendingJobsVersion', 'results', 'filters', 'flash'];
 
 const judgementClass = (result) => result.judgement === 'OK'
     ? 'bg-emerald-100 text-emerald-700'
@@ -116,6 +125,8 @@ const resetForm = () => {
 
 const submit = () => {
     const options = {
+        only: workflowReloadOnly,
+        preserveScroll: true,
         onSuccess: () => {
             resetForm();
             submitted.value = true;
@@ -153,7 +164,11 @@ const deleteResult = (result) => {
     }
 
     if (confirm(`Delete test result #${result.detail_id}?`)) {
-        form.delete(route('execute-test.destroy', result.detail_id));
+        form.delete(route('execute-test.destroy', result.detail_id), {
+            only: workflowReloadOnly,
+            preserveScroll: true,
+            onSuccess: resetForm,
+        });
     }
 };
 
@@ -163,7 +178,10 @@ const restoreResult = (result) => {
     }
 
     if (confirm(`Restore test result #${result.detail_id}?`)) {
-        form.patch(route('execute-test.restore', result.detail_id));
+        form.patch(route('execute-test.restore', result.detail_id), {
+            only: workflowReloadOnly,
+            preserveScroll: true,
+        });
     }
 };
 
@@ -208,7 +226,7 @@ const reloadPendingJobs = () => {
     }
 
     router.reload({
-        only: ['pendingJobs', 'pendingJobsVersion'],
+        only: ['pendingJobs', 'pendingJobsCount', 'pendingJobsVersion'],
         preserveState: true,
         preserveScroll: true,
         onStart: () => {
@@ -333,11 +351,11 @@ onBeforeUnmount(() => {
                 </div>
             </div>
 
-            <div v-if="pendingJobs.length" class="info-bar" style="margin-bottom:0">
+            <div v-if="openJobCount" class="info-bar" style="margin-bottom:0">
                 <div style="display:flex;align-items:center;gap:10px">
                     <div style="width:8px;height:8px;border-radius:50%;background:#F59E0B;animation:pulse 2s infinite"></div>
                     <div class="text-[13px] font-bold text-orange-100">
-                        {{ pendingJobs.length }} open job{{ pendingJobs.length > 1 ? 's' : '' }} available for testing
+                        {{ openJobCount }} open job{{ openJobCount > 1 ? 's' : '' }} available for testing
                     </div>
                 </div>
                 <span class="pill pill-y">Open</span>
@@ -368,9 +386,9 @@ onBeforeUnmount(() => {
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
                                 <label class="form-lbl" style="margin-bottom:0">Open Job *</label>
                             </div>
-                            <select v-model="form.transaction_id" required class="form-inp" style="padding:10px 12px">
-                                <option value="" disabled>Select job...</option>
-                                <option v-for="j in pendingJobs" :key="j.transaction_id" :value="j.transaction_id">
+                            <select v-model="form.transaction_id" required :disabled="!pendingJobsReady" class="form-inp" style="padding:10px 12px">
+                                <option value="" disabled>{{ pendingJobsReady ? 'Select job...' : 'Loading open jobs...' }}</option>
+                                <option v-for="j in pendingJobOptions" :key="j.transaction_id" :value="j.transaction_id">
                                     #{{ j.transaction_id }} - {{ j.detail || 'No detail' }} {{ j.dmc ? `(${j.dmc})` : '' }}
                                 </option>
                             </select>
@@ -378,9 +396,9 @@ onBeforeUnmount(() => {
                         </div>
                         <div>
                             <label class="form-lbl">Inspection Process *</label>
-                            <select v-model="form.method_id" required class="form-inp" style="padding:10px 12px">
-                                <option value="" disabled>Select method...</option>
-                                <option v-for="m in methods" :key="m.method_id" :value="m.method_id">{{ m.method_name }}</option>
+                            <select v-model="form.method_id" required :disabled="!methodOptionsReady" class="form-inp" style="padding:10px 12px">
+                                <option value="" disabled>{{ methodOptionsReady ? 'Select method...' : 'Loading methods...' }}</option>
+                                <option v-for="m in methodOptions" :key="m.method_id" :value="m.method_id">{{ m.method_name }}</option>
                             </select>
                             <div v-if="form.errors.method_id" class="mt-1 text-xs text-red-600">{{ form.errors.method_id }}</div>
                         </div>
@@ -389,9 +407,9 @@ onBeforeUnmount(() => {
                     <div class="form-grid" style="margin-bottom:24px">
                         <div>
                             <label class="form-lbl">Inspector *</label>
-                            <select v-model="form.internal_id" required class="form-inp" style="padding:10px 12px">
-                                <option value="" disabled>Select inspector...</option>
-                                <option v-for="u in inspectors" :key="u.user_id" :value="u.user_id">{{ u.name }}</option>
+                            <select v-model="form.internal_id" required :disabled="!inspectorOptionsReady" class="form-inp" style="padding:10px 12px">
+                                <option value="" disabled>{{ inspectorOptionsReady ? 'Select inspector...' : 'Loading inspectors...' }}</option>
+                                <option v-for="u in inspectorOptions" :key="u.user_id" :value="u.user_id">{{ u.name }}</option>
                             </select>
                             <div v-if="form.errors.internal_id" class="mt-1 text-xs text-red-600">{{ form.errors.internal_id }}</div>
                         </div>
