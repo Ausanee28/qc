@@ -240,7 +240,7 @@ const healthSummary = computed(() => {
     if (!totalTests.value) {
         return {
             title: 'Waiting for inspection data',
-            text: 'Once results are recorded, the dashboard will surface quality and workload signals here.',
+            text: 'Record the first jobs to unlock quality and workload signals.',
             tone: 'ink',
         };
     }
@@ -248,7 +248,7 @@ const healthSummary = computed(() => {
     if (yieldPct.value >= 95 && Number(props.metrics.pendingCount || 0) <= 5) {
         return {
             title: 'Quality is stable and queue pressure is low',
-            text: 'Yield is above target while pending work remains manageable for the team.',
+            text: 'Yield is above target and the queue is still manageable.',
             tone: 'orange',
         };
     }
@@ -256,24 +256,18 @@ const healthSummary = computed(() => {
     if (yieldPct.value >= 92) {
         return {
             title: 'Operations look healthy with a few areas to watch',
-            text: 'Keep an eye on the queue and on any equipment causing NG clusters.',
+            text: 'Watch the queue and any equipment causing NG clusters.',
             tone: 'amber',
         };
     }
 
     return {
         title: 'Quality needs attention this period',
-            text: 'Yield has slipped below target, so failure drivers and workload distribution deserve a closer look.',
+            text: 'Yield is below target. Review failure drivers and workload balance.',
             tone: 'ember',
     };
 });
 
-const overviewStats = computed(() => ([
-    { label: 'Total inspections', value: formatNumber(totalTests.value), note: `${formatNumber(props.metrics.todayCount)} logged today`, tone: 'ink' },
-    { label: 'Pass yield', value: formatPercent(yieldPct.value), note: `${formatNumber(props.metrics.okCount)} OK records`, tone: 'orange' },
-    { label: 'Defect rate', value: formatPercent(defectPct.value), note: `${formatNumber(props.metrics.ngCount)} NG records`, tone: 'ember' },
-    { label: 'Pending jobs', value: formatNumber(props.metrics.pendingCount), note: `${props.metrics.avgTestTime || 0} min avg test time`, tone: 'amber' },
-]));
 const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 const recentActivityPreview = computed(() => props.recentActivities.slice(0, 5));
 const signalCards = computed(() => ([
@@ -293,21 +287,31 @@ const signalCards = computed(() => ([
         note: leadInspector.value ? `${formatPercent(leadInspector.value.yield)} yield across ${formatNumber(leadInspector.value.total)} tests` : 'Inspector leaderboard will appear once records are available',
     },
 ]));
-const heroChecklist = computed(() => ([
+const heroStatusMetrics = computed(() => ([
+    { label: 'Pass yield', value: formatPercent(yieldPct.value), note: `${formatNumber(props.metrics.okCount)} OK` },
+    { label: 'Defect rate', value: formatPercent(defectPct.value), note: `${formatNumber(props.metrics.ngCount)} NG` },
+    { label: 'Pending jobs', value: formatNumber(pendingJobs.value), note: `${props.metrics.avgTestTime || 0} min avg test` },
+]));
+const heroSummaryCards = computed(() => ([
     {
-        label: 'Queue pressure',
-        value: pendingJobs.value <= 5 ? 'In range' : 'Needs watch',
-        note: `${formatNumber(pendingJobs.value)} jobs still open`,
+        label: 'Window volume',
+        value: formatNumber(totalTests.value),
+        note: `${selectedPeriodLabel.value} total inspections`,
     },
     {
-        label: 'Today cadence',
+        label: 'Today output',
         value: formatNumber(todayTotal.value),
-        note: `${formatPercent(todayYield.value)} yield for today's output`,
+        note: `${formatPercent(todayYield.value)} yield today`,
     },
     {
-        label: 'Window focus',
-        value: selectedPeriodLabel.value,
-        note: `${props.metrics.avgTestTime || 0} min average test time`,
+        label: 'Top fail source',
+        value: leadFailure.value ? leadFailure.value.name : 'No fail hotspot',
+        note: leadFailure.value ? `${formatNumber(leadFailure.value.count)} NG results` : 'No clustered NG source in this window',
+    },
+    {
+        label: 'Lead equipment',
+        value: leadEquipment.value ? leadEquipment.value.name : 'No load trend yet',
+        note: leadEquipment.value ? `${formatNumber(leadEquipment.value.count)} tests in this window` : 'Usage ranking appears once jobs are recorded',
     },
 ]));
 const snapshotMetrics = computed(() => ([
@@ -316,22 +320,80 @@ const snapshotMetrics = computed(() => ([
     { label: 'Pending jobs', value: formatNumber(pendingJobs.value), note: 'Jobs still waiting to close' },
     { label: 'Avg test time', value: `${props.metrics.avgTestTime || 0} min`, note: `${props.metrics.testsPerJob || 0} tests per job` },
 ]));
+const weeklyOkTotal = computed(() => props.weeklyData.reduce((sum, day) => sum + Number(day.ok || 0), 0));
+const weeklyNgTotal = computed(() => props.weeklyData.reduce((sum, day) => sum + Number(day.ng || 0), 0));
+const weeklyTotal = computed(() => weeklyOkTotal.value + weeklyNgTotal.value);
+const weeklyYield = computed(() => weeklyTotal.value > 0 ? Number(((weeklyOkTotal.value / weeklyTotal.value) * 100).toFixed(1)) : 0);
+const movementSummary = computed(() => ([
+    { label: '7-day total', value: formatNumber(weeklyTotal.value), note: `${formatNumber(weeklyOkTotal.value)} OK / ${formatNumber(weeklyNgTotal.value)} NG` },
+    { label: '7-day yield', value: formatPercent(weeklyYield.value), note: 'How clean the recent flow has been' },
+    { label: 'Open queue', value: formatNumber(pendingJobs.value), note: 'Jobs currently waiting to close' },
+]));
+const weeklyRows = computed(() => props.weeklyData.map((day) => {
+    const ok = Number(day.ok || 0);
+    const ng = Number(day.ng || 0);
+    const total = ok + ng;
+    const yieldRate = total > 0 ? Number(((ok / total) * 100).toFixed(1)) : 0;
+
+    return {
+        label: day.label,
+        ok,
+        ng,
+        total,
+        yieldRate,
+    };
+}));
+const movementHighlights = computed(() => {
+    const activeDays = weeklyRows.value.filter((day) => day.total > 0);
+
+    if (!activeDays.length) {
+        return [
+            { label: 'Strongest day', value: 'No activity yet', note: 'The busiest day appears once tests are recorded.' },
+            { label: 'Highest NG day', value: 'No failures yet', note: 'Use this spot to catch the roughest day quickly.' },
+            { label: 'Flow signal', value: pendingJobs.value ? 'Queue waiting' : 'Queue clear', note: `${formatNumber(pendingJobs.value)} open jobs need follow-up.` },
+        ];
+    }
+
+    const strongestDay = activeDays.reduce((best, day) => (day.total > best.total ? day : best), activeDays[0]);
+    const highestNgDay = activeDays.reduce((worst, day) => (day.ng > worst.ng ? day : worst), activeDays[0]);
+    const latestDay = activeDays[activeDays.length - 1];
+
+    return [
+        {
+            label: 'Strongest day',
+            value: strongestDay.label,
+            note: `${formatNumber(strongestDay.total)} inspections moved through the lab.`,
+        },
+        {
+            label: 'Highest NG day',
+            value: highestNgDay.ng > 0 ? highestNgDay.label : 'No NG spike',
+            note: highestNgDay.ng > 0
+                ? `${formatNumber(highestNgDay.ng)} NG records were logged on that day.`
+                : 'The week has not produced a visible fail cluster.',
+        },
+        {
+            label: 'Latest flow signal',
+            value: `${formatPercent(latestDay.yieldRate)} yield`,
+            note: `${latestDay.label} closed with ${formatNumber(latestDay.total)} inspections.`,
+        },
+    ];
+});
 const attentionItems = computed(() => {
     if (!totalTests.value) {
         return [
             {
                 title: 'Start by registering incoming work',
-                detail: 'The dashboard will become much more useful once the first jobs and test results are recorded.',
+                detail: 'Record the first jobs and results to activate the dashboard.',
                 tone: 'ink',
             },
             {
-                title: 'Keep an eye on the open queue',
-                detail: `${formatNumber(pendingJobs.value)} jobs are currently waiting to be returned or completed.`,
+                title: 'Open queue',
+                detail: `${formatNumber(pendingJobs.value)} jobs are waiting to close.`,
                 tone: 'amber',
             },
             {
-                title: 'Use the launch actions on the right',
-                detail: 'Receive Job and Execute Test are the fastest paths to populate today’s operational picture.',
+                title: 'Start from actions',
+                detail: 'Use Receive Job and Execute Test to populate today\'s picture.',
                 tone: 'orange',
             },
         ];
@@ -340,44 +402,44 @@ const attentionItems = computed(() => {
     const items = [
         pendingJobs.value <= 5
             ? {
-                title: 'Queue is under control',
-                detail: `${formatNumber(pendingJobs.value)} jobs remain open, which keeps the lab in a manageable range.`,
+                title: 'Queue in control',
+                detail: `${formatNumber(pendingJobs.value)} jobs remain open.`,
                 tone: 'orange',
             }
             : {
-                title: 'Queue needs attention',
-                detail: `${formatNumber(pendingJobs.value)} jobs remain open. Clearing the backlog should be the first priority.`,
+                title: 'Queue needs review',
+                detail: `${formatNumber(pendingJobs.value)} jobs remain open.`,
                 tone: 'amber',
             },
         yieldPct.value >= 95
             ? {
-                title: 'Yield is holding above target',
-                detail: `${formatPercent(yieldPct.value)} yield across ${formatNumber(totalTests.value)} tests in the selected window.`,
+                title: 'Yield above target',
+                detail: `${formatPercent(yieldPct.value)} yield in this window.`,
                 tone: 'orange',
             }
             : {
-                title: 'Quality drift needs review',
-                detail: `${formatPercent(defectPct.value)} defect rate is dragging yield down in the selected window.`,
+                title: 'Quality drift',
+                detail: `${formatPercent(defectPct.value)} defect rate in this window.`,
                 tone: 'ember',
             },
     ];
 
     if (leadFailure.value) {
         items.push({
-            title: 'Most frequent failure source',
-            detail: `${leadFailure.value.name} is responsible for ${formatNumber(leadFailure.value.count)} NG results.`,
+            title: 'Top fail source',
+            detail: `${leadFailure.value.name}: ${formatNumber(leadFailure.value.count)} NG results.`,
             tone: 'ember',
         });
     } else if (leadEquipment.value) {
         items.push({
             title: 'Main workload driver',
-            detail: `${leadEquipment.value.name} handled ${formatNumber(leadEquipment.value.count)} tests in this window.`,
+            detail: `${leadEquipment.value.name}: ${formatNumber(leadEquipment.value.count)} tests.`,
             tone: 'ink',
         });
     } else {
         items.push({
-            title: 'Trend signals are still building',
-            detail: 'As more results come in, this panel will highlight the biggest operational risk automatically.',
+            title: 'Signals still building',
+            detail: 'This panel will highlight the biggest risk once more results arrive.',
             tone: 'ink',
         });
     }
@@ -464,96 +526,80 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     <AuthenticatedLayout>
         <template #title>Dashboard</template>
 
-        <div class="space-y-8">
-            <section class="dash-hero reveal-section p-6 sm:p-8">
-                <div class="grid gap-6 xl:items-start xl:grid-cols-[minmax(0,1.7fr)_340px]">
-                    <div class="space-y-6">
-                        <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                            <div class="max-w-3xl">
-                                <div class="dash-kicker">Operations Dashboard</div>
-                                <h1 class="dash-heading mt-2">Start with what needs attention now</h1>
-                                <p class="mt-3 text-sm leading-7 text-stone-300/80 sm:text-base">
-                                    The dashboard should answer four questions quickly: how much work is moving, whether quality is healthy, what looks risky, and where the team should go next for {{ selectedPeriodLabel.toLowerCase() }}.
-                                </p>
-                            </div>
-
-                            <div class="flex flex-wrap items-center gap-3">
-                                <div class="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm font-semibold text-stone-100 backdrop-blur">
-                                    <span class="h-2.5 w-2.5 rounded-full bg-orange-400 shadow-[0_0_0_6px_rgba(251,146,60,0.18)]"></span>
-                                    {{ isLoading ? 'Refreshing data' : 'Live overview' }}
-                                </div>
-                                <label class="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm font-semibold text-stone-100 backdrop-blur">
-                                    <span class="text-stone-400">Window</span>
-                                    <select v-model="selectedPeriod" class="bg-transparent text-stone-100 outline-none">
-                                        <option v-for="option in periodOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                    </select>
-                                </label>
-                            </div>
-                        </div>
-
-                        <article class="rounded-[28px] border border-white/10 p-6 text-white shadow-[0_20px_50px_rgba(15,23,42,0.18)]" :class="{
-                                'bg-[linear-gradient(160deg,#0a0a0a,#1c1917)]': healthSummary.tone === 'ink',
-                                'bg-[linear-gradient(160deg,#1c0f05,#9a3412)]': healthSummary.tone === 'orange',
-                                'bg-[linear-gradient(160deg,#20120a,#b45309)]': healthSummary.tone === 'amber',
-                                'bg-[linear-gradient(160deg,#130d08,#7c2d12)]': healthSummary.tone === 'ember'
-                            }">
-                            <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                                <div class="max-w-2xl">
-                                    <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">Operational pulse</div>
-                                    <h2 class="mt-3 text-3xl font-semibold tracking-tight">{{ healthSummary.title }}</h2>
-                                    <p class="mt-3 text-sm leading-7 text-white/72">{{ healthSummary.text }}</p>
-                                </div>
-                                <div class="grid gap-3 sm:grid-cols-3">
-                                    <div v-for="item in heroChecklist" :key="item.label" class="rounded-2xl border border-white/10 bg-white/10 p-4">
-                                        <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">{{ item.label }}</div>
-                                        <div class="mt-2 text-2xl font-semibold tracking-tight">{{ item.value }}</div>
-                                        <div class="mt-2 text-sm text-white/70">{{ item.note }}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            </article>
-
-                        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                            <article v-for="stat in overviewStats" :key="stat.label" class="dash-stat rounded-[22px] border border-white/10 bg-[#18120e]/88 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]" :data-tone="stat.tone">
-                                <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{{ stat.label }}</div>
-                                <div class="mt-3 text-3xl font-semibold tracking-tight text-stone-50">{{ stat.value }}</div>
-                                <div class="mt-2 text-sm leading-6 text-stone-400">{{ stat.note }}</div>
-                            </article>
-                        </div>
+        <div class="space-y-6">
+            <section class="dash-hero reveal-section p-5 sm:p-7">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div class="min-w-0 max-w-3xl">
+                        <div class="dash-kicker">Operations Dashboard</div>
+                        <h1 class="dash-heading mt-2">Lab status at a glance</h1>
+                        <p class="mt-3 max-w-2xl text-sm leading-6 text-stone-300/75 sm:text-base">
+                            The fastest read on queue, quality, and what the team should analyze next.
+                        </p>
                     </div>
 
-                    <aside class="space-y-4">
-                        <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-                            <div class="dash-kicker">Focus now</div>
-                            <div class="mt-3">
-                                <h2 class="text-2xl font-semibold tracking-tight text-stone-50">What should the team look at first</h2>
-                                <p class="mt-3 text-sm leading-7 text-stone-300/80">
-                                    These are the most important signals for the current window, ordered so the team can decide what to do next without scanning the whole page.
-                                </p>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm font-semibold text-stone-100 backdrop-blur">
+                            <span class="h-2.5 w-2.5 rounded-full bg-orange-400 shadow-[0_0_0_6px_rgba(251,146,60,0.18)]"></span>
+                            {{ isLoading ? 'Refreshing data' : 'Live overview' }}
+                        </div>
+                        <label class="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm font-semibold text-stone-100 backdrop-blur">
+                            <span class="text-stone-400">Window</span>
+                            <select v-model="selectedPeriod" class="min-w-0 bg-transparent text-stone-100 outline-none">
+                                <option v-for="option in periodOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+                    <article class="rounded-[28px] border border-white/10 p-5 text-white shadow-[0_20px_50px_rgba(15,23,42,0.18)] sm:p-6" :class="{
+                            'bg-[linear-gradient(160deg,#0a0a0a,#1c1917)]': healthSummary.tone === 'ink',
+                            'bg-[linear-gradient(160deg,#1c0f05,#9a3412)]': healthSummary.tone === 'orange',
+                            'bg-[linear-gradient(160deg,#20120a,#b45309)]': healthSummary.tone === 'amber',
+                            'bg-[linear-gradient(160deg,#130d08,#7c2d12)]': healthSummary.tone === 'ember'
+                        }">
+                        <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">Operational pulse</div>
+                        <h2 class="mt-3 max-w-2xl text-[clamp(2rem,3vw,3.2rem)] font-semibold tracking-tight leading-[1.02]">{{ healthSummary.title }}</h2>
+                        <p class="mt-3 max-w-2xl text-sm leading-6 text-white/72">{{ healthSummary.text }}</p>
+
+                        <div class="mt-5 grid gap-3 sm:grid-cols-3">
+                            <div v-for="item in heroStatusMetrics" :key="item.label" class="rounded-[22px] border border-white/10 bg-black/12 px-5 py-4">
+                                <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">{{ item.label }}</div>
+                                <div class="mt-4 text-[clamp(1.9rem,2.8vw,2.8rem)] font-semibold tracking-tight leading-none">{{ item.value }}</div>
+                                <div class="mt-3 text-sm leading-5 text-white/72">{{ item.note }}</div>
                             </div>
-                            <div class="mt-5 space-y-3">
-                                <div v-for="item in attentionItems" :key="item.title" class="rounded-2xl border p-4" :class="{
-                                    'border-orange-500/20 bg-orange-500/10': item.tone === 'orange',
-                                    'border-amber-500/20 bg-amber-500/10': item.tone === 'amber',
-                                    'border-[#9a3412]/30 bg-[#9a3412]/15': item.tone === 'ember',
-                                    'border-white/10 bg-black/25': item.tone === 'ink',
-                                }">
-                                    <div class="text-[11px] font-bold uppercase tracking-[0.16em]" :class="{
-                                        'text-orange-200/80': item.tone === 'orange',
-                                        'text-amber-200/80': item.tone === 'amber',
-                                        'text-orange-100/80': item.tone === 'ember',
-                                        'text-stone-500': item.tone === 'ink',
-                                    }">{{ item.title }}</div>
-                                    <div class="mt-2 text-sm leading-6" :class="item.tone === 'ink' ? 'text-stone-400' : 'text-stone-100/80'">{{ item.detail }}</div>
-                                </div>
-                            </div>
+                        </div>
+                    </article>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <article v-for="card in heroSummaryCards" :key="card.label" class="rounded-[24px] border border-white/10 bg-[#17120e]/92 p-5 shadow-[0_16px_36px_rgba(0,0,0,0.24)]">
+                            <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{{ card.label }}</div>
+                            <div class="mt-3 text-3xl font-semibold tracking-tight text-stone-50">{{ card.value }}</div>
+                            <div class="mt-2 text-sm leading-6 text-stone-400">{{ card.note }}</div>
                         </article>
-                    </aside>
+                    </div>
+                </div>
+
+                <div class="mt-5 grid gap-3 lg:grid-cols-3">
+                    <article v-for="item in attentionItems" :key="item.title" class="rounded-[22px] border px-5 py-4" :class="{
+                        'border-orange-500/20 bg-orange-500/10': item.tone === 'orange',
+                        'border-amber-500/20 bg-amber-500/10': item.tone === 'amber',
+                        'border-[#9a3412]/30 bg-[#9a3412]/15': item.tone === 'ember',
+                        'border-white/10 bg-black/25': item.tone === 'ink',
+                    }">
+                        <div class="text-[11px] font-bold uppercase tracking-[0.16em]" :class="{
+                            'text-orange-200/80': item.tone === 'orange',
+                            'text-amber-200/80': item.tone === 'amber',
+                            'text-orange-100/80': item.tone === 'ember',
+                            'text-stone-500': item.tone === 'ink',
+                        }">{{ item.title }}</div>
+                        <div class="mt-2 text-sm leading-5" :class="item.tone === 'ink' ? 'text-stone-400' : 'text-stone-100/80'">{{ item.detail }}</div>
+                    </article>
                 </div>
             </section>
 
-            <section class="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)] reveal-section">
-                <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+            <section class="grid items-start gap-6 xl:grid-cols-[minmax(0,1.58fr)_340px] reveal-section">
+                <article class="dash-panel self-start rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <div class="dash-kicker">Movement</div>
@@ -562,41 +608,111 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                         </div>
                         <div class="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-semibold text-orange-200">{{ selectedPeriodLabel }}</div>
                     </div>
-                    <div class="mt-6 h-[320px]">
+                    <div class="mt-5 grid gap-3 md:grid-cols-3">
+                        <div v-for="item in movementSummary" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4">
+                            <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div>
+                            <div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
+                            <div class="mt-2 text-sm text-stone-400">{{ item.note }}</div>
+                        </div>
+                    </div>
+                    <div class="mt-5 h-[240px]">
                         <BarChart v-if="showPrimaryCharts" :data="weeklyChartData" :options="barOpts" />
                         <div v-else class="dash-skeleton h-full"></div>
                     </div>
+                    <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                        <div class="grid gap-3">
+                            <div v-for="item in movementHighlights" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4">
+                                <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div>
+                                <div class="mt-2 text-lg font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
+                                <div class="mt-2 text-sm leading-6 text-stone-400">{{ item.note }}</div>
+                            </div>
+                        </div>
+                        <div class="rounded-[22px] border border-white/10 bg-black/25 p-4">
+                            <div class="flex items-end justify-between gap-3">
+                                <div>
+                                    <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Daily breakdown</div>
+                                    <div class="mt-2 text-lg font-semibold tracking-tight text-stone-50">How each day contributed</div>
+                                </div>
+                                <div class="text-xs font-semibold text-stone-500">7 days</div>
+                            </div>
+                            <div class="mt-4 space-y-2">
+                                <div v-for="day in weeklyRows" :key="day.label" class="grid grid-cols-[88px_minmax(0,1fr)_64px] items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2.5">
+                                    <div class="text-sm font-semibold text-stone-200">{{ day.label }}</div>
+                                    <div>
+                                        <div class="flex h-2 overflow-hidden rounded-full bg-white/10">
+                                            <div class="bg-gradient-to-r from-orange-500 to-amber-300" :style="{ width: day.total ? `${day.yieldRate}%` : '0%' }"></div>
+                                            <div class="bg-gradient-to-r from-[#5b2d12] to-[#9a3412]" :style="{ width: day.total ? `${100 - day.yieldRate}%` : '0%' }"></div>
+                                        </div>
+                                        <div class="mt-1 flex items-center justify-between text-[11px] text-stone-500">
+                                            <span>{{ formatNumber(day.ok) }} OK / {{ formatNumber(day.ng) }} NG</span>
+                                            <span>{{ formatNumber(day.total) }} total</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right text-sm font-semibold text-orange-200">{{ formatPercent(day.yieldRate) }}</div>
+                                </div>
+                                <div v-if="!weeklyRows.length" class="rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-6 text-center text-sm text-stone-400">
+                                    Weekly movement detail will appear once inspection activity is recorded.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </article>
 
-                <div class="grid gap-6">
-                    <article class="rounded-[24px] border border-orange-500/15 bg-[linear-gradient(160deg,#090909,#22140a)] p-6 text-white shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
-                        <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-300/70">Quick actions</div>
-                        <div class="mt-4 space-y-3">
-                            <Link :href="route('receive-job.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
-                                <div><div class="text-base font-semibold tracking-tight">Receive new job</div><div class="mt-1 text-sm text-white/70">Open intake and register incoming work.</div></div>
-                                <span class="text-white/60">></span>
-                            </Link>
-                            <Link :href="route('execute-test.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
-                                <div><div class="text-base font-semibold tracking-tight">Record test result</div><div class="mt-1 text-sm text-white/70">Jump straight to active inspections.</div></div>
-                                <span class="text-white/60">></span>
-                            </Link>
-                            <Link :href="route('report.index')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
-                                <div><div class="text-base font-semibold tracking-tight">Open reporting</div><div class="mt-1 text-sm text-white/70">Review history and export filtered reports.</div></div>
-                                <span class="text-white/60">></span>
-                            </Link>
+                <article class="dash-panel self-start rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <div class="dash-kicker">Action board</div>
+                            <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Act fast, keep context</h2>
+                            <p class="mt-3 text-sm leading-7 text-stone-300/80">Launch the next task and keep the key numbers for this window in the same view.</p>
                         </div>
-                    </article>
-
-                    <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-                        <div class="dash-kicker">Window snapshot</div>
-                        <div class="mt-4 flex items-end justify-between gap-4">
+                        <div class="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-semibold text-orange-200">{{ selectedPeriodLabel }}</div>
+                    </div>
+                    <div class="mt-5 space-y-3">
+                        <Link :href="route('receive-job.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
+                            <div><div class="text-base font-semibold tracking-tight">Receive new job</div><div class="mt-1 text-sm text-white/70">Open intake and register incoming work.</div></div>
+                            <span class="text-white/60">></span>
+                        </Link>
+                        <Link :href="route('execute-test.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
+                            <div><div class="text-base font-semibold tracking-tight">Record test result</div><div class="mt-1 text-sm text-white/70">Jump straight to active inspections.</div></div>
+                            <span class="text-white/60">></span>
+                        </Link>
+                        <Link :href="route('report.index')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
+                            <div><div class="text-base font-semibold tracking-tight">Open reporting</div><div class="mt-1 text-sm text-white/70">Review history and export filtered reports.</div></div>
+                            <span class="text-white/60">></span>
+                        </Link>
+                    </div>
+                    <div class="mt-5 rounded-[22px] border border-orange-500/15 bg-[linear-gradient(160deg,#090909,#22140a)] p-5 text-white">
+                        <div class="flex items-end justify-between gap-4">
                             <div>
-                                <div class="text-sm font-medium text-stone-400">{{ selectedPeriodLabel }}</div>
-                                <div class="mt-1 text-4xl font-semibold tracking-tight text-stone-50">{{ formatNumber(totalTests) }}</div>
+                                <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-300/70">Today pulse</div>
+                                <div class="mt-2 text-3xl font-semibold tracking-tight">{{ formatNumber(todayTotal) }}</div>
+                                <div class="mt-1 text-sm text-white/65">completed inspections</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-300/70">Yield</div>
+                                <div class="mt-2 text-2xl font-semibold tracking-tight">{{ formatPercent(todayYield) }}</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid gap-3 grid-cols-2">
+                            <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
+                                <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">OK today</div>
+                                <div class="mt-2 text-lg font-semibold tracking-tight">{{ formatNumber(props.metrics.todayOK) }}</div>
+                            </div>
+                            <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
+                                <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">NG today</div>
+                                <div class="mt-2 text-lg font-semibold tracking-tight">{{ formatNumber(props.metrics.todayNG) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-5">
+                        <div class="flex items-end justify-between gap-4">
+                            <div>
+                                <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Window snapshot</div>
+                                <div class="mt-1 text-3xl font-semibold tracking-tight text-stone-50">{{ formatNumber(totalTests) }}</div>
                             </div>
                             <div class="rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-200">{{ formatPercent(yieldPct) }} yield</div>
                         </div>
-                        <div class="mt-5 space-y-3">
+                        <div class="mt-4 space-y-3">
                             <div>
                                 <div class="mb-2 flex items-center justify-between text-xs font-semibold text-stone-400">
                                     <span>Quality mix</span>
@@ -615,8 +731,8 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                                 </div>
                             </div>
                         </div>
-                    </article>
-                </div>
+                    </div>
+                </article>
             </section>
 
             <template v-if="showHeavySections">
