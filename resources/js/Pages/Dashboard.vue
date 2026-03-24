@@ -504,15 +504,15 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                         <article class="rounded-[24px] border border-orange-500/15 bg-[linear-gradient(160deg,#090909,#22140a)] p-6 text-white shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
                             <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-300/70">Quick actions</div>
                             <div class="mt-4 space-y-3">
-                                <Link :href="route('receive-job.create')" class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
+                                <Link :href="route('receive-job.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
                                     <div><div class="text-base font-semibold tracking-tight">Receive new job</div><div class="mt-1 text-sm text-white/70">Open intake and register incoming work.</div></div>
                                     <span class="text-white/60">></span>
                                 </Link>
-                                <Link :href="route('execute-test.create')" class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
+                                <Link :href="route('execute-test.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
                                     <div><div class="text-base font-semibold tracking-tight">Record test result</div><div class="mt-1 text-sm text-white/70">Jump straight to active inspections.</div></div>
                                     <span class="text-white/60">></span>
                                 </Link>
-                                <Link :href="route('report.index')" class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
+                                <Link :href="route('report.index')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
                                     <div><div class="text-base font-semibold tracking-tight">Open reporting</div><div class="mt-1 text-sm text-white/70">Review history and export filtered reports.</div></div>
                                     <span class="text-white/60">></span>
                                 </Link>

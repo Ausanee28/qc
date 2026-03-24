@@ -12,6 +12,9 @@ defineProps({
 <template>
     <Link
         :href="href"
+        prefetch="click"
+        cache-for="45s"
+        view-transition
         class="block w-full px-4 py-2 text-start text-sm leading-5 text-stone-200 transition duration-150 ease-in-out hover:bg-orange-500/10 hover:text-orange-100 focus:bg-orange-500/10 focus:text-orange-100 focus:outline-none"
     >
         <slot />
