@@ -15,7 +15,7 @@ class PerformanceController extends Controller
         $hasHeaderDeletedAt = SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at');
         $windowStart = now()->subDays(30);
 
-        $inspectors = Cache::remember('performance.inspectors.30d', now()->addMinutes(1), function () use ($hasDetailDeletedAt, $windowStart) {
+        $inspectors = Cache::remember('performance.inspectors.30d', now()->addMinutes(3), function () use ($hasDetailDeletedAt, $windowStart) {
             $inspectorsQuery = DB::table('Transaction_Detail as TD')
                 ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
                 ->whereNotNull('TD.start_time')
@@ -41,7 +41,7 @@ class PerformanceController extends Controller
             return $inspectorsQuery->get();
         });
 
-        $details = Cache::remember('performance.details.30d.recent50', now()->addMinutes(1), function () use ($hasDetailDeletedAt, $hasHeaderDeletedAt, $windowStart) {
+        $details = Cache::remember('performance.details.30d.recent50', now()->addMinutes(3), function () use ($hasDetailDeletedAt, $hasHeaderDeletedAt, $windowStart) {
             $detailsQuery = DB::table('Transaction_Detail as TD')
                 ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
                 ->join('Transaction_Header as TH', 'TD.transaction_id', '=', 'TH.transaction_id')

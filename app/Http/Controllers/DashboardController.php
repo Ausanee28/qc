@@ -2,17 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TransactionHeader;
-use App\Models\TransactionDetail;
-use App\Models\Equipment;
-use App\Models\User;
-use App\Support\SchemaCapabilities;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
-
 use App\Services\DashboardMetricsService;
 
 class DashboardController extends Controller
@@ -33,44 +26,40 @@ class DashboardController extends Controller
 
         $cacheKey = "dashboard.metrics.{$period}";
 
-        $basePayload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($period, $from, $to) {
-            $counts = $this->metricsService->getCounts($from, $to);
-            $todayJudgements = $this->metricsService->getTodayJudgements();
-            $pendingCountQuery = DB::table('Transaction_Header')->whereNull('return_date');
-            if (SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at')) {
-                $pendingCountQuery->whereNull('deleted_at');
-            }
-
+        $basePayload = Cache::remember($cacheKey, now()->addMinutes(3), function () use ($period, $from, $to) {
             return [
                 'currentPeriod' => $period,
-                'metrics' => [
-                    'todayCount' => $this->metricsService->getTodayCount(),
-                    'monthCount' => $this->metricsService->getMonthCount(),
-                    'okCount' => $counts['okCount'],
-                    'ngCount' => $counts['ngCount'],
-                    'pendingCount' => $pendingCountQuery->count(),
-                    'todayOK' => $todayJudgements['todayOK'],
-                    'todayNG' => $todayJudgements['todayNG'],
-                    'yieldRate' => $counts['yieldRate'],
-                    'defectRate' => $counts['defectRate'],
-                    'avgTestTime' => $this->metricsService->getAverageTestTimeMinutes($from, $to),
-                    'totalTests' => $counts['totalTests'],
-                    'testsPerJob' => $this->metricsService->getTestsPerJob($from, $to),
-                ],
+                'metrics' => $this->metricsService->getOverviewMetrics($from, $to),
             ];
         });
 
         return Inertia::render('Dashboard', [
             ...$basePayload,
-            'weeklyData' => Inertia::defer(fn () => Cache::remember('dashboard.heavy.weekly', now()->addSeconds(60), fn () => $this->metricsService->getWeeklyTrend()), 'dashboard-heavy'),
-            'dailyData' => Inertia::defer(fn () => Cache::remember('dashboard.heavy.daily', now()->addSeconds(60), fn () => $this->metricsService->getDailyTrend()), 'dashboard-heavy'),
-            'monthlyData' => Inertia::defer(fn () => Cache::remember('dashboard.heavy.monthly', now()->addSeconds(60), fn () => $this->metricsService->getMonthlyTrend()), 'dashboard-heavy'),
-            'equipRank' => Inertia::defer(fn () => Cache::remember("dashboard.heavy.{$period}.equip-rank", now()->addSeconds(60), fn () => $this->metricsService->getEquipmentRanking(5, $from, $to)), 'dashboard-heavy'),
-            'failByEquip' => Inertia::defer(fn () => Cache::remember("dashboard.heavy.{$period}.fail-by-equip", now()->addSeconds(60), fn () => $this->metricsService->getFailuresByEquipment(5, $from, $to)), 'dashboard-heavy'),
-            'inspectorEff' => Inertia::defer(fn () => Cache::remember("dashboard.heavy.{$period}.inspector-eff", now()->addSeconds(60), fn () => $this->metricsService->getInspectorEfficiency(5, $from, $to)), 'dashboard-heavy'),
-            'recentActivities' => Inertia::defer(fn () => Cache::remember("dashboard.heavy.{$period}.recent-activities", now()->addSeconds(30), fn () => $this->metricsService->getRecentActivities(5, $from, $to)), 'dashboard-heavy'),
-            'inspectorData' => Inertia::defer(fn () => Cache::remember("dashboard.heavy.{$period}.inspector-data", now()->addSeconds(60), fn () => $this->metricsService->getInspectorData(5, $from, $to)), 'dashboard-heavy'),
+            'weeklyData' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['weeklyData'], 'dashboard-heavy'),
+            'dailyData' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['dailyData'], 'dashboard-heavy'),
+            'monthlyData' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['monthlyData'], 'dashboard-heavy'),
+            'equipRank' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['equipRank'], 'dashboard-heavy'),
+            'failByEquip' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['failByEquip'], 'dashboard-heavy'),
+            'inspectorEff' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['inspectorEff'], 'dashboard-heavy'),
+            'recentActivities' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['recentActivities'], 'dashboard-heavy'),
+            'inspectorData' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['inspectorData'], 'dashboard-heavy'),
         ]);
+    }
+
+    private function getHeavyPayload(string $period, Carbon $from, Carbon $to): array
+    {
+        return Cache::remember("dashboard.heavy.{$period}", now()->addMinutes(3), function () use ($from, $to) {
+            return [
+                'weeklyData' => $this->metricsService->getWeeklyTrend(),
+                'dailyData' => $this->metricsService->getDailyTrend(),
+                'monthlyData' => $this->metricsService->getMonthlyTrend(),
+                'equipRank' => $this->metricsService->getEquipmentRanking(5, $from, $to),
+                'failByEquip' => $this->metricsService->getFailuresByEquipment(5, $from, $to),
+                'inspectorEff' => $this->metricsService->getInspectorEfficiency(5, $from, $to),
+                'recentActivities' => $this->metricsService->getRecentActivities(5, $from, $to),
+                'inspectorData' => $this->metricsService->getInspectorData(5, $from, $to),
+            ];
+        });
     }
 
     private function getDateRange(string $period): array

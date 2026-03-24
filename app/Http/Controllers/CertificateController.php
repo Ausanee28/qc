@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Support\SchemaCapabilities;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -22,43 +24,51 @@ class CertificateController extends Controller
         $dateFrom = (string) ($filters['date_from'] ?? now()->startOfMonth()->format('Y-m-d'));
         $dateTo = (string) ($filters['date_to'] ?? now()->format('Y-m-d'));
         $perPage = (int) ($filters['per_page'] ?? 12);
+        $page = Paginator::resolveCurrentPage();
         [$fromDateTime, $toDateTime] = $this->resolveDateRange($dateFrom, $dateTo);
         $hasHeaderDeletedAt = SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at');
         $hasDetailDeletedAt = SchemaCapabilities::hasColumn('Transaction_Detail', 'deleted_at');
 
-        $jobsQuery = DB::table('Transaction_Header as TH')
-            ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id');
+        $jobs = Cache::remember(
+            $this->certificateCacheKey($dateFrom, $dateTo, $perPage, $page),
+            now()->addMinutes(3),
+            function () use ($fromDateTime, $toDateTime, $perPage, $page, $hasHeaderDeletedAt, $hasDetailDeletedAt, $request) {
+                $jobsQuery = DB::table('Transaction_Header as TH')
+                    ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id');
 
-        $jobsQuery->leftJoin('Transaction_Detail as TD', function ($join) use ($hasDetailDeletedAt) {
-            $join->on('TH.transaction_id', '=', 'TD.transaction_id');
-            if ($hasDetailDeletedAt) {
-                $join->whereNull('TD.deleted_at');
+                $jobsQuery->leftJoin('Transaction_Detail as TD', function ($join) use ($hasDetailDeletedAt) {
+                    $join->on('TH.transaction_id', '=', 'TD.transaction_id');
+                    if ($hasDetailDeletedAt) {
+                        $join->whereNull('TD.deleted_at');
+                    }
+                });
+
+                if ($hasHeaderDeletedAt) {
+                    $jobsQuery->whereNull('TH.deleted_at');
+                }
+
+                return $jobsQuery
+                    ->whereBetween('TH.receive_date', [$fromDateTime, $toDateTime])
+                    ->select(
+                        'TH.transaction_id',
+                        'TH.dmc',
+                        'TH.line',
+                        'TH.receive_date',
+                        'TH.return_date',
+                        'EU.external_name as sender',
+                        'TH.detail',
+                        DB::raw('COUNT(TD.detail_id) as test_count'),
+                        DB::raw("SUM(CASE WHEN TD.judgement = 'OK' THEN 1 ELSE 0 END) as ok_count"),
+                        DB::raw("SUM(CASE WHEN TD.judgement = 'NG' THEN 1 ELSE 0 END) as ng_count")
+                    )
+                    ->groupBy('TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date', 'TH.return_date',
+                        'EU.external_name', 'TH.detail')
+                    ->orderByDesc('TH.receive_date')
+                    ->simplePaginate($perPage, ['*'], 'page', $page)
+                    ->withPath($request->url())
+                    ->appends($request->query());
             }
-        });
-
-        if ($hasHeaderDeletedAt) {
-            $jobsQuery->whereNull('TH.deleted_at');
-        }
-
-        $jobs = $jobsQuery
-            ->whereBetween('TH.receive_date', [$fromDateTime, $toDateTime])
-            ->select(
-                'TH.transaction_id',
-                'TH.dmc',
-                'TH.line',
-                'TH.receive_date',
-                'TH.return_date',
-                'EU.external_name as sender',
-                'TH.detail',
-                DB::raw('COUNT(TD.detail_id) as test_count'),
-                DB::raw("SUM(CASE WHEN TD.judgement = 'OK' THEN 1 ELSE 0 END) as ok_count"),
-                DB::raw("SUM(CASE WHEN TD.judgement = 'NG' THEN 1 ELSE 0 END) as ng_count")
-            )
-            ->groupBy('TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date', 'TH.return_date',
-                'EU.external_name', 'TH.detail')
-            ->orderByDesc('TH.receive_date')
-            ->simplePaginate($perPage)
-            ->withQueryString();
+        );
 
         return Inertia::render('Certificates/Index', [
             'jobs' => $jobs,
@@ -117,5 +127,10 @@ class CertificateController extends Controller
             Carbon::parse($dateFrom)->startOfDay(),
             Carbon::parse($dateTo)->endOfDay(),
         ];
+    }
+
+    private function certificateCacheKey(string $dateFrom, string $dateTo, int $perPage, int $page): string
+    {
+        return "certificates.list.{$dateFrom}.{$dateTo}.{$perPage}.{$page}";
     }
 }

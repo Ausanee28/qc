@@ -106,6 +106,85 @@ class DashboardMetricsService
         return "TIMESTAMPDIFF(SECOND, {$startColumn}, {$endColumn})";
     }
 
+    public function getOverviewMetrics(Carbon $from, Carbon $to): array
+    {
+        $todayStart = today()->startOfDay();
+        $todayEnd = today()->endOfDay();
+        $monthStart = now()->startOfMonth();
+        $monthEnd = now()->endOfDay();
+
+        $headerQuery = DB::table('Transaction_Header')
+            ->selectRaw(
+                "SUM(CASE WHEN receive_date BETWEEN ? AND ? THEN 1 ELSE 0 END) as today_count,
+                 SUM(CASE WHEN receive_date BETWEEN ? AND ? THEN 1 ELSE 0 END) as month_count,
+                 SUM(CASE WHEN receive_date BETWEEN ? AND ? THEN 1 ELSE 0 END) as period_jobs,
+                 SUM(CASE WHEN return_date IS NULL THEN 1 ELSE 0 END) as pending_count",
+                [$todayStart, $todayEnd, $monthStart, $monthEnd, $from, $to]
+            );
+
+        $this->applyHeaderNotDeleted($headerQuery, 'Transaction_Header.deleted_at');
+
+        $headerRow = $headerQuery->first();
+
+        $detailQuery = DB::table('Transaction_Detail as TD')
+            ->join('Transaction_Header as TH', 'TD.transaction_id', '=', 'TH.transaction_id')
+            ->selectRaw(
+                "SUM(CASE WHEN TH.receive_date BETWEEN ? AND ? AND TD.judgement = ? THEN 1 ELSE 0 END) as ok_count,
+                 SUM(CASE WHEN TH.receive_date BETWEEN ? AND ? AND TD.judgement = ? THEN 1 ELSE 0 END) as ng_count,
+                 SUM(CASE WHEN TH.receive_date BETWEEN ? AND ? THEN 1 ELSE 0 END) as total_tests,
+                 SUM(CASE WHEN TH.receive_date BETWEEN ? AND ? AND TD.judgement = ? THEN 1 ELSE 0 END) as today_ok,
+                 SUM(CASE WHEN TH.receive_date BETWEEN ? AND ? AND TD.judgement = ? THEN 1 ELSE 0 END) as today_ng,
+                 AVG(CASE
+                        WHEN TH.receive_date BETWEEN ? AND ?
+                         AND TD.start_time IS NOT NULL
+                         AND TD.end_time IS NOT NULL
+                        THEN TD.duration_sec
+                     END) / 60 as avg_min",
+                [
+                    $from, $to, TransactionDetail::JUDGEMENT_OK,
+                    $from, $to, TransactionDetail::JUDGEMENT_NG,
+                    $from, $to,
+                    $todayStart, $todayEnd, TransactionDetail::JUDGEMENT_OK,
+                    $todayStart, $todayEnd, TransactionDetail::JUDGEMENT_NG,
+                    $from, $to,
+                ]
+            );
+
+        $this->applyDetailNotDeleted($detailQuery, 'TD.deleted_at');
+        $this->applyHeaderNotDeleted($detailQuery, 'TH.deleted_at');
+
+        $detailRow = $detailQuery->first();
+
+        $todayCount = (int) ($headerRow->today_count ?? 0);
+        $monthCount = (int) ($headerRow->month_count ?? 0);
+        $periodJobs = (int) ($headerRow->period_jobs ?? 0);
+        $pendingCount = (int) ($headerRow->pending_count ?? 0);
+        $okCount = (int) ($detailRow->ok_count ?? 0);
+        $ngCount = (int) ($detailRow->ng_count ?? 0);
+        $totalTests = (int) ($detailRow->total_tests ?? 0);
+        $todayOK = (int) ($detailRow->today_ok ?? 0);
+        $todayNG = (int) ($detailRow->today_ng ?? 0);
+        $avgTestTime = (float) round((float) ($detailRow->avg_min ?? 0));
+        $yieldRate = $totalTests > 0 ? round($okCount / $totalTests * 100, 1) : 0;
+        $defectRate = $totalTests > 0 ? round($ngCount / $totalTests * 100, 1) : 0;
+        $testsPerJob = $periodJobs > 0 ? round($totalTests / $periodJobs, 1) : 0;
+
+        return compact(
+            'todayCount',
+            'monthCount',
+            'okCount',
+            'ngCount',
+            'pendingCount',
+            'todayOK',
+            'todayNG',
+            'yieldRate',
+            'defectRate',
+            'avgTestTime',
+            'totalTests',
+            'testsPerJob',
+        );
+    }
+
     public function getTodayCount(): int
     {
         return $this->headerQuery()
@@ -303,29 +382,45 @@ class DashboardMetricsService
 
     public function getRecentActivities(int $limit = 5, ?Carbon $from = null, ?Carbon $to = null): \Illuminate\Support\Collection
     {
-        $query = $this->headerQuery()
-            ->with(['details' => function ($q) {
-                $q->withoutGlobalScopes();
-                $this->applyDetailNotDeleted($q);
-            }])
-            ->whereNotNull('return_date');
+        $query = DB::table('Transaction_Header as TH')
+            ->leftJoin('Transaction_Detail as TD', function ($join) {
+                $join->on('TH.transaction_id', '=', 'TD.transaction_id');
+
+                if ($this->hasDetailDeletedAt()) {
+                    $join->whereNull('TD.deleted_at');
+                }
+            })
+            ->whereNotNull('TH.return_date');
+
+        $this->applyHeaderNotDeleted($query, 'TH.deleted_at');
 
         if ($from && $to) {
-            $query->whereBetween('receive_date', [$from, $to]);
+            $query->whereBetween('TH.receive_date', [$from, $to]);
         }
 
-        return $query->orderByDesc('return_date')
+        return $query->select(
+                'TH.transaction_id as id',
+                'TH.detail',
+                'TH.dmc',
+                'TH.line',
+                'TH.return_date',
+                DB::raw("SUM(CASE WHEN TD.judgement = '" . TransactionDetail::JUDGEMENT_OK . "' THEN 1 ELSE 0 END) as ok"),
+                DB::raw("SUM(CASE WHEN TD.judgement = '" . TransactionDetail::JUDGEMENT_NG . "' THEN 1 ELSE 0 END) as ng")
+            )
+            ->groupBy('TH.transaction_id', 'TH.detail', 'TH.dmc', 'TH.line', 'TH.return_date')
+            ->orderByDesc('TH.return_date')
             ->limit($limit)
             ->get()
             ->map(function ($tx) {
-                $ok = $tx->details->where('judgement', TransactionDetail::JUDGEMENT_OK)->count();
-                $ng = $tx->details->where('judgement', TransactionDetail::JUDGEMENT_NG)->count();
+                $ok = (int) ($tx->ok ?? 0);
+                $ng = (int) ($tx->ng ?? 0);
+
                 return [
-                    'id' => $tx->transaction_id,
+                    'id' => $tx->id,
                     'detail' => $tx->detail ?? $tx->dmc ?? $tx->line ?? '-',
                     'dmcCode' => $tx->dmc ?? '-',
                     'result' => $ng > 0 ? TransactionDetail::JUDGEMENT_NG : TransactionDetail::JUDGEMENT_OK,
-                    'date' => $tx->return_date ? $tx->return_date->format('d M Y') : '-',
+                    'date' => $tx->return_date ? Carbon::parse($tx->return_date)->format('d M Y') : '-',
                     'ok' => $ok,
                     'ng' => $ng,
                 ];

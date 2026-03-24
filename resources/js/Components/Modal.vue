@@ -21,6 +21,22 @@ const dialog = ref();
 const showSlot = ref(props.show);
 let hideTimer = null;
 
+const close = () => {
+    if (props.closeable) {
+        emit('close');
+    }
+};
+
+const closeOnEscape = (e) => {
+    if (e.key === 'Escape') {
+        e.preventDefault();
+
+        if (props.show) {
+            close();
+        }
+    }
+};
+
 watch(
     () => props.show,
     (isOpen) => {
@@ -29,7 +45,7 @@ watch(
             hideTimer = null;
         }
 
-        if (props.show) {
+        if (isOpen) {
             document.body.style.overflow = 'hidden';
             showSlot.value = true;
             document.addEventListener('keydown', closeOnEscape);
@@ -48,22 +64,6 @@ watch(
     },
     { immediate: true },
 );
-
-const close = () => {
-    if (props.closeable) {
-        emit('close');
-    }
-};
-
-const closeOnEscape = (e) => {
-    if (e.key === 'Escape') {
-        e.preventDefault();
-
-        if (props.show) {
-            close();
-        }
-    }
-};
 
 onUnmounted(() => {
     if (hideTimer !== null) {

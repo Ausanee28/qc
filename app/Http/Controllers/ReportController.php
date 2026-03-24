@@ -31,13 +31,13 @@ class ReportController extends Controller
 
         $summary = Cache::remember(
             $this->reportCacheKey('summary', $filters),
-            now()->addMinutes(1),
+            now()->addMinutes(3),
             fn () => $this->buildResultsSummary($filters['date_from'], $filters['date_to'], $filters['dmc'])
         );
         $page = LengthAwarePaginator::resolveCurrentPage();
         $pageResults = Cache::remember(
             $this->reportCacheKey('page', [...$filters, 'page' => $page]),
-            now()->addMinutes(1),
+            now()->addMinutes(3),
             fn () => $this->buildResultsQuery($filters['date_from'], $filters['date_to'], $filters['dmc'])
                 ->forPage($page, $filters['per_page'])
                 ->get()
