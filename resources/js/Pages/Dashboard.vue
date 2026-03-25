@@ -26,6 +26,7 @@ const props = defineProps({
         default: () => ({
             todayCount: 0,
             monthCount: 0,
+            periodJobs: 0,
             okCount: 0,
             ngCount: 0,
             pendingCount: 0,
@@ -222,6 +223,7 @@ onBeforeUnmount(() => {
 
 const formatNumber = (value) => Number(value || 0).toLocaleString();
 const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`;
+const formatDecimal = (value) => Number(value || 0).toFixed(1);
 
 const totalTests = computed(() => Number(props.metrics.totalTests || 0));
 const yieldPct = computed(() => Number(props.metrics.yieldRate || 0));
@@ -231,6 +233,7 @@ const todayYield = computed(() => todayTotal.value > 0 ? Number(((props.metrics.
 const monthlyTotalOK = computed(() => props.monthlyData.reduce((sum, month) => sum + Number(month.ok || 0), 0));
 const monthlyTotalNG = computed(() => props.monthlyData.reduce((sum, month) => sum + Number(month.ng || 0), 0));
 const selectedPeriodLabel = computed(() => periodLabels[selectedPeriod.value] || 'This Month');
+const periodJobs = computed(() => Number(props.metrics.periodJobs || 0));
 const leadEquipment = computed(() => props.equipRank?.[0] ?? null);
 const leadFailure = computed(() => props.failByEquip?.[0] ?? null);
 const leadInspector = computed(() => props.inspectorData?.[0] ?? null);
@@ -290,35 +293,35 @@ const signalCards = computed(() => ([
 const heroStatusMetrics = computed(() => ([
     { label: 'Pass yield', value: formatPercent(yieldPct.value), note: `${formatNumber(props.metrics.okCount)} OK` },
     { label: 'Defect rate', value: formatPercent(defectPct.value), note: `${formatNumber(props.metrics.ngCount)} NG` },
-    { label: 'Pending jobs', value: formatNumber(pendingJobs.value), note: `${props.metrics.avgTestTime || 0} min avg test` },
+    { label: 'Pending jobs', value: formatNumber(pendingJobs.value), note: `${formatNumber(periodJobs.value)} jobs in window` },
 ]));
 const heroSummaryCards = computed(() => ([
     {
-        label: 'Window volume',
-        value: formatNumber(totalTests.value),
-        note: `${selectedPeriodLabel.value} total inspections`,
+        label: 'Jobs received',
+        value: formatNumber(periodJobs.value),
+        note: `${selectedPeriodLabel.value} incoming jobs`,
     },
     {
-        label: 'Today output',
+        label: 'Inspections run',
+        value: formatNumber(totalTests.value),
+        note: `${formatDecimal(props.metrics.testsPerJob)} tests per job`,
+    },
+    {
+        label: 'Average test time',
+        value: `${formatNumber(props.metrics.avgTestTime)} min`,
+        note: 'Average time per completed inspection',
+    },
+    {
+        label: 'Today completed',
         value: formatNumber(todayTotal.value),
         note: `${formatPercent(todayYield.value)} yield today`,
     },
-    {
-        label: 'Top fail source',
-        value: leadFailure.value ? leadFailure.value.name : 'No fail hotspot',
-        note: leadFailure.value ? `${formatNumber(leadFailure.value.count)} NG results` : 'No clustered NG source in this window',
-    },
-    {
-        label: 'Lead equipment',
-        value: leadEquipment.value ? leadEquipment.value.name : 'No load trend yet',
-        note: leadEquipment.value ? `${formatNumber(leadEquipment.value.count)} tests in this window` : 'Usage ranking appears once jobs are recorded',
-    },
 ]));
 const snapshotMetrics = computed(() => ([
-    { label: 'Pass records', value: formatNumber(props.metrics.okCount), note: 'Accepted inspections in this window' },
-    { label: 'Fail records', value: formatNumber(props.metrics.ngCount), note: 'Records marked NG' },
+    { label: 'Jobs received', value: formatNumber(periodJobs.value), note: `${selectedPeriodLabel.value} intake volume` },
+    { label: 'Tests per job', value: formatDecimal(props.metrics.testsPerJob), note: 'Average inspection density per job' },
     { label: 'Pending jobs', value: formatNumber(pendingJobs.value), note: 'Jobs still waiting to close' },
-    { label: 'Avg test time', value: `${props.metrics.avgTestTime || 0} min`, note: `${props.metrics.testsPerJob || 0} tests per job` },
+    { label: 'Avg test time', value: `${formatNumber(props.metrics.avgTestTime)} min`, note: 'Average time spent per inspection' },
 ]));
 const weeklyOkTotal = computed(() => props.weeklyData.reduce((sum, day) => sum + Number(day.ok || 0), 0));
 const weeklyNgTotal = computed(() => props.weeklyData.reduce((sum, day) => sum + Number(day.ng || 0), 0));
@@ -382,18 +385,21 @@ const attentionItems = computed(() => {
     if (!totalTests.value) {
         return [
             {
-                title: 'Start by registering incoming work',
-                detail: 'Record the first jobs and results to activate the dashboard.',
+                title: 'Dashboard readiness',
+                value: 'No inspections yet',
+                detail: 'Record incoming jobs and results to unlock live signals.',
                 tone: 'ink',
             },
             {
                 title: 'Open queue',
-                detail: `${formatNumber(pendingJobs.value)} jobs are waiting to close.`,
-                tone: 'amber',
+                value: formatNumber(pendingJobs.value),
+                detail: 'Jobs waiting to close right now.',
+                tone: pendingJobs.value ? 'amber' : 'ink',
             },
             {
-                title: 'Start from actions',
-                detail: 'Use Receive Job and Execute Test to populate today\'s picture.',
+                title: 'Next step',
+                value: 'Start intake or testing',
+                detail: 'Use the quick actions to build today\'s dashboard view.',
                 tone: 'orange',
             },
         ];
@@ -402,44 +408,51 @@ const attentionItems = computed(() => {
     const items = [
         pendingJobs.value <= 5
             ? {
-                title: 'Queue in control',
+                title: 'Queue status',
+                value: 'In control',
                 detail: `${formatNumber(pendingJobs.value)} jobs remain open.`,
                 tone: 'orange',
             }
             : {
-                title: 'Queue needs review',
+                title: 'Queue status',
+                value: 'Needs review',
                 detail: `${formatNumber(pendingJobs.value)} jobs remain open.`,
                 tone: 'amber',
             },
         yieldPct.value >= 95
             ? {
-                title: 'Yield above target',
-                detail: `${formatPercent(yieldPct.value)} yield in this window.`,
+                title: 'Quality signal',
+                value: 'Above target',
+                detail: `${formatPercent(yieldPct.value)} yield in ${selectedPeriodLabel.value.toLowerCase()}.`,
                 tone: 'orange',
             }
             : {
-                title: 'Quality drift',
-                detail: `${formatPercent(defectPct.value)} defect rate in this window.`,
+                title: 'Quality signal',
+                value: 'Needs attention',
+                detail: `${formatPercent(defectPct.value)} defect rate in ${selectedPeriodLabel.value.toLowerCase()}.`,
                 tone: 'ember',
             },
     ];
 
     if (leadFailure.value) {
         items.push({
-            title: 'Top fail source',
+            title: 'Primary focus',
+            value: leadFailure.value.name,
             detail: `${leadFailure.value.name}: ${formatNumber(leadFailure.value.count)} NG results.`,
             tone: 'ember',
         });
     } else if (leadEquipment.value) {
         items.push({
-            title: 'Main workload driver',
+            title: 'Primary focus',
+            value: leadEquipment.value.name,
             detail: `${leadEquipment.value.name}: ${formatNumber(leadEquipment.value.count)} tests.`,
             tone: 'ink',
         });
     } else {
         items.push({
-            title: 'Signals still building',
-            detail: 'This panel will highlight the biggest risk once more results arrive.',
+            title: 'Primary focus',
+            value: 'Signals still building',
+            detail: 'This card will surface the main risk once more results arrive.',
             tone: 'ink',
         });
     }
@@ -526,122 +539,117 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     <AuthenticatedLayout>
         <template #title>Dashboard</template>
 
-        <div class="space-y-6">
-            <section class="dash-hero reveal-section p-5 sm:p-7">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <div class="min-w-0 max-w-3xl">
-                        <div class="dash-kicker">Operations Dashboard</div>
-                        <h1 class="dash-heading mt-2">Lab status at a glance</h1>
-                        <p class="mt-3 max-w-2xl text-sm leading-6 text-stone-300/75 sm:text-base">
-                            The fastest read on queue, quality, and what the team should analyze next.
-                        </p>
-                    </div>
+        <div class="dashboard-shell space-y-6">
+            <section class="dash-hero reveal-section p-5 sm:p-7 lg:p-8">
+                <div class="dash-hero__glow dash-hero__glow--one"></div>
+                <div class="dash-hero__glow dash-hero__glow--two"></div>
 
-                    <div class="flex flex-wrap items-center gap-3">
-                        <div class="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm font-semibold text-stone-100 backdrop-blur">
-                            <span class="h-2.5 w-2.5 rounded-full bg-orange-400 shadow-[0_0_0_6px_rgba(251,146,60,0.18)]"></span>
-                            {{ isLoading ? 'Refreshing data' : 'Live overview' }}
+                <div class="relative z-10">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                        <div class="min-w-0 max-w-3xl">
+                            <div class="dash-kicker">Operations Dashboard</div>
+                            <h1 class="dash-heading mt-3">Lab performance in one view</h1>
+                            <p class="mt-3 max-w-2xl text-sm leading-7 text-stone-300/80 sm:text-base">
+                                A clean read of queue pressure, quality outcome, and team workload for {{ selectedPeriodLabel.toLowerCase() }}.
+                            </p>
                         </div>
-                        <label class="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm font-semibold text-stone-100 backdrop-blur">
-                            <span class="text-stone-400">Window</span>
-                            <select v-model="selectedPeriod" class="min-w-0 bg-transparent text-stone-100 outline-none">
-                                <option v-for="option in periodOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                            </select>
-                        </label>
-                    </div>
-                </div>
 
-                <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-                    <article class="rounded-[28px] border border-white/10 p-5 text-white shadow-[0_20px_50px_rgba(15,23,42,0.18)] sm:p-6" :class="{
-                            'bg-[linear-gradient(160deg,#0a0a0a,#1c1917)]': healthSummary.tone === 'ink',
-                            'bg-[linear-gradient(160deg,#1c0f05,#9a3412)]': healthSummary.tone === 'orange',
-                            'bg-[linear-gradient(160deg,#20120a,#b45309)]': healthSummary.tone === 'amber',
-                            'bg-[linear-gradient(160deg,#130d08,#7c2d12)]': healthSummary.tone === 'ember'
-                        }">
-                        <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">Operational pulse</div>
-                        <h2 class="mt-3 max-w-2xl text-[clamp(2rem,3vw,3.2rem)] font-semibold tracking-tight leading-[1.02]">{{ healthSummary.title }}</h2>
-                        <p class="mt-3 max-w-2xl text-sm leading-6 text-white/72">{{ healthSummary.text }}</p>
-
-                        <div class="mt-5 grid gap-3 sm:grid-cols-3">
-                            <div v-for="item in heroStatusMetrics" :key="item.label" class="rounded-[22px] border border-white/10 bg-black/12 px-5 py-4">
-                                <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">{{ item.label }}</div>
-                                <div class="mt-4 text-[clamp(1.9rem,2.8vw,2.8rem)] font-semibold tracking-tight leading-none">{{ item.value }}</div>
-                                <div class="mt-3 text-sm leading-5 text-white/72">{{ item.note }}</div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div class="dash-chip">
+                                <span class="dash-chip__dot"></span>
+                                {{ isLoading ? 'Refreshing data' : 'Live overview' }}
                             </div>
+                            <label class="dash-chip dash-chip--select">
+                                <span class="text-stone-400">Window</span>
+                                <select v-model="selectedPeriod" class="dash-select">
+                                    <option v-for="option in periodOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                </select>
+                            </label>
                         </div>
-                    </article>
+                    </div>
 
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <article v-for="card in heroSummaryCards" :key="card.label" class="rounded-[24px] border border-white/10 bg-[#17120e]/92 p-5 shadow-[0_16px_36px_rgba(0,0,0,0.24)]">
-                            <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{{ card.label }}</div>
-                            <div class="mt-3 text-3xl font-semibold tracking-tight text-stone-50">{{ card.value }}</div>
-                            <div class="mt-2 text-sm leading-6 text-stone-400">{{ card.note }}</div>
+                    <div class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.12fr)_minmax(300px,0.88fr)]">
+                        <article class="hero-brief" :data-tone="healthSummary.tone">
+                            <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">Executive summary</div>
+                            <h2 class="mt-4 max-w-2xl text-[clamp(2rem,3vw,3.35rem)] font-semibold leading-[1.02] tracking-tight text-white">{{ healthSummary.title }}</h2>
+                            <p class="mt-4 max-w-2xl text-sm leading-7 text-white/78">{{ healthSummary.text }}</p>
+
+                            <div class="mt-6 grid gap-3 sm:grid-cols-3">
+                                <div v-for="item in heroStatusMetrics" :key="item.label" class="metric-glass">
+                                    <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">{{ item.label }}</div>
+                                    <div class="mt-4 text-[clamp(1.9rem,2.5vw,2.8rem)] font-semibold leading-none tracking-tight text-white">{{ item.value }}</div>
+                                    <div class="mt-3 text-sm leading-5 text-white/72">{{ item.note }}</div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                            <article v-for="card in heroSummaryCards" :key="card.label" class="surface-card summary-tile p-5">
+                                <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{{ card.label }}</div>
+                                <div class="mt-4 text-3xl font-semibold tracking-tight text-stone-50">{{ card.value }}</div>
+                                <div class="mt-3 text-sm leading-6 text-stone-400">{{ card.note }}</div>
+                            </article>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 grid gap-3 lg:grid-cols-3">
+                        <article v-for="item in attentionItems" :key="item.title" class="attention-card" :data-tone="item.tone">
+                            <div class="text-[11px] font-bold uppercase tracking-[0.16em]">{{ item.title }}</div>
+                            <div class="mt-3 text-xl font-semibold tracking-tight">{{ item.value }}</div>
+                            <div class="mt-3 text-sm leading-6">{{ item.detail }}</div>
                         </article>
                     </div>
                 </div>
-
-                <div class="mt-5 grid gap-3 lg:grid-cols-3">
-                    <article v-for="item in attentionItems" :key="item.title" class="rounded-[22px] border px-5 py-4" :class="{
-                        'border-orange-500/20 bg-orange-500/10': item.tone === 'orange',
-                        'border-amber-500/20 bg-amber-500/10': item.tone === 'amber',
-                        'border-[#9a3412]/30 bg-[#9a3412]/15': item.tone === 'ember',
-                        'border-white/10 bg-black/25': item.tone === 'ink',
-                    }">
-                        <div class="text-[11px] font-bold uppercase tracking-[0.16em]" :class="{
-                            'text-orange-200/80': item.tone === 'orange',
-                            'text-amber-200/80': item.tone === 'amber',
-                            'text-orange-100/80': item.tone === 'ember',
-                            'text-stone-500': item.tone === 'ink',
-                        }">{{ item.title }}</div>
-                        <div class="mt-2 text-sm leading-5" :class="item.tone === 'ink' ? 'text-stone-400' : 'text-stone-100/80'">{{ item.detail }}</div>
-                    </article>
-                </div>
             </section>
 
-            <section class="grid items-start gap-6 xl:grid-cols-[minmax(0,1.58fr)_340px] reveal-section">
-                <article class="dash-panel self-start rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+            <section class="grid items-start gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)] reveal-section">
+                <article class="surface-card surface-card--deep self-start p-5 sm:p-6">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <div class="dash-kicker">Movement</div>
-                            <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">How work is moving across the last seven days</h2>
-                            <p class="mt-3 text-sm leading-7 text-stone-300/80">Use this chart to judge whether the queue is flowing cleanly or whether fail volume is starting to change the pattern.</p>
+                            <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">7-day flow</h2>
+                            <p class="mt-3 text-sm leading-7 text-stone-300/80">See throughput, yield movement, and the days that deserve follow-up.</p>
                         </div>
-                        <div class="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-semibold text-orange-200">{{ selectedPeriodLabel }}</div>
+                        <div class="mini-badge">{{ selectedPeriodLabel }}</div>
                     </div>
+
                     <div class="mt-5 grid gap-3 md:grid-cols-3">
-                        <div v-for="item in movementSummary" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <div v-for="item in movementSummary" :key="item.label" class="surface-inset">
                             <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div>
-                            <div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
-                            <div class="mt-2 text-sm text-stone-400">{{ item.note }}</div>
+                            <div class="mt-3 text-2xl font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
+                            <div class="mt-2 text-sm leading-6 text-stone-400">{{ item.note }}</div>
                         </div>
                     </div>
-                    <div class="mt-5 h-[240px]">
+
+                    <div class="mt-6 h-[280px] rounded-[24px] border border-white/5 bg-black/20 p-3">
                         <BarChart v-if="showPrimaryCharts" :data="weeklyChartData" :options="barOpts" />
                         <div v-else class="dash-skeleton h-full"></div>
                     </div>
-                    <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+
+                    <div class="mt-6 grid gap-4 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
                         <div class="grid gap-3">
-                            <div v-for="item in movementHighlights" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4">
+                            <div v-for="item in movementHighlights" :key="item.label" class="surface-inset">
                                 <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div>
-                                <div class="mt-2 text-lg font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
+                                <div class="mt-3 text-lg font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
                                 <div class="mt-2 text-sm leading-6 text-stone-400">{{ item.note }}</div>
                             </div>
                         </div>
-                        <div class="rounded-[22px] border border-white/10 bg-black/25 p-4">
+
+                        <div class="surface-inset">
                             <div class="flex items-end justify-between gap-3">
                                 <div>
                                     <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Daily breakdown</div>
-                                    <div class="mt-2 text-lg font-semibold tracking-tight text-stone-50">How each day contributed</div>
+                                    <div class="mt-2 text-lg font-semibold tracking-tight text-stone-50">Contribution by day</div>
                                 </div>
                                 <div class="text-xs font-semibold text-stone-500">7 days</div>
                             </div>
                             <div class="mt-4 space-y-2">
-                                <div v-for="day in weeklyRows" :key="day.label" class="grid grid-cols-[88px_minmax(0,1fr)_64px] items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2.5">
+                                <div v-for="day in weeklyRows" :key="day.label" class="day-row">
                                     <div class="text-sm font-semibold text-stone-200">{{ day.label }}</div>
                                     <div>
-                                        <div class="flex h-2 overflow-hidden rounded-full bg-white/10">
-                                            <div class="bg-gradient-to-r from-orange-500 to-amber-300" :style="{ width: day.total ? `${day.yieldRate}%` : '0%' }"></div>
-                                            <div class="bg-gradient-to-r from-[#5b2d12] to-[#9a3412]" :style="{ width: day.total ? `${100 - day.yieldRate}%` : '0%' }"></div>
+                                        <div class="quality-bar quality-bar--thin">
+                                            <div class="quality-bar__ok" :style="{ width: day.total ? `${day.yieldRate}%` : '0%' }"></div>
+                                            <div class="quality-bar__ng" :style="{ width: day.total ? `${100 - day.yieldRate}%` : '0%' }"></div>
                                         </div>
                                         <div class="mt-1 flex items-center justify-between text-[11px] text-stone-500">
                                             <span>{{ formatNumber(day.ok) }} OK / {{ formatNumber(day.ng) }} NG</span>
@@ -658,76 +666,83 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                     </div>
                 </article>
 
-                <article class="dash-panel self-start rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+                <article class="surface-card self-start p-5 sm:p-6">
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <div class="dash-kicker">Action board</div>
-                            <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Act fast, keep context</h2>
-                            <p class="mt-3 text-sm leading-7 text-stone-300/80">Launch the next task and keep the key numbers for this window in the same view.</p>
+                            <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Snapshot and next actions</h2>
+                            <p class="mt-3 text-sm leading-7 text-stone-300/80">Keep the current window in view while moving straight into the next workflow step.</p>
                         </div>
-                        <div class="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-semibold text-orange-200">{{ selectedPeriodLabel }}</div>
+                        <div class="mini-badge">{{ selectedPeriodLabel }}</div>
                     </div>
+
                     <div class="mt-5 space-y-3">
-                        <Link :href="route('receive-job.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
-                            <div><div class="text-base font-semibold tracking-tight">Receive new job</div><div class="mt-1 text-sm text-white/70">Open intake and register incoming work.</div></div>
-                            <span class="text-white/60">></span>
+                        <Link :href="route('receive-job.create')" prefetch="click" cache-for="45s" view-transition class="quick-link">
+                            <div><div class="text-base font-semibold tracking-tight text-stone-50">Receive new job</div><div class="mt-1 text-sm text-stone-400">Open intake and register incoming work.</div></div>
+                            <span class="text-lg text-white/50">></span>
                         </Link>
-                        <Link :href="route('execute-test.create')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
-                            <div><div class="text-base font-semibold tracking-tight">Record test result</div><div class="mt-1 text-sm text-white/70">Jump straight to active inspections.</div></div>
-                            <span class="text-white/60">></span>
+                        <Link :href="route('execute-test.create')" prefetch="click" cache-for="45s" view-transition class="quick-link">
+                            <div><div class="text-base font-semibold tracking-tight text-stone-50">Record test result</div><div class="mt-1 text-sm text-stone-400">Jump straight to active inspections.</div></div>
+                            <span class="text-lg text-white/50">></span>
                         </Link>
-                        <Link :href="route('report.index')" prefetch="click" cache-for="45s" view-transition class="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10">
-                            <div><div class="text-base font-semibold tracking-tight">Open reporting</div><div class="mt-1 text-sm text-white/70">Review history and export filtered reports.</div></div>
-                            <span class="text-white/60">></span>
+                        <Link :href="route('report.index')" prefetch="click" cache-for="45s" view-transition class="quick-link">
+                            <div><div class="text-base font-semibold tracking-tight text-stone-50">Open reporting</div><div class="mt-1 text-sm text-stone-400">Review history and export filtered reports.</div></div>
+                            <span class="text-lg text-white/50">></span>
                         </Link>
                     </div>
-                    <div class="mt-5 rounded-[22px] border border-orange-500/15 bg-[linear-gradient(160deg,#090909,#22140a)] p-5 text-white">
+
+                    <div class="mt-5 pulse-card">
                         <div class="flex items-end justify-between gap-4">
                             <div>
-                                <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-300/70">Today pulse</div>
-                                <div class="mt-2 text-3xl font-semibold tracking-tight">{{ formatNumber(todayTotal) }}</div>
-                                <div class="mt-1 text-sm text-white/65">completed inspections</div>
+                                <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-200/75">Today pulse</div>
+                                <div class="mt-3 text-4xl font-semibold tracking-tight text-white">{{ formatNumber(todayTotal) }}</div>
+                                <div class="mt-2 text-sm text-white/65">completed inspections</div>
                             </div>
                             <div class="text-right">
-                                <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-300/70">Yield</div>
-                                <div class="mt-2 text-2xl font-semibold tracking-tight">{{ formatPercent(todayYield) }}</div>
+                                <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-200/75">Yield</div>
+                                <div class="mt-3 text-3xl font-semibold tracking-tight text-orange-100">{{ formatPercent(todayYield) }}</div>
                             </div>
                         </div>
-                        <div class="mt-4 grid gap-3 grid-cols-2">
-                            <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
+
+                        <div class="mt-5 grid grid-cols-2 gap-3">
+                            <div class="metric-chip">
                                 <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">OK today</div>
-                                <div class="mt-2 text-lg font-semibold tracking-tight">{{ formatNumber(props.metrics.todayOK) }}</div>
+                                <div class="mt-2 text-xl font-semibold tracking-tight text-white">{{ formatNumber(props.metrics.todayOK) }}</div>
                             </div>
-                            <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
+                            <div class="metric-chip">
                                 <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">NG today</div>
-                                <div class="mt-2 text-lg font-semibold tracking-tight">{{ formatNumber(props.metrics.todayNG) }}</div>
+                                <div class="mt-2 text-xl font-semibold tracking-tight text-white">{{ formatNumber(props.metrics.todayNG) }}</div>
                             </div>
                         </div>
                     </div>
-                    <div class="mt-5">
+
+                    <div class="mt-5 surface-inset">
                         <div class="flex items-end justify-between gap-4">
                             <div>
                                 <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Window snapshot</div>
-                                <div class="mt-1 text-3xl font-semibold tracking-tight text-stone-50">{{ formatNumber(totalTests) }}</div>
+                                <div class="mt-2 text-3xl font-semibold tracking-tight text-stone-50">{{ formatNumber(totalTests) }}</div>
+                                <div class="mt-2 text-sm text-stone-400">{{ formatNumber(periodJobs) }} jobs received in {{ selectedPeriodLabel.toLowerCase() }}</div>
                             </div>
-                            <div class="rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-200">{{ formatPercent(yieldPct) }} yield</div>
+                            <div class="mini-badge mini-badge--accent">{{ formatPercent(yieldPct) }} yield</div>
                         </div>
+
                         <div class="mt-4 space-y-3">
                             <div>
                                 <div class="mb-2 flex items-center justify-between text-xs font-semibold text-stone-400">
                                     <span>Quality mix</span>
                                     <span>{{ formatPercent(defectPct) }} defect</span>
                                 </div>
-                                <div class="flex h-3 overflow-hidden rounded-full bg-white/10">
-                                    <div class="bg-gradient-to-r from-orange-500 to-amber-300" :style="{ width: `${yieldPct}%` }"></div>
-                                    <div class="bg-gradient-to-r from-[#5b2d12] to-[#9a3412]" :style="{ width: `${defectPct}%` }"></div>
+                                <div class="quality-bar">
+                                    <div class="quality-bar__ok" :style="{ width: `${yieldPct}%` }"></div>
+                                    <div class="quality-bar__ng" :style="{ width: `${defectPct}%` }"></div>
                                 </div>
                             </div>
+
                             <div class="grid gap-3 sm:grid-cols-2">
-                                <div v-for="item in snapshotMetrics" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4">
+                                <div v-for="item in snapshotMetrics" :key="item.label" class="metric-chip metric-chip--dark">
                                     <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div>
                                     <div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
-                                    <div class="mt-2 text-sm text-stone-400">{{ item.note }}</div>
+                                    <div class="mt-2 text-sm leading-6 text-stone-400">{{ item.note }}</div>
                                 </div>
                             </div>
                         </div>
@@ -740,47 +755,53 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 
                 <section class="space-y-4 reveal-section">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                        <div><div class="dash-kicker">Performance drivers</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">What is shaping the lab right now</h2></div>
-                        <p class="max-w-2xl text-sm leading-7 text-stone-300/80 lg:text-right">Equipment usage, failure concentration, and inspector efficiency for {{ selectedPeriodLabel.toLowerCase() }}.</p>
+                        <div><div class="dash-kicker">Performance Drivers</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Charts that explain the story</h2></div>
+                        <p class="max-w-2xl text-sm leading-7 text-stone-300/80 lg:text-right">Equipment load, failure concentration, and inspector pace for {{ selectedPeriodLabel.toLowerCase() }}.</p>
                     </div>
                     <div class="grid gap-4 lg:grid-cols-3">
-                        <article v-for="item in signalCards" :key="item.label" class="dash-panel rounded-[22px] border border-white/10 bg-[#16110d]/92 p-5 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+                        <article v-for="item in signalCards" :key="item.label" class="surface-card p-5">
                             <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div>
                             <div class="mt-3 text-lg font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
                             <div class="mt-2 text-sm leading-6 text-stone-400">{{ item.note }}</div>
                         </article>
                     </div>
                     <div class="grid gap-6 xl:grid-cols-3">
-                        <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]"><div class="text-xl font-semibold tracking-tight text-stone-50">Top equipment used</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Usage volume by equipment across the active reporting window.</p><div class="mt-6 h-[260px]"><BarChart :data="equipUsageData" :options="horizontalBarOpts" /></div></article>
-                        <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]"><div class="text-xl font-semibold tracking-tight text-stone-50">Failure by equipment</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Where NG results are clustering most often.</p><div class="mt-6 h-[260px]"><DoughnutChart :data="failDoughnutData" :options="doughnutOpts" /></div></article>
-                        <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]"><div class="text-xl font-semibold tracking-tight text-stone-50">Inspector efficiency</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Average test duration by inspector in minutes.</p><div class="mt-6 h-[260px]"><BarChart :data="inspectorEffData" :options="horizontalBarOpts" /></div></article>
+                        <article class="surface-card p-5 sm:p-6"><div class="text-xl font-semibold tracking-tight text-stone-50">Equipment load</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Most-used equipment in the selected window.</p><div class="mt-6 h-[260px]"><BarChart :data="equipUsageData" :options="horizontalBarOpts" /></div></article>
+                        <article class="surface-card p-5 sm:p-6"><div class="text-xl font-semibold tracking-tight text-stone-50">NG hotspot</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Where failed inspections are clustering most often.</p><div class="mt-6 h-[260px]"><DoughnutChart :data="failDoughnutData" :options="doughnutOpts" /></div></article>
+                        <article class="surface-card p-5 sm:p-6"><div class="text-xl font-semibold tracking-tight text-stone-50">Inspector pace</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Average inspection duration by inspector in minutes.</p><div class="mt-6 h-[260px]"><BarChart :data="inspectorEffData" :options="horizontalBarOpts" /></div></article>
                     </div>
                 </section>
 
-                <section class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] reveal-section">
-                    <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-                        <div class="flex items-start justify-between gap-3"><div><div class="dash-kicker">Team activity</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Inspector leaderboard</h2><p class="mt-3 text-sm leading-7 text-stone-300/80">A quick comparison of throughput and pass rate by inspector.</p></div><div class="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-semibold text-orange-200">Top 5</div></div>
+                <section class="grid gap-6 xl:grid-cols-[minmax(0,0.96fr)_minmax(0,1.04fr)] reveal-section">
+                    <article class="surface-card p-5 sm:p-6">
+                        <div class="flex items-start justify-between gap-3"><div><div class="dash-kicker">Team Activity</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Inspector leaderboard</h2><p class="mt-3 text-sm leading-7 text-stone-300/80">Compare throughput and pass rate across the team.</p></div><div class="mini-badge">Top 5</div></div>
                         <div class="mt-5 space-y-3">
-                            <div v-for="(inspector, index) in topInspectors" :key="`${inspector.name}-${index}`" class="flex items-center gap-4 rounded-2xl border border-white/10 bg-black/25 p-4">
-                                <div class="flex h-9 w-9 items-center justify-center rounded-full bg-orange-500/15 text-sm font-bold text-orange-200">{{ index + 1 }}</div>
+                            <div v-for="(inspector, index) in topInspectors" :key="`${inspector.name}-${index}`" class="leaderboard-row">
+                                <div class="leaderboard-row__rank">{{ index + 1 }}</div>
                                 <div class="min-w-0 flex-1"><div class="text-base font-semibold tracking-tight text-stone-50">{{ inspector.name }}</div><div class="mt-1 text-sm text-stone-400">{{ formatNumber(inspector.total) }} tests, {{ formatNumber(inspector.ok) }} OK, {{ formatNumber(inspector.ng) }} NG</div></div>
-                                <div class="text-right text-xl font-semibold tracking-tight text-orange-300">{{ formatPercent(inspector.yield) }}</div>
+                                <div class="text-right"><div class="text-xl font-semibold tracking-tight text-orange-200">{{ formatPercent(inspector.yield) }}</div><div class="text-xs text-stone-500">pass yield</div></div>
                             </div>
                             <div v-if="!inspectorData || !inspectorData.length" class="rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-8 text-center text-sm text-stone-400">Inspector ranking will appear once enough results are recorded.</div>
                         </div>
                     </article>
 
-                    <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-                        <div class="flex items-start justify-between gap-3"><div><div class="dash-kicker">Recent activity</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Latest inspection outcomes</h2></div><div class="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-semibold text-orange-200">{{ selectedPeriodLabel }}</div></div>
+                    <article class="surface-card p-5 sm:p-6">
+                        <div class="flex items-start justify-between gap-3"><div><div class="dash-kicker">Recent Activity</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Latest closed jobs</h2><p class="mt-3 text-sm leading-7 text-stone-300/80">The newest completed jobs with result mix and close date.</p></div><div class="mini-badge">{{ selectedPeriodLabel }}</div></div>
                         <div class="mt-5 overflow-x-auto">
-                            <table class="w-full border-collapse">
-                                <thead><tr class="border-b border-white/10"><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">ID</th><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">DMC</th><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Detail</th><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Status</th></tr></thead>
+                            <table class="dash-table w-full border-collapse">
+                                <thead><tr class="border-b border-white/10"><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Job</th><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Detail</th><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Result mix</th><th class="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Closed</th></tr></thead>
                                 <tbody>
-                                    <tr v-for="activity in recentActivityPreview" :key="activity.id" class="border-b border-white/5">
-                                        <td class="px-3 py-4 font-mono text-sm font-semibold text-stone-50">#{{ activity.id }}</td>
-                                        <td class="px-3 py-4 text-sm text-stone-200">{{ activity.dmcCode || '-' }}</td>
+                                    <tr v-for="activity in recentActivityPreview" :key="activity.id" class="dash-table__row align-top">
+                                        <td class="px-3 py-4">
+                                            <div class="font-mono text-sm font-semibold text-stone-50">#{{ activity.id }}</div>
+                                            <div class="mt-1 text-xs text-stone-500">{{ activity.dmcCode || '-' }}</div>
+                                        </td>
                                         <td class="px-3 py-4 text-sm text-stone-300">{{ activity.detail || '-' }}</td>
-                                        <td class="px-3 py-4 text-sm"><span :class="activity.result === 'OK' ? 'bg-orange-500/15 text-orange-200' : 'bg-stone-100/10 text-stone-200'" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">{{ activity.result }}</span></td>
+                                        <td class="px-3 py-4 text-sm">
+                                            <div class="inline-flex rounded-full px-3 py-1 text-xs font-semibold" :class="activity.result === 'OK' ? 'bg-orange-500/15 text-orange-200' : 'bg-stone-100/10 text-stone-200'">{{ activity.result }}</div>
+                                            <div class="mt-2 text-xs text-stone-400">{{ formatNumber(activity.ok) }} OK / {{ formatNumber(activity.ng) }} NG</div>
+                                        </td>
+                                        <td class="px-3 py-4 text-sm text-stone-400">{{ activity.date }}</td>
                                     </tr>
                                     <tr v-if="!recentActivities.length"><td colspan="4" class="px-3 py-8 text-center text-sm text-stone-400">No recent activity for this period.</td></tr>
                                 </tbody>
@@ -792,39 +813,39 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                 <template v-if="showTrendArchive">
                     <section class="space-y-4 reveal-section">
                         <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                            <div><div class="dash-kicker">Trend archive</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Daily and monthly quality context</h2></div>
-                            <p class="max-w-2xl text-sm leading-7 text-stone-300/80 lg:text-right">Pair the current pulse with broader trends to see whether recent movement is a short-term issue or part of a longer shift.</p>
+                            <div><div class="dash-kicker">Trend Archive</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Daily and monthly trends</h2></div>
+                            <p class="max-w-2xl text-sm leading-7 text-stone-300/80 lg:text-right">Use the broader trend to confirm whether the latest movement is isolated or persistent.</p>
                         </div>
                         <div class="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)]">
-                            <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+                            <article class="surface-card p-5 sm:p-6">
                                 <div class="text-xl font-semibold tracking-tight text-stone-50">Monthly pass vs fail trend</div>
-                                <p class="mt-2 text-sm leading-7 text-stone-300/80">A six-month view of pass/fail movement for the lab.</p>
+                                <p class="mt-2 text-sm leading-7 text-stone-300/80">Six months of pass and fail movement.</p>
                                 <div class="mt-6 h-[320px]"><LineChart :data="monthlyLineData" :options="lineOpts" /></div>
                                 <div class="mt-6 grid gap-3 md:grid-cols-3">
-                                    <div v-for="item in monthlyHighlights" :key="item.label" class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div><div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ item.value }}</div><div class="mt-2 text-sm text-stone-400">{{ item.note }}</div></div>
+                                    <div v-for="item in monthlyHighlights" :key="item.label" class="surface-inset"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div><div class="mt-2 text-xl font-semibold tracking-tight text-stone-50">{{ item.value }}</div><div class="mt-2 text-sm text-stone-400">{{ item.note }}</div></div>
                                 </div>
                             </article>
                             <div class="grid gap-6">
-                                <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]"><div class="text-xl font-semibold tracking-tight text-stone-50">Daily trend</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Current-month day-by-day inspection movement.</p><div class="mt-6 h-[220px]"><LineChart :data="dailyLineData" :options="lineOpts" /></div></article>
-                                <article class="dash-panel rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]"><div class="text-xl font-semibold tracking-tight text-stone-50">Six-month totals</div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-200/80">Total OK</div><div class="mt-2 text-2xl font-semibold tracking-tight text-orange-100">{{ formatNumber(monthlyTotalOK) }}</div><div class="mt-2 text-sm text-orange-100/70">Across reported months</div></div><div class="rounded-2xl border border-white/10 bg-black/25 p-4"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Total NG</div><div class="mt-2 text-2xl font-semibold tracking-tight text-stone-100">{{ formatNumber(monthlyTotalNG) }}</div><div class="mt-2 text-sm text-stone-400">Across reported months</div></div></div></article>
+                                <article class="surface-card p-5 sm:p-6"><div class="text-xl font-semibold tracking-tight text-stone-50">Daily trend</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Day-by-day inspection movement this month.</p><div class="mt-6 h-[220px]"><LineChart :data="dailyLineData" :options="lineOpts" /></div></article>
+                                <article class="surface-card p-5 sm:p-6"><div class="text-xl font-semibold tracking-tight text-stone-50">Six-month totals</div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="metric-chip metric-chip--accent"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-200/80">Total OK</div><div class="mt-2 text-2xl font-semibold tracking-tight text-orange-100">{{ formatNumber(monthlyTotalOK) }}</div><div class="mt-2 text-sm text-orange-100/70">Across reported months</div></div><div class="metric-chip metric-chip--dark"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Total NG</div><div class="mt-2 text-2xl font-semibold tracking-tight text-stone-100">{{ formatNumber(monthlyTotalNG) }}</div><div class="mt-2 text-sm text-stone-400">Across reported months</div></div></div></article>
                             </div>
                         </div>
                     </section>
                 </template>
                 <template v-else>
-                    <section class="dash-panel reveal-section rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
-                        <div class="dash-kicker">Trend archive</div>
-                        <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Trend archive loads when you reach it</h2>
-                        <p class="mt-3 text-sm leading-7 text-stone-300/80">Monthly and daily history stay deferred until this part of the dashboard approaches the viewport, which keeps the first paint lighter on both mobile and desktop.</p>
+                    <section class="surface-card reveal-section p-5 sm:p-6">
+                        <div class="dash-kicker">Trend Archive</div>
+                        <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Trend archive loads on approach</h2>
+                        <p class="mt-3 text-sm leading-7 text-stone-300/80">Daily and monthly history stay deferred until this area is near the viewport to keep the first load responsive.</p>
                         <div class="mt-5 grid gap-3 sm:grid-cols-3"><div class="dash-skeleton"></div><div class="dash-skeleton"></div><div class="dash-skeleton"></div></div>
                     </section>
                 </template>
             </template>
 
-            <section v-else class="dash-panel reveal-section rounded-[24px] border border-white/10 bg-[#16110d]/92 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+            <section v-else class="surface-card reveal-section p-5 sm:p-6">
                 <div class="dash-kicker">Loading</div>
                 <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Detailed sections are on the way</h2>
-                <p class="mt-3 text-sm leading-7 text-stone-300/80">Heavier charts load after the core dashboard so the first view stays responsive.</p>
+                <p class="mt-3 text-sm leading-7 text-stone-300/80">Heavier charts load after the main summary so the first view stays responsive.</p>
                 <div class="mt-5 grid gap-3 sm:grid-cols-3"><div class="dash-skeleton"></div><div class="dash-skeleton"></div><div class="dash-skeleton"></div></div>
             </section>
         </div>
@@ -832,16 +853,130 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 </template>
 
 <style scoped>
+.dashboard-shell {
+    position: relative;
+}
+
+.dashboard-shell::before {
+    content: '';
+    position: fixed;
+    inset: auto 0 0 0;
+    height: 60vh;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 15% 20%, rgba(251, 146, 60, 0.08), transparent 26%),
+        radial-gradient(circle at 85% 0%, rgba(120, 53, 15, 0.12), transparent 24%);
+    z-index: 0;
+}
+
 .dash-hero {
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(251, 146, 60, 0.14);
-    border-radius: 32px;
+    isolation: isolate;
+    border: 1px solid rgba(251, 146, 60, 0.16);
+    border-radius: 36px;
     background:
-        radial-gradient(circle at top left, rgba(251, 146, 60, 0.18), transparent 30%),
-        radial-gradient(circle at bottom right, rgba(234, 88, 12, 0.12), transparent 28%),
-        linear-gradient(145deg, rgba(10, 10, 10, 0.98), rgba(28, 18, 12, 0.96));
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
+        linear-gradient(135deg, rgba(10, 10, 10, 0.98), rgba(27, 20, 16, 0.96) 58%, rgba(38, 21, 10, 0.95)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.34);
+}
+
+.dash-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(115deg, rgba(255, 255, 255, 0.05), transparent 26%),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 110px);
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.dash-hero__glow {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(24px);
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.dash-hero__glow--one {
+    top: -30px;
+    left: -20px;
+    width: 260px;
+    height: 260px;
+    background: rgba(251, 146, 60, 0.16);
+}
+
+.dash-hero__glow--two {
+    right: -40px;
+    bottom: -60px;
+    width: 300px;
+    height: 300px;
+    background: rgba(194, 65, 12, 0.18);
+}
+
+.surface-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(24, 18, 14, 0.95), rgba(14, 11, 9, 0.96));
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.26);
+}
+
+.surface-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at top right, rgba(251, 146, 60, 0.12), transparent 36%);
+}
+
+.surface-card--deep {
+    background: linear-gradient(180deg, rgba(18, 13, 11, 0.97), rgba(10, 8, 7, 0.97));
+}
+
+.surface-inset {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.18));
+    padding: 1rem;
+}
+
+.hero-brief {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 30px;
+    padding: 1.5rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.hero-brief::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 36%);
+    pointer-events: none;
+}
+
+.hero-brief[data-tone='ink'] {
+    background: linear-gradient(160deg, rgba(16, 13, 11, 0.95), rgba(31, 24, 20, 0.95));
+}
+
+.hero-brief[data-tone='orange'] {
+    background: linear-gradient(160deg, rgba(45, 23, 10, 0.96), rgba(154, 52, 18, 0.88));
+}
+
+.hero-brief[data-tone='amber'] {
+    background: linear-gradient(160deg, rgba(44, 26, 11, 0.96), rgba(180, 83, 9, 0.86));
+}
+
+.hero-brief[data-tone='ember'] {
+    background: linear-gradient(160deg, rgba(31, 16, 10, 0.96), rgba(124, 45, 18, 0.88));
 }
 
 .dash-kicker {
@@ -853,32 +988,239 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 }
 
 .dash-heading {
-    font-size: clamp(2rem, 3vw, 3.3rem);
+    font-size: clamp(2.3rem, 3.5vw, 4rem);
     font-weight: 650;
-    line-height: 0.98;
-    letter-spacing: -0.045em;
+    line-height: 0.96;
+    letter-spacing: -0.05em;
     color: #fff7ed;
 }
 
-.dash-stat {
-    position: relative;
-    overflow: hidden;
+.dash-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, 0.28);
+    padding: 0.72rem 1rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #f5f5f4;
+    backdrop-filter: blur(14px);
 }
 
-.dash-stat::after {
+.dash-chip--select {
+    gap: 0.65rem;
+}
+
+.dash-chip__dot {
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 9999px;
+    background: #fb923c;
+    box-shadow: 0 0 0 6px rgba(251, 146, 60, 0.16);
+}
+
+.dash-select {
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: #fafaf9;
+    font-weight: 600;
+    outline: none;
+}
+
+.dash-select option {
+    color: #111827;
+}
+
+.metric-glass {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 22px;
+    background: rgba(0, 0, 0, 0.18);
+    padding: 1rem 1.1rem;
+    backdrop-filter: blur(14px);
+}
+
+.summary-tile {
+    min-height: 160px;
+}
+
+.attention-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 22px;
+    padding: 1.2rem 1.25rem;
+    color: #d6d3d1;
+}
+
+.attention-card::after {
     content: '';
     position: absolute;
-    left: 20px;
-    right: 20px;
-    bottom: 16px;
-    height: 3px;
+    left: 1.25rem;
+    right: 1.25rem;
+    bottom: 0.95rem;
+    height: 2px;
     border-radius: 9999px;
 }
 
-.dash-stat[data-tone='orange']::after { background: linear-gradient(90deg, #f59e0b, transparent); }
-.dash-stat[data-tone='ember']::after { background: linear-gradient(90deg, #ea580c, transparent); }
-.dash-stat[data-tone='amber']::after { background: linear-gradient(90deg, #d97706, transparent); }
-.dash-stat[data-tone='ink']::after { background: linear-gradient(90deg, #fef3c7, transparent); }
+.attention-card[data-tone='orange'] {
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.12), rgba(120, 53, 15, 0.16));
+    color: #fff7ed;
+}
+
+.attention-card[data-tone='orange']::after {
+    background: linear-gradient(90deg, #f59e0b, transparent);
+}
+
+.attention-card[data-tone='amber'] {
+    background: linear-gradient(180deg, rgba(217, 119, 6, 0.14), rgba(120, 53, 15, 0.12));
+    color: #fff7ed;
+}
+
+.attention-card[data-tone='amber']::after {
+    background: linear-gradient(90deg, #d97706, transparent);
+}
+
+.attention-card[data-tone='ember'] {
+    background: linear-gradient(180deg, rgba(154, 52, 18, 0.18), rgba(91, 45, 18, 0.12));
+    color: #fff7ed;
+}
+
+.attention-card[data-tone='ember']::after {
+    background: linear-gradient(90deg, #ea580c, transparent);
+}
+
+.attention-card[data-tone='ink'] {
+    background: rgba(0, 0, 0, 0.24);
+    color: #e7e5e4;
+}
+
+.attention-card[data-tone='ink']::after {
+    background: linear-gradient(90deg, #fef3c7, transparent);
+}
+
+.pulse-card {
+    border: 1px solid rgba(251, 146, 60, 0.18);
+    border-radius: 24px;
+    background: linear-gradient(160deg, rgba(14, 10, 8, 0.98), rgba(34, 20, 10, 0.94));
+    padding: 1.25rem;
+}
+
+.metric-chip {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.95rem;
+}
+
+.metric-chip--dark {
+    background: rgba(0, 0, 0, 0.24);
+}
+
+.metric-chip--accent {
+    border-color: rgba(251, 146, 60, 0.2);
+    background: rgba(251, 146, 60, 0.1);
+}
+
+.mini-badge {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.45rem 0.8rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fdba74;
+}
+
+.mini-badge--accent {
+    border-color: rgba(251, 146, 60, 0.2);
+    background: rgba(251, 146, 60, 0.12);
+}
+
+.quality-bar {
+    display: flex;
+    height: 0.75rem;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.quality-bar--thin {
+    height: 0.52rem;
+}
+
+.quality-bar__ok {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.quality-bar__ng {
+    background: linear-gradient(90deg, #7c2d12, #ea580c);
+}
+
+.day-row {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr) 64px;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.75rem;
+}
+
+.quick-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 1rem 1.1rem;
+    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.quick-link:hover {
+    transform: translateY(-1px);
+    border-color: rgba(251, 146, 60, 0.22);
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.leaderboard-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 22px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+}
+
+.leaderboard-row__rank {
+    display: flex;
+    width: 2.5rem;
+    height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: rgba(251, 146, 60, 0.14);
+    color: #fdba74;
+    font-weight: 700;
+}
+
+.dash-table__row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dash-table__row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
 
 .reveal-section {
     animation: dash-rise 420ms ease-out both;
@@ -903,8 +1245,28 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 }
 
 @media (max-width: 767px) {
-    .dash-hero {
+    .dash-hero,
+    .surface-card {
         border-radius: 24px;
+    }
+
+    .hero-brief,
+    .surface-inset,
+    .pulse-card,
+    .quick-link,
+    .attention-card,
+    .leaderboard-row {
+        border-radius: 20px;
+    }
+
+    .day-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1279px) {
+    .summary-tile {
+        min-height: auto;
     }
 }
 </style>

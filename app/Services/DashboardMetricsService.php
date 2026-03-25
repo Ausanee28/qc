@@ -172,6 +172,7 @@ class DashboardMetricsService
         return compact(
             'todayCount',
             'monthCount',
+            'periodJobs',
             'okCount',
             'ngCount',
             'pendingCount',
