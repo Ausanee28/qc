@@ -48,16 +48,15 @@ const submit = () => {
             <form @submit.prevent="submit" class="space-y-5">
                 <div>
                     <label for="user_name" class="mb-2 block text-sm font-semibold text-stone-300">Username</label>
-                    <input
-                        id="user_name"
-                        v-model="form.user_name"
-                        type="text"
-                        required
-                        autofocus
-                        placeholder="e.g. admin"
-                        class="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-stone-100 outline-none transition focus:border-orange-400/40 focus:ring-4 focus:ring-orange-300/15"
-                        :class="{ 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-rose-100': form.errors.user_name }"
-                    />
+                        <input
+                            id="user_name"
+                            v-model="form.user_name"
+                            type="text"
+                            required
+                            autofocus
+                            class="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-stone-100 outline-none transition focus:border-orange-400/40 focus:ring-4 focus:ring-orange-300/15"
+                            :class="{ 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-rose-100': form.errors.user_name }"
+                        />
                     <InputError class="mt-2 text-sm" :message="form.errors.user_name" />
                 </div>
 
@@ -69,8 +68,7 @@ const submit = () => {
                             v-model="form.password"
                             :type="showPassword ? 'text' : 'password'"
                             required
-                            placeholder="Enter your password"
-                            class="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 pr-12 text-sm text-stone-100 outline-none transition focus:border-orange-400/40 focus:ring-4 focus:ring-orange-300/15"
+                            class="password-input h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 pr-12 text-sm text-stone-100 outline-none transition focus:border-orange-400/40 focus:ring-4 focus:ring-orange-300/15"
                             :class="{ 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-rose-100': form.errors.password }"
                         />
                         <button
@@ -126,3 +124,15 @@ const submit = () => {
         </div>
     </GuestLayout>
 </template>
+
+<style scoped>
+.password-input::-ms-reveal,
+.password-input::-ms-clear {
+    display: none;
+}
+
+.password-input::-webkit-credentials-auto-fill-button,
+.password-input::-webkit-textfield-decoration-container {
+    display: none !important;
+}
+</style>
