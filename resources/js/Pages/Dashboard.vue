@@ -10,11 +10,15 @@ const showPrimaryCharts = ref(false);
 const showHeavySections = ref(false);
 const showTrendArchive = ref(false);
 const trendArchiveSentinel = ref(null);
+const prefersReducedMotion = ref(false);
 let realtimeRefreshTimer = null;
 let dashboardEcho = null;
 let realtimeBootTimer = null;
 let trendArchiveFallbackTimer = null;
 let trendArchiveObserver = null;
+let metricsAnimationFrame = null;
+let motionPreferenceQuery = null;
+let motionPreferenceListener = null;
 const BarChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Bar));
 const LineChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Line));
 const DoughnutChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Doughnut));
@@ -122,6 +126,21 @@ const scheduleRealtimeReload = () => {
 };
 
 onMounted(() => {
+    if (typeof window.matchMedia === 'function') {
+        motionPreferenceQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+        prefersReducedMotion.value = motionPreferenceQuery.matches;
+        motionPreferenceListener = (event) => {
+            prefersReducedMotion.value = event.matches;
+            animateMetricValues(animatedMetricTargets.value, true);
+        };
+
+        if (typeof motionPreferenceQuery.addEventListener === 'function') {
+            motionPreferenceQuery.addEventListener('change', motionPreferenceListener);
+        } else if (typeof motionPreferenceQuery.addListener === 'function') {
+            motionPreferenceQuery.addListener(motionPreferenceListener);
+        }
+    }
+
     const revealPrimaryCharts = () => {
         showPrimaryCharts.value = true;
     };
@@ -196,6 +215,11 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    if (metricsAnimationFrame !== null) {
+        window.cancelAnimationFrame(metricsAnimationFrame);
+        metricsAnimationFrame = null;
+    }
+
     if (realtimeRefreshTimer !== null) {
         window.clearTimeout(realtimeRefreshTimer);
     }
@@ -219,6 +243,14 @@ onBeforeUnmount(() => {
         dashboardEcho.leave('dashboard.global');
         dashboardEcho = null;
     }
+
+    if (motionPreferenceQuery && motionPreferenceListener) {
+        if (typeof motionPreferenceQuery.removeEventListener === 'function') {
+            motionPreferenceQuery.removeEventListener('change', motionPreferenceListener);
+        } else if (typeof motionPreferenceQuery.removeListener === 'function') {
+            motionPreferenceQuery.removeListener(motionPreferenceListener);
+        }
+    }
 });
 
 const formatNumber = (value) => Number(value || 0).toLocaleString();
@@ -238,6 +270,24 @@ const leadEquipment = computed(() => props.equipRank?.[0] ?? null);
 const leadFailure = computed(() => props.failByEquip?.[0] ?? null);
 const leadInspector = computed(() => props.inspectorData?.[0] ?? null);
 const pendingJobs = computed(() => Number(props.metrics.pendingCount || 0));
+
+const animatedMetrics = ref({
+    periodJobs: 0,
+    totalTests: 0,
+    avgTestTime: 0,
+    todayTotal: 0,
+    yieldPct: 0,
+    defectPct: 0,
+    pendingJobs: 0,
+    okCount: 0,
+    ngCount: 0,
+    todayYield: 0,
+    testsPerJob: 0,
+    weeklyTotal: 0,
+    weeklyOkTotal: 0,
+    weeklyNgTotal: 0,
+    weeklyYield: 0,
+});
 
 const healthSummary = computed(() => {
     if (!totalTests.value) {
@@ -291,47 +341,47 @@ const signalCards = computed(() => ([
     },
 ]));
 const heroStatusMetrics = computed(() => ([
-    { label: 'Pass yield', value: formatPercent(yieldPct.value), note: `${formatNumber(props.metrics.okCount)} OK` },
-    { label: 'Defect rate', value: formatPercent(defectPct.value), note: `${formatNumber(props.metrics.ngCount)} NG` },
-    { label: 'Pending jobs', value: formatNumber(pendingJobs.value), note: `${formatNumber(periodJobs.value)} jobs in window` },
+    { label: 'Pass yield', value: formatPercent(animatedMetrics.value.yieldPct), note: `${formatNumber(animatedMetrics.value.okCount)} OK` },
+    { label: 'Defect rate', value: formatPercent(animatedMetrics.value.defectPct), note: `${formatNumber(animatedMetrics.value.ngCount)} NG` },
+    { label: 'Pending jobs', value: formatNumber(animatedMetrics.value.pendingJobs), note: `${formatNumber(animatedMetrics.value.periodJobs)} jobs in window` },
 ]));
 const heroSummaryCards = computed(() => ([
     {
         label: 'Jobs received',
-        value: formatNumber(periodJobs.value),
+        value: formatNumber(animatedMetrics.value.periodJobs),
         note: `${selectedPeriodLabel.value} incoming jobs`,
     },
     {
         label: 'Inspections run',
-        value: formatNumber(totalTests.value),
-        note: `${formatDecimal(props.metrics.testsPerJob)} tests per job`,
+        value: formatNumber(animatedMetrics.value.totalTests),
+        note: `${formatDecimal(animatedMetrics.value.testsPerJob)} tests per job`,
     },
     {
         label: 'Average test time',
-        value: `${formatNumber(props.metrics.avgTestTime)} min`,
+        value: `${formatNumber(animatedMetrics.value.avgTestTime)} min`,
         note: 'Average time per completed inspection',
     },
     {
         label: 'Today completed',
-        value: formatNumber(todayTotal.value),
-        note: `${formatPercent(todayYield.value)} yield today`,
+        value: formatNumber(animatedMetrics.value.todayTotal),
+        note: `${formatPercent(animatedMetrics.value.todayYield)} yield today`,
     },
 ]));
 const heroSpotlightStats = computed(() => ([
     {
         label: 'Yield confidence',
-        value: formatPercent(yieldPct.value),
-        progress: Math.min(Math.max(yieldPct.value, 0), 100),
+        value: formatPercent(animatedMetrics.value.yieldPct),
+        progress: Math.min(Math.max(animatedMetrics.value.yieldPct, 0), 100),
     },
     {
         label: 'Queue pressure',
-        value: formatNumber(pendingJobs.value),
-        progress: Math.min((pendingJobs.value / 12) * 100, 100),
+        value: formatNumber(animatedMetrics.value.pendingJobs),
+        progress: Math.min((animatedMetrics.value.pendingJobs / 12) * 100, 100),
     },
     {
         label: 'Inspection load',
-        value: formatNumber(totalTests.value),
-        progress: Math.min((totalTests.value / Math.max(periodJobs.value * 4, 1)) * 100, 100),
+        value: formatNumber(animatedMetrics.value.totalTests),
+        progress: Math.min((animatedMetrics.value.totalTests / Math.max(animatedMetrics.value.periodJobs * 4, 1)) * 100, 100),
     },
 ]));
 const heroSupportCards = computed(() => ([
@@ -360,10 +410,71 @@ const weeklyOkTotal = computed(() => props.weeklyData.reduce((sum, day) => sum +
 const weeklyNgTotal = computed(() => props.weeklyData.reduce((sum, day) => sum + Number(day.ng || 0), 0));
 const weeklyTotal = computed(() => weeklyOkTotal.value + weeklyNgTotal.value);
 const weeklyYield = computed(() => weeklyTotal.value > 0 ? Number(((weeklyOkTotal.value / weeklyTotal.value) * 100).toFixed(1)) : 0);
+const animatedMetricTargets = computed(() => ({
+    periodJobs: periodJobs.value,
+    totalTests: totalTests.value,
+    avgTestTime: Number(props.metrics.avgTestTime || 0),
+    todayTotal: todayTotal.value,
+    yieldPct: yieldPct.value,
+    defectPct: defectPct.value,
+    pendingJobs: pendingJobs.value,
+    okCount: Number(props.metrics.okCount || 0),
+    ngCount: Number(props.metrics.ngCount || 0),
+    todayYield: todayYield.value,
+    testsPerJob: Number(props.metrics.testsPerJob || 0),
+    weeklyTotal: weeklyTotal.value,
+    weeklyOkTotal: weeklyOkTotal.value,
+    weeklyNgTotal: weeklyNgTotal.value,
+    weeklyYield: weeklyYield.value,
+}));
+
+const animateMetricValues = (targetValues, instant = false) => {
+    if (metricsAnimationFrame !== null) {
+        window.cancelAnimationFrame(metricsAnimationFrame);
+        metricsAnimationFrame = null;
+    }
+
+    if (instant || prefersReducedMotion.value || typeof window === 'undefined') {
+        animatedMetrics.value = { ...targetValues };
+        return;
+    }
+
+    const startValues = { ...animatedMetrics.value };
+    const startTime = window.performance.now();
+    const duration = 820;
+    const easeOutCubic = (t) => 1 - ((1 - t) ** 3);
+
+    const step = (now) => {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = easeOutCubic(progress);
+        const nextValues = {};
+
+        Object.keys(targetValues).forEach((key) => {
+            const start = Number(startValues[key] || 0);
+            const end = Number(targetValues[key] || 0);
+            nextValues[key] = start + ((end - start) * eased);
+        });
+
+        animatedMetrics.value = nextValues;
+
+        if (progress < 1) {
+            metricsAnimationFrame = window.requestAnimationFrame(step);
+        } else {
+            metricsAnimationFrame = null;
+        }
+    };
+
+    metricsAnimationFrame = window.requestAnimationFrame(step);
+};
+
+watch(animatedMetricTargets, (targets) => {
+    animateMetricValues(targets);
+}, { immediate: true });
+
 const movementSummary = computed(() => ([
-    { label: '7-day total', value: formatNumber(weeklyTotal.value), note: `${formatNumber(weeklyOkTotal.value)} OK / ${formatNumber(weeklyNgTotal.value)} NG` },
-    { label: '7-day yield', value: formatPercent(weeklyYield.value), note: 'How clean the recent flow has been' },
-    { label: 'Open queue', value: formatNumber(pendingJobs.value), note: 'Jobs currently waiting to close' },
+    { label: '7-day total', value: formatNumber(animatedMetrics.value.weeklyTotal), note: `${formatNumber(animatedMetrics.value.weeklyOkTotal)} OK / ${formatNumber(animatedMetrics.value.weeklyNgTotal)} NG` },
+    { label: '7-day yield', value: formatPercent(animatedMetrics.value.weeklyYield), note: 'How clean the recent flow has been' },
+    { label: 'Open queue', value: formatNumber(animatedMetrics.value.pendingJobs), note: 'Jobs currently waiting to close' },
 ]));
 const weeklyRows = computed(() => props.weeklyData.map((day) => {
     const ok = Number(day.ok || 0);
@@ -560,11 +671,26 @@ const sharedCartesianScale = {
 };
 
 const tooltipOpts = { backgroundColor: '#120c08', padding: 12, titleFont: { family: chartFontFamily, size: 12, weight: '700' }, bodyFont: { family: chartFontFamily, size: 11 } };
+const chartEnterAnimation = computed(() => (
+    prefersReducedMotion.value
+        ? false
+        : {
+            duration: 760,
+            easing: 'easeOutCubic',
+            delay(context) {
+                if (context.type !== 'data' || context.mode !== 'default') {
+                    return 0;
+                }
 
-const barOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', color: '#d6d3d1', font: { family: chartFontFamily, size: 11, weight: '600' }, padding: 18 } }, tooltip: tooltipOpts }, scales: sharedCartesianScale };
-const horizontalBarOpts = { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipOpts }, scales: { x: sharedCartesianScale.y, y: { ticks: { color: '#e7e5e4', font: { size: 11, family: chartFontFamily, weight: '600' } }, grid: { display: false }, border: { display: false } } } };
-const doughnutOpts = { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', color: '#d6d3d1', font: { family: chartFontFamily, size: 10, weight: '600' }, padding: 16 } }, tooltip: tooltipOpts } };
-const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipOpts }, scales: sharedCartesianScale, elements: { line: { tension: 0.36, borderWidth: 2.5 }, point: { radius: 0, hoverRadius: 5 } }, interaction: { mode: 'index', intersect: false } };
+                return (context.dataIndex * 70) + (context.datasetIndex * 120);
+            },
+        }
+));
+
+const barOpts = computed(() => ({ responsive: true, maintainAspectRatio: false, animation: chartEnterAnimation.value, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', color: '#d6d3d1', font: { family: chartFontFamily, size: 11, weight: '600' }, padding: 18 } }, tooltip: tooltipOpts }, scales: sharedCartesianScale }));
+const horizontalBarOpts = computed(() => ({ indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: chartEnterAnimation.value, plugins: { legend: { display: false }, tooltip: tooltipOpts }, scales: { x: sharedCartesianScale.y, y: { ticks: { color: '#e7e5e4', font: { size: 11, family: chartFontFamily, weight: '600' } }, grid: { display: false }, border: { display: false } } } }));
+const doughnutOpts = computed(() => ({ responsive: true, maintainAspectRatio: false, cutout: '68%', animation: chartEnterAnimation.value, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', color: '#d6d3d1', font: { family: chartFontFamily, size: 10, weight: '600' }, padding: 16 } }, tooltip: tooltipOpts } }));
+const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false, animation: chartEnterAnimation.value, plugins: { legend: { display: false }, tooltip: tooltipOpts }, scales: sharedCartesianScale, elements: { line: { tension: 0.36, borderWidth: 2.5 }, point: { radius: 0, hoverRadius: 5 } }, interaction: { mode: 'index', intersect: false } }));
 </script>
 
 <template>
@@ -572,7 +698,7 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     <AuthenticatedLayout>
         <template #title>Dashboard</template>
 
-        <div class="dashboard-shell space-y-6">
+        <div class="dashboard-shell space-y-6" :data-loading="isLoading ? 'true' : 'false'">
             <section class="dash-hero reveal-section p-5 sm:p-7 lg:p-8">
                 <div class="dash-hero__glow dash-hero__glow--one"></div>
                 <div class="dash-hero__glow dash-hero__glow--two"></div>
@@ -946,6 +1072,7 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 <style scoped>
 .dashboard-shell {
     position: relative;
+    transition: filter 220ms ease;
 }
 
 .dashboard-shell::before {
@@ -958,6 +1085,38 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
         radial-gradient(circle at 15% 20%, rgba(251, 146, 60, 0.08), transparent 26%),
         radial-gradient(circle at 85% 0%, rgba(120, 53, 15, 0.12), transparent 24%);
     z-index: 0;
+    animation: dash-ambient-drift 18s ease-in-out infinite alternate;
+}
+
+.dashboard-shell::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(100deg, transparent 20%, rgba(251, 146, 60, 0.08) 50%, transparent 80%);
+    transition: opacity 180ms ease;
+    z-index: 0;
+}
+
+.dashboard-shell[data-loading='true'] {
+    filter: saturate(0.92);
+}
+
+.dashboard-shell[data-loading='true']::after {
+    opacity: 1;
+    animation: dash-shell-sheen 1.1s linear infinite;
+}
+
+.dashboard-shell[data-loading='true'] .dash-hero,
+.dashboard-shell[data-loading='true'] .surface-card,
+.dashboard-shell[data-loading='true'] .surface-inset,
+.dashboard-shell[data-loading='true'] .attention-card,
+.dashboard-shell[data-loading='true'] .pulse-card,
+.dashboard-shell[data-loading='true'] .quick-link,
+.dashboard-shell[data-loading='true'] .leaderboard-row {
+    opacity: 0.74;
+    transform: translateY(4px) scale(0.995);
 }
 
 .dash-hero {
@@ -1616,11 +1775,23 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     to { background-position: 200% 50%; }
 }
 
+@keyframes dash-ambient-drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(0, -18px, 0) scale(1.04); }
+}
+
+@keyframes dash-shell-sheen {
+    from { transform: translateX(-120%); }
+    to { transform: translateX(120%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .dash-hero__glow,
     .dash-chip__dot,
     .spotlight-track__fill,
     .reveal-section,
+    .dashboard-shell::before,
+    .dashboard-shell::after,
     .hero-summary-grid > *,
     .hero-support-grid > *,
     .attention-card,
