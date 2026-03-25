@@ -28,12 +28,12 @@ const submit = () => {
     <GuestLayout>
         <Head title="Sign in" />
 
-        <div class="rounded-[24px] p-4 sm:p-5">
-            <div class="mb-8">
-                <div class="inline-flex rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-100">
+        <div class="login-root rounded-[24px] p-4 sm:p-5">
+            <div class="login-block login-block--hero mb-8">
+                <div class="login-kicker inline-flex rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-100">
                     Factory QC
                 </div>
-                <h1 class="mt-4 font-['Sora'] text-4xl font-semibold leading-[0.95] tracking-[-0.04em] text-stone-50 sm:text-5xl">
+                <h1 class="login-title mt-4 font-['Sora'] text-4xl font-semibold leading-[0.95] tracking-[-0.04em] text-stone-50 sm:text-5xl">
                     Welcome Back
                 </h1>
                 <p class="mt-4 max-w-sm text-sm leading-6 text-stone-400">
@@ -41,12 +41,12 @@ const submit = () => {
                 </p>
             </div>
 
-            <div v-if="status" class="mb-5 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-sm font-medium text-orange-100">
+            <div v-if="status" class="login-block login-block--status mb-5 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-sm font-medium text-orange-100">
                 {{ status }}
             </div>
 
             <form @submit.prevent="submit" class="space-y-5">
-                <div>
+                <div class="login-block login-block--field">
                     <label for="user_name" class="mb-2 block text-sm font-semibold text-stone-300">Username</label>
                         <input
                             id="user_name"
@@ -60,7 +60,7 @@ const submit = () => {
                     <InputError class="mt-2 text-sm" :message="form.errors.user_name" />
                 </div>
 
-                <div>
+                <div class="login-block login-block--field">
                     <label for="password" class="mb-2 block text-sm font-semibold text-stone-300">Password</label>
                     <div class="relative">
                         <input
@@ -89,7 +89,7 @@ const submit = () => {
                     <InputError class="mt-2 text-sm" :message="form.errors.password" />
                 </div>
 
-                <div class="flex flex-col gap-3 text-sm text-stone-400 sm:flex-row sm:items-center sm:justify-between">
+                <div class="login-block login-block--meta flex flex-col gap-3 text-sm text-stone-400 sm:flex-row sm:items-center sm:justify-between">
                     <label class="flex items-center gap-3">
                         <input v-model="form.remember" type="checkbox" class="h-4 w-4 rounded border-white/10 bg-white/5 text-orange-500 focus:ring-orange-300/20" />
                         <span>Remember me</span>
@@ -101,7 +101,7 @@ const submit = () => {
 
                 <button
                     type="submit"
-                    class="flex h-12 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#fb923c,#f97316_72%,#c2410c)] px-4 text-sm font-semibold uppercase tracking-[0.18em] text-[#140d08] shadow-[0_16px_30px_rgba(249,115,22,0.24)] transition hover:translate-y-[-1px] hover:brightness-110 hover:shadow-[0_20px_34px_rgba(249,115,22,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
+                    class="login-submit flex h-12 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#fb923c,#f97316_72%,#c2410c)] px-4 text-sm font-semibold uppercase tracking-[0.18em] text-[#140d08] shadow-[0_16px_30px_rgba(249,115,22,0.24)] transition hover:translate-y-[-1px] hover:brightness-110 hover:shadow-[0_20px_34px_rgba(249,115,22,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
                     :disabled="form.processing"
                 >
                     <span v-if="!form.processing">Sign In</span>
@@ -114,7 +114,7 @@ const submit = () => {
                     </span>
                 </button>
 
-                <div class="pt-1 text-center text-sm text-stone-400">
+                <div class="login-block login-block--footer pt-1 text-center text-sm text-stone-400">
                     New here?
                     <Link :href="route('register')" class="font-semibold text-orange-100 transition hover:text-orange-200">
                         Create account
@@ -126,6 +126,41 @@ const submit = () => {
 </template>
 
 <style scoped>
+.login-root {
+    position: relative;
+}
+
+.login-block {
+    opacity: 0;
+    animation: login-rise 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.login-block--hero { animation-delay: 60ms; }
+.login-block--status { animation-delay: 120ms; }
+.login-block--field:nth-of-type(1) { animation-delay: 150ms; }
+.login-block--field:nth-of-type(2) { animation-delay: 210ms; }
+.login-block--meta { animation-delay: 270ms; }
+.login-submit { animation: login-rise 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: 330ms; }
+.login-block--footer { animation-delay: 390ms; }
+
+.login-kicker {
+    position: relative;
+    overflow: hidden;
+}
+
+.login-kicker::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+    transform: translateX(-130%);
+    animation: login-sheen 3.4s ease-in-out infinite;
+}
+
+.login-title {
+    text-shadow: 0 10px 34px rgba(0, 0, 0, 0.32);
+}
+
 .password-input::-ms-reveal,
 .password-input::-ms-clear {
     display: none;
@@ -134,5 +169,56 @@ const submit = () => {
 .password-input::-webkit-credentials-auto-fill-button,
 .password-input::-webkit-textfield-decoration-container {
     display: none !important;
+}
+
+.password-input,
+#user_name {
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.password-input:hover,
+#user_name:hover {
+    transform: translateY(-1px);
+}
+
+.login-submit {
+    position: relative;
+    overflow: hidden;
+}
+
+.login-submit::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 18%, rgba(255, 255, 255, 0.22) 50%, transparent 82%);
+    transform: translateX(-140%);
+    transition: transform 420ms ease;
+}
+
+.login-submit:hover::after {
+    transform: translateX(140%);
+}
+
+@keyframes login-rise {
+    from { opacity: 0; transform: translateY(14px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes login-sheen {
+    0%, 100% { transform: translateX(-130%); }
+    45%, 60% { transform: translateX(130%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-block,
+    .login-submit,
+    .login-kicker::after {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .login-submit::after {
+        display: none;
+    }
 }
 </style>
