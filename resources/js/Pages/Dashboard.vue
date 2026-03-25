@@ -317,6 +317,39 @@ const heroSummaryCards = computed(() => ([
         note: `${formatPercent(todayYield.value)} yield today`,
     },
 ]));
+const heroSpotlightStats = computed(() => ([
+    {
+        label: 'Yield confidence',
+        value: formatPercent(yieldPct.value),
+        progress: Math.min(Math.max(yieldPct.value, 0), 100),
+    },
+    {
+        label: 'Queue pressure',
+        value: formatNumber(pendingJobs.value),
+        progress: Math.min((pendingJobs.value / 12) * 100, 100),
+    },
+    {
+        label: 'Inspection load',
+        value: formatNumber(totalTests.value),
+        progress: Math.min((totalTests.value / Math.max(periodJobs.value * 4, 1)) * 100, 100),
+    },
+]));
+const heroSupportCards = computed(() => ([
+    {
+        label: 'Window status',
+        value: selectedPeriodLabel.value,
+        note: `${formatNumber(periodJobs.value)} jobs tracked in scope`,
+    },
+    {
+        label: 'Priority now',
+        value: leadFailure.value ? leadFailure.value.name : leadEquipment.value ? leadEquipment.value.name : 'No hotspot',
+        note: leadFailure.value
+            ? `${formatNumber(leadFailure.value.count)} NG results need follow-up`
+            : leadEquipment.value
+                ? `${formatNumber(leadEquipment.value.count)} tests leading current load`
+                : 'Waiting for more activity to rank priorities',
+    },
+]));
 const snapshotMetrics = computed(() => ([
     { label: 'Jobs received', value: formatNumber(periodJobs.value), note: `${selectedPeriodLabel.value} intake volume` },
     { label: 'Tests per job', value: formatDecimal(props.metrics.testsPerJob), note: 'Average inspection density per job' },
@@ -568,33 +601,91 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
                         </div>
                     </div>
 
-                    <div class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.12fr)_minmax(300px,0.88fr)]">
-                        <article class="hero-brief" :data-tone="healthSummary.tone">
-                            <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">Executive summary</div>
-                            <h2 class="mt-4 max-w-2xl text-[clamp(2rem,3vw,3.35rem)] font-semibold leading-[1.02] tracking-tight text-white">{{ healthSummary.title }}</h2>
-                            <p class="mt-4 max-w-2xl text-sm leading-7 text-white/78">{{ healthSummary.text }}</p>
+                    <div class="hero-layout mt-6">
+                        <article class="hero-brief hero-brief--compact" :data-tone="healthSummary.tone">
+                            <div class="hero-summary-top">
+                                <div>
+                                    <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">Executive summary</div>
+                                    <div class="hero-summary-status">
+                                        <span class="hero-summary-status__dot"></span>
+                                        <span>{{ healthSummary.tone === 'orange' ? 'Stable performance' : healthSummary.tone === 'amber' ? 'Watch closely' : healthSummary.tone === 'ember' ? 'Needs action' : 'Awaiting data' }}</span>
+                                    </div>
+                                    <h2 class="mt-3 max-w-2xl text-[clamp(1.55rem,2.35vw,2.25rem)] font-semibold leading-[1.04] tracking-tight text-white">{{ healthSummary.title }}</h2>
+                                </div>
+                                <div class="hero-summary-aside">
+                                    <div class="hero-summary-aside__label">Main focus</div>
+                                    <div class="hero-summary-aside__value">{{ leadFailure ? leadFailure.name : leadEquipment ? leadEquipment.name : 'Build signal' }}</div>
+                                </div>
+                            </div>
+                            <p class="mt-3 max-w-2xl text-sm leading-6 text-white/78">{{ healthSummary.text }}</p>
 
-                            <div class="mt-6 grid gap-3 sm:grid-cols-3">
-                                <div v-for="item in heroStatusMetrics" :key="item.label" class="metric-glass">
+                            <div class="mt-5 grid gap-3 sm:grid-cols-3">
+                                <div v-for="item in heroStatusMetrics" :key="item.label" class="metric-glass metric-glass--compact">
                                     <div class="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">{{ item.label }}</div>
-                                    <div class="mt-4 text-[clamp(1.9rem,2.5vw,2.8rem)] font-semibold leading-none tracking-tight text-white">{{ item.value }}</div>
-                                    <div class="mt-3 text-sm leading-5 text-white/72">{{ item.note }}</div>
+                                    <div class="mt-3 text-[clamp(1.5rem,2vw,2.15rem)] font-semibold leading-none tracking-tight text-white">{{ item.value }}</div>
+                                    <div class="mt-2 text-sm leading-5 text-white/72">{{ item.note }}</div>
                                 </div>
                             </div>
                         </article>
 
-                        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                            <article v-for="card in heroSummaryCards" :key="card.label" class="surface-card summary-tile p-5">
-                                <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{{ card.label }}</div>
-                                <div class="mt-4 text-3xl font-semibold tracking-tight text-stone-50">{{ card.value }}</div>
-                                <div class="mt-3 text-sm leading-6 text-stone-400">{{ card.note }}</div>
-                            </article>
-                        </div>
+                        <aside class="hero-side">
+                            <div class="hero-summary-grid">
+                                <article v-for="card in heroSummaryCards" :key="card.label" class="surface-card summary-tile summary-tile--compact p-4">
+                                    <div class="text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">{{ card.label }}</div>
+                                    <div class="mt-3 text-[1.85rem] font-semibold tracking-tight text-stone-50">{{ card.value }}</div>
+                                    <div class="mt-2 text-sm leading-5 text-stone-400">{{ card.note }}</div>
+                                </article>
+                            </div>
+
+                            <div class="hero-support-grid">
+                                <article v-for="item in heroSupportCards" :key="item.label" class="hero-support-card">
+                                    <div class="text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">{{ item.label }}</div>
+                                    <div class="mt-2 text-base font-semibold tracking-tight text-stone-50">{{ item.value }}</div>
+                                    <div class="mt-2 text-xs leading-5 text-stone-400">{{ item.note }}</div>
+                                </article>
+                            </div>
+                        </aside>
                     </div>
+
+                    <article class="surface-card hero-spotlight mt-4 p-4">
+                        <div class="hero-spotlight__header">
+                            <div class="min-w-0">
+                                <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Live pulse</div>
+                                <h3 class="mt-2 text-lg font-semibold tracking-tight text-stone-50">Operational focus</h3>
+                                <p class="mt-2 text-sm leading-6 text-stone-400">A quick read on confidence, queue, and current hotspot for {{ selectedPeriodLabel.toLowerCase() }}.</p>
+                            </div>
+                            <div class="mini-badge mini-badge--accent self-start xl:justify-self-end">{{ selectedPeriodLabel }}</div>
+                        </div>
+
+                        <div class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
+                            <div class="space-y-3">
+                                <div v-for="item in heroSpotlightStats" :key="item.label" class="spotlight-row">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div class="text-sm font-medium text-stone-200">{{ item.label }}</div>
+                                        <div class="text-sm font-semibold text-stone-50">{{ item.value }}</div>
+                                    </div>
+                                    <div class="spotlight-track">
+                                        <div class="spotlight-track__fill" :style="{ width: `${item.progress}%` }"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+                                <div v-for="item in signalCards" :key="item.label" class="spotlight-note">
+                                    <div class="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-500">{{ item.label }}</div>
+                                    <div class="mt-2 text-sm font-semibold leading-5 text-stone-50">{{ item.value }}</div>
+                                    <div class="mt-2 text-xs leading-5 text-stone-400">{{ item.note }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
 
                     <div class="mt-6 grid gap-3 lg:grid-cols-3">
                         <article v-for="item in attentionItems" :key="item.title" class="attention-card" :data-tone="item.tone">
-                            <div class="text-[11px] font-bold uppercase tracking-[0.16em]">{{ item.title }}</div>
+                            <div class="attention-card__eyebrow">
+                                <span class="attention-card__dot"></span>
+                                <span class="text-[11px] font-bold uppercase tracking-[0.16em]">{{ item.title }}</span>
+                            </div>
                             <div class="mt-3 text-xl font-semibold tracking-tight">{{ item.value }}</div>
                             <div class="mt-3 text-sm leading-6">{{ item.detail }}</div>
                         </article>
@@ -604,7 +695,7 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 
             <section class="grid items-start gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)] reveal-section">
                 <article class="surface-card surface-card--deep self-start p-5 sm:p-6">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <div class="dash-kicker">Movement</div>
                             <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">7-day flow</h2>
@@ -879,6 +970,7 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
         linear-gradient(135deg, rgba(10, 10, 10, 0.98), rgba(27, 20, 16, 0.96) 58%, rgba(38, 21, 10, 0.95)),
         linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
     box-shadow: 0 34px 90px rgba(0, 0, 0, 0.34);
+    min-height: 0;
 }
 
 .dash-hero::before {
@@ -988,11 +1080,12 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 }
 
 .dash-heading {
-    font-size: clamp(2.3rem, 3.5vw, 4rem);
+    font-size: clamp(2.1rem, 3.1vw, 3.45rem);
     font-weight: 650;
-    line-height: 0.96;
+    line-height: 0.94;
     letter-spacing: -0.05em;
     color: #fff7ed;
+    max-width: 16ch;
 }
 
 .dash-chip {
@@ -1031,7 +1124,8 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 }
 
 .dash-select option {
-    color: #111827;
+    color: #fafaf9;
+    background: #140f0d;
 }
 
 .metric-glass {
@@ -1042,8 +1136,173 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     backdrop-filter: blur(14px);
 }
 
+.metric-glass--compact {
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.18));
+}
+
+.hero-layout {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+}
+
+.hero-brief--compact {
+    padding: 1.25rem;
+    align-self: start;
+}
+
+.hero-summary-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.hero-summary-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-top: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, 0.16);
+    padding: 0.42rem 0.72rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ffedd5;
+}
+
+.hero-summary-status__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: #fb923c;
+    box-shadow: 0 0 0 5px rgba(251, 146, 60, 0.14);
+}
+
+.hero-summary-aside {
+    min-width: 150px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    background: rgba(0, 0, 0, 0.18);
+    padding: 0.8rem 0.95rem;
+}
+
+.hero-summary-aside__label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.52);
+}
+
+.hero-summary-aside__value {
+    margin-top: 0.45rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff7ed;
+}
+
+.hero-side {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+}
+
+.hero-summary-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hero-support-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hero-support-card {
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.14));
+    padding: 0.9rem 1rem;
+}
+
 .summary-tile {
     min-height: 160px;
+}
+
+.summary-tile--compact {
+    min-height: 0;
+    border-radius: 24px;
+    padding: 0.95rem;
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.summary-tile--compact:hover {
+    transform: translateY(-2px);
+    border-color: rgba(251, 146, 60, 0.22);
+    box-shadow: 0 28px 54px rgba(0, 0, 0, 0.3);
+}
+
+.hero-spotlight {
+    border-radius: 26px;
+    align-self: start;
+    background:
+        radial-gradient(circle at top right, rgba(251, 146, 60, 0.14), transparent 28%),
+        linear-gradient(180deg, rgba(22, 18, 14, 0.96), rgba(11, 9, 8, 0.98));
+}
+
+.hero-spotlight__header {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+}
+
+.spotlight-row {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.spotlight-track {
+    height: 0.5rem;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.spotlight-track__fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #fb923c, #fdba74);
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.3);
+    transition: width 360ms ease;
+}
+
+.spotlight-note {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.9rem;
+}
+
+.attention-card__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.attention-card__dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 9999px;
+    background: currentColor;
+    opacity: 0.8;
+    box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.05);
 }
 
 .attention-card {
@@ -1053,6 +1312,11 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     border-radius: 22px;
     padding: 1.2rem 1.25rem;
     color: #d6d3d1;
+    transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.attention-card:hover {
+    transform: translateY(-2px);
 }
 
 .attention-card::after {
@@ -1127,15 +1391,19 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 .mini-badge {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 9999px;
     background: rgba(0, 0, 0, 0.2);
     padding: 0.45rem 0.8rem;
+    min-width: max-content;
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #fdba74;
+    white-space: nowrap;
 }
 
 .mini-badge--accent {
@@ -1262,11 +1530,33 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     .day-row {
         grid-template-columns: 1fr;
     }
+
+    .hero-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-support-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 1279px) {
     .summary-tile {
         min-height: auto;
+    }
+}
+
+@media (min-width: 1024px) {
+    .hero-layout {
+        grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+    }
+
+    .dash-heading {
+        max-width: none;
+    }
+
+    .hero-spotlight__header {
+        grid-template-columns: minmax(0, 1fr) auto;
     }
 }
 </style>
