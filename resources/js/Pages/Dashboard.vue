@@ -990,6 +990,7 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     filter: blur(24px);
     opacity: 0.7;
     pointer-events: none;
+    animation: dash-float 11s ease-in-out infinite;
 }
 
 .dash-hero__glow--one {
@@ -1006,6 +1007,7 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     width: 300px;
     height: 300px;
     background: rgba(194, 65, 12, 0.18);
+    animation-delay: -5s;
 }
 
 .surface-card {
@@ -1015,6 +1017,7 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     border-radius: 28px;
     background: linear-gradient(180deg, rgba(24, 18, 14, 0.95), rgba(14, 11, 9, 0.96));
     box-shadow: 0 22px 50px rgba(0, 0, 0, 0.26);
+    transition: transform 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
 }
 
 .surface-card::after {
@@ -1023,6 +1026,17 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     inset: 0;
     pointer-events: none;
     background: radial-gradient(circle at top right, rgba(251, 146, 60, 0.12), transparent 36%);
+    opacity: 0.7;
+    transition: opacity 240ms ease;
+}
+
+.surface-card:hover {
+    border-color: rgba(251, 146, 60, 0.18);
+    box-shadow: 0 28px 62px rgba(0, 0, 0, 0.3);
+}
+
+.surface-card:hover::after {
+    opacity: 1;
 }
 
 .surface-card--deep {
@@ -1036,6 +1050,13 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     border-radius: 22px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.18));
     padding: 1rem;
+    transition: transform 220ms ease, border-color 220ms ease, background 220ms ease;
+}
+
+.surface-inset:hover {
+    transform: translateY(-2px);
+    border-color: rgba(251, 146, 60, 0.18);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.2));
 }
 
 .hero-brief {
@@ -1112,6 +1133,7 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     border-radius: 9999px;
     background: #fb923c;
     box-shadow: 0 0 0 6px rgba(251, 146, 60, 0.16);
+    animation: dash-pulse-dot 1.9s ease-out infinite;
 }
 
 .dash-select {
@@ -1230,6 +1252,12 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     border-radius: 20px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.14));
     padding: 0.9rem 1rem;
+    transition: transform 220ms ease, border-color 220ms ease;
+}
+
+.hero-support-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(251, 146, 60, 0.18);
 }
 
 .summary-tile {
@@ -1279,8 +1307,10 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, #fb923c, #fdba74);
+    background-size: 200% 100%;
     box-shadow: 0 0 20px rgba(251, 146, 60, 0.3);
     transition: width 360ms ease;
+    animation: dash-progress-sheen 3.6s linear infinite;
 }
 
 .spotlight-note {
@@ -1288,6 +1318,13 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.03);
     padding: 0.9rem;
+    transition: transform 220ms ease, border-color 220ms ease, background 220ms ease;
+}
+
+.spotlight-note:hover {
+    transform: translateY(-2px);
+    border-color: rgba(251, 146, 60, 0.18);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .attention-card__eyebrow {
@@ -1455,9 +1492,18 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 }
 
 .quick-link:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     border-color: rgba(251, 146, 60, 0.22);
     background: rgba(255, 255, 255, 0.07);
+}
+
+.quick-link:hover > span {
+    transform: translateX(3px);
+    color: #fdba74;
+}
+
+.quick-link > span {
+    transition: transform 180ms ease, color 180ms ease;
 }
 
 .leaderboard-row {
@@ -1468,6 +1514,13 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
     border-radius: 22px;
     background: rgba(0, 0, 0, 0.2);
     padding: 1rem;
+    transition: transform 200ms ease, border-color 200ms ease, background 200ms ease;
+}
+
+.leaderboard-row:hover {
+    transform: translateY(-2px);
+    border-color: rgba(251, 146, 60, 0.18);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .leaderboard-row__rank {
@@ -1491,7 +1544,42 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 }
 
 .reveal-section {
-    animation: dash-rise 420ms ease-out both;
+    animation: dash-rise 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.hero-summary-grid > *:nth-child(1),
+.hero-support-grid > *:nth-child(1),
+.attention-card:nth-child(1),
+.spotlight-note:nth-child(1),
+.leaderboard-row:nth-child(1),
+.quick-link:nth-child(1) {
+    animation-delay: 70ms;
+}
+
+.hero-summary-grid > *:nth-child(2),
+.hero-support-grid > *:nth-child(2),
+.attention-card:nth-child(2),
+.spotlight-note:nth-child(2),
+.leaderboard-row:nth-child(2),
+.quick-link:nth-child(2) {
+    animation-delay: 130ms;
+}
+
+.hero-summary-grid > *:nth-child(3),
+.attention-card:nth-child(3),
+.spotlight-note:nth-child(3),
+.leaderboard-row:nth-child(3),
+.quick-link:nth-child(3) {
+    animation-delay: 190ms;
+}
+
+.hero-summary-grid > *,
+.hero-support-grid > *,
+.attention-card,
+.spotlight-note,
+.leaderboard-row,
+.quick-link {
+    animation: dash-rise 540ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 .dash-skeleton {
@@ -1503,13 +1591,45 @@ const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { lege
 }
 
 @keyframes dash-rise {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(14px) scale(0.985); }
     to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes dash-shimmer {
     from { background-position: 200% 0; }
     to { background-position: -200% 0; }
+}
+
+@keyframes dash-float {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(0, 12px, 0) scale(1.04); }
+}
+
+@keyframes dash-pulse-dot {
+    0% { box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.24); }
+    70% { box-shadow: 0 0 0 10px rgba(251, 146, 60, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(251, 146, 60, 0); }
+}
+
+@keyframes dash-progress-sheen {
+    from { background-position: 0% 50%; }
+    to { background-position: 200% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dash-hero__glow,
+    .dash-chip__dot,
+    .spotlight-track__fill,
+    .reveal-section,
+    .hero-summary-grid > *,
+    .hero-support-grid > *,
+    .attention-card,
+    .spotlight-note,
+    .leaderboard-row,
+    .quick-link {
+        animation: none !important;
+        transition: none !important;
+    }
 }
 
 @media (max-width: 767px) {
