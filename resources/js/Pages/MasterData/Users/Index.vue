@@ -8,6 +8,8 @@ const props = defineProps({ users: Object, filters: Object });
 
 const showModal = ref(false);
 const isEditing = ref(false);
+const showResetModal = ref(false);
+const resetTarget = ref(null);
 const defaultFilters = {
     search: '',
     per_page: '20',
@@ -33,8 +35,13 @@ const form = useForm({
     user_name: '',
     name: '',
     employee_id: '',
-    email: '',
     role: 'inspector',
+    password: '',
+    password_confirmation: '',
+});
+
+const resetForm = useForm({
+    employee_id: '',
     password: '',
     password_confirmation: '',
 });
@@ -78,6 +85,18 @@ const closeModal = () => {
     showModal.value = false;
 };
 
+const openResetModal = (user) => {
+    resetTarget.value = user;
+    resetForm.reset();
+    resetForm.clearErrors();
+    showResetModal.value = true;
+};
+
+const closeResetModal = () => {
+    showResetModal.value = false;
+    resetTarget.value = null;
+};
+
 const openEditModal = (user) => {
     isEditing.value = true;
     form.clearErrors();
@@ -85,7 +104,6 @@ const openEditModal = (user) => {
     form.user_name = user.user_name;
     form.name = user.name || '';
     form.employee_id = user.employee_id || '';
-    form.email = user.email || '';
     form.role = user.role || 'inspector';
     form.password = '';
     form.password_confirmation = '';
@@ -115,6 +133,16 @@ const deleteUser = (id) => {
             preserveScroll: true,
         });
     }
+};
+
+const submitReset = () => {
+    if (!resetTarget.value) return;
+
+    resetForm.post(route('master-data.users.reset-password', resetTarget.value.user_id), {
+        only: reloadOnly,
+        preserveScroll: true,
+        onSuccess: () => { closeResetModal(); },
+    });
 };
 </script>
 
@@ -197,7 +225,7 @@ const deleteUser = (id) => {
                                         </div>
                                         <div>
                                             <div class="text-sm font-medium text-gray-900">{{ user.name || '-' }}</div>
-                                            <div class="text-xs text-gray-500">{{ user.email || 'No email' }}</div>
+                                            <div class="text-xs text-gray-500">{{ user.user_name }}</div>
                                         </div>
                                     </div>
                                 </td>
@@ -211,6 +239,7 @@ const deleteUser = (id) => {
                                 <td class="px-6 py-4 whitespace-nowrap text-right pr-6 text-sm font-medium">
                                     <div class="flex justify-end gap-4">
                                         <button @click="openEditModal(user)" class="text-gray-900 hover:text-black underline decoration-gray-300 underline-offset-4">Edit</button>
+                                        <button @click="openResetModal(user)" class="text-amber-700 hover:text-amber-900 underline decoration-amber-300 underline-offset-4">Reset Password</button>
                                         <button @click="deleteUser(user.user_id)" class="text-red-600 hover:text-red-900">Delete</button>
                                     </div>
                                 </td>
@@ -267,30 +296,69 @@ const deleteUser = (id) => {
                         <div v-if="form.errors.role" class="mt-1 text-xs text-rose-400">{{ form.errors.role }}</div>
                     </div>
                 </div>
-                <div class="mb-5">
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-stone-300 mb-2">Email</label>
-                    <input type="email" v-model="form.email" class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
-                    <div v-if="form.errors.email" class="mt-1 text-xs text-rose-400">{{ form.errors.email }}</div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div v-if="!isEditing" class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-stone-300 mb-2">
-                            Password <span v-if="!isEditing" class="text-rose-400">*</span>
-                            <span v-else class="normal-case font-normal text-stone-500">(leave blank to keep)</span>
+                            Password <span class="text-rose-400">*</span>
                         </label>
-                        <input type="password" v-model="form.password" :required="!isEditing" class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
+                        <input type="password" v-model="form.password" required class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
                         <div v-if="form.errors.password" class="mt-1 text-xs text-rose-400">{{ form.errors.password }}</div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-stone-300 mb-2">Confirm Password</label>
-                        <input type="password" v-model="form.password_confirmation" :required="!isEditing && !!form.password" class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
+                        <input type="password" v-model="form.password_confirmation" :required="!!form.password" class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
                     </div>
+                </div>
+                <div v-else class="rounded-xl border border-orange-500/15 bg-orange-500/10 p-4 text-sm text-orange-100">
+                    Password changes are handled from <span class="font-semibold">Reset Password</span> to keep admin actions consistent and auditable.
                 </div>
             </form>
             <template #actions>
                 <button type="button" @click="closeModal" class="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-stone-300 hover:bg-white/5">Cancel</button>
                 <button type="button" @click="submit" :disabled="form.processing" class="rounded-lg bg-[linear-gradient(135deg,#fb923c,#ea580c)] px-4 py-2 text-sm font-medium text-[#140d08] disabled:opacity-50">
                     {{ form.processing ? 'Saving...' : 'Save User' }}
+                </button>
+            </template>
+        </CrudFormModal>
+
+        <CrudFormModal :show="showResetModal" title="Admin Reset Password" max-width="lg" @close="closeResetModal">
+            <form @submit.prevent="submitReset">
+                <div class="space-y-5">
+                    <div class="rounded-xl border border-orange-500/15 bg-orange-500/10 p-4 text-sm text-orange-100">
+                        <div class="font-semibold">{{ resetTarget?.name || '-' }}</div>
+                        <div class="mt-1 text-orange-100/75">Username: {{ resetTarget?.user_name || '-' }}</div>
+                        <div class="mt-1 text-orange-100/75">Employee ID on record: {{ resetTarget?.employee_id || 'Not set' }}</div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-stone-300 mb-2">Confirm Employee ID <span class="text-rose-400">*</span></label>
+                        <input
+                            type="text"
+                            v-model="resetForm.employee_id"
+                            required
+                            placeholder="Enter employee ID to confirm"
+                            class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm font-mono text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                        />
+                        <div v-if="resetForm.errors.employee_id" class="mt-1 text-xs text-rose-400">{{ resetForm.errors.employee_id }}</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-300 mb-2">New Password <span class="text-rose-400">*</span></label>
+                            <input type="password" v-model="resetForm.password" required class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
+                            <div v-if="resetForm.errors.password" class="mt-1 text-xs text-rose-400">{{ resetForm.errors.password }}</div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-300 mb-2">Confirm Password <span class="text-rose-400">*</span></label>
+                            <input type="password" v-model="resetForm.password_confirmation" required class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <template #actions>
+                <button type="button" @click="closeResetModal" class="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-stone-300 hover:bg-white/5">Cancel</button>
+                <button type="button" @click="submitReset" :disabled="resetForm.processing || !resetTarget?.employee_id" class="rounded-lg bg-[linear-gradient(135deg,#fb923c,#ea580c)] px-4 py-2 text-sm font-medium text-[#140d08] disabled:opacity-50">
+                    {{ resetForm.processing ? 'Resetting...' : 'Reset Password' }}
                 </button>
             </template>
         </CrudFormModal>

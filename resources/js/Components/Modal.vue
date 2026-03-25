@@ -122,12 +122,13 @@ const maxWidthClass = computed(() => {
                 leave-from-class="opacity-100 translate-y-0 sm:scale-100"
                 leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-                <div
-                    v-show="show"
-                    class="mb-6 transform overflow-hidden rounded-2xl border border-orange-500/20 bg-[linear-gradient(180deg,rgba(20,16,13,0.98),rgba(12,10,9,0.96))] shadow-xl transition-all sm:mx-auto sm:w-full"
-                    :class="maxWidthClass"
-                >
-                    <slot v-if="showSlot" />
+                <div v-show="show" class="flex min-h-full items-center justify-center">
+                    <div
+                        class="w-full transform overflow-hidden rounded-2xl border border-orange-500/20 bg-[linear-gradient(180deg,rgba(20,16,13,0.98),rgba(12,10,9,0.96))] shadow-xl transition-all sm:mx-auto sm:w-full"
+                        :class="maxWidthClass"
+                    >
+                        <slot v-if="showSlot" />
+                    </div>
                 </div>
             </Transition>
         </div>
