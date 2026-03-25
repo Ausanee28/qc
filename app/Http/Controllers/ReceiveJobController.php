@@ -7,6 +7,7 @@ use App\Models\TransactionHeader;
 use App\Models\ExternalUser;
 use App\Models\TransactionDetail;
 use App\Support\PendingJobsVersion;
+use App\Support\DashboardCache;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -112,6 +113,7 @@ class ReceiveJobController extends Controller
             'return_date' => null,
         ]);
         PendingJobsVersion::bump();
+        DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')
@@ -129,6 +131,7 @@ class ReceiveJobController extends Controller
         $validated = $this->validatePayload($request);
         $job->update($validated);
         PendingJobsVersion::bump();
+        DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')
@@ -155,6 +158,7 @@ class ReceiveJobController extends Controller
             $job->delete();
         });
         PendingJobsVersion::bump();
+        DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')
@@ -183,6 +187,7 @@ class ReceiveJobController extends Controller
             }
         });
         PendingJobsVersion::bump();
+        DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')
@@ -201,6 +206,7 @@ class ReceiveJobController extends Controller
             'return_date' => now(),
         ]);
         PendingJobsVersion::bump();
+        DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')
@@ -215,6 +221,7 @@ class ReceiveJobController extends Controller
             'return_date' => null,
         ]);
         PendingJobsVersion::bump();
+        DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')

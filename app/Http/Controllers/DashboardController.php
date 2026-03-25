@@ -7,10 +7,13 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use App\Services\DashboardMetricsService;
+use App\Support\DashboardCache;
 
 class DashboardController extends Controller
 {
     private DashboardMetricsService $metricsService;
+    private array $primaryPayloadMemo = [];
+    private array $secondaryPayloadMemo = [];
 
     public function __construct(DashboardMetricsService $metricsService)
     {
@@ -24,9 +27,9 @@ class DashboardController extends Controller
         // Compute date range based on period
         [$from, $to] = $this->getDateRange($period);
 
-        $cacheKey = "dashboard.metrics.{$period}";
+        $cacheKey = DashboardCache::summaryKey($period);
 
-        $basePayload = Cache::remember($cacheKey, now()->addMinutes(3), function () use ($period, $from, $to) {
+        $basePayload = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($period, $from, $to) {
             return [
                 'currentPeriod' => $period,
                 'metrics' => $this->metricsService->getOverviewMetrics($from, $to),
@@ -35,29 +38,37 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard', [
             ...$basePayload,
-            'weeklyData' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['weeklyData'], 'dashboard-heavy'),
-            'dailyData' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['dailyData'], 'dashboard-heavy'),
-            'monthlyData' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['monthlyData'], 'dashboard-heavy'),
-            'equipRank' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['equipRank'], 'dashboard-heavy'),
-            'failByEquip' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['failByEquip'], 'dashboard-heavy'),
-            'inspectorEff' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['inspectorEff'], 'dashboard-heavy'),
-            'recentActivities' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['recentActivities'], 'dashboard-heavy'),
-            'inspectorData' => Inertia::defer(fn () => $this->getHeavyPayload($period, $from, $to)['inspectorData'], 'dashboard-heavy'),
+            'weeklyData' => Inertia::defer(fn () => $this->getPrimaryPayload($period, $from, $to)['weeklyData'], 'dashboard-primary'),
+            'equipRank' => Inertia::defer(fn () => $this->getPrimaryPayload($period, $from, $to)['equipRank'], 'dashboard-primary'),
+            'failByEquip' => Inertia::defer(fn () => $this->getPrimaryPayload($period, $from, $to)['failByEquip'], 'dashboard-primary'),
+            'inspectorData' => Inertia::defer(fn () => $this->getPrimaryPayload($period, $from, $to)['inspectorData'], 'dashboard-primary'),
+            'dailyData' => Inertia::optional(fn () => $this->getSecondaryPayload($period, $from, $to)['dailyData']),
+            'monthlyData' => Inertia::optional(fn () => $this->getSecondaryPayload($period, $from, $to)['monthlyData']),
+            'inspectorEff' => Inertia::optional(fn () => $this->getSecondaryPayload($period, $from, $to)['inspectorEff']),
+            'recentActivities' => Inertia::optional(fn () => $this->getSecondaryPayload($period, $from, $to)['recentActivities']),
         ]);
     }
 
-    private function getHeavyPayload(string $period, Carbon $from, Carbon $to): array
+    private function getPrimaryPayload(string $period, Carbon $from, Carbon $to): array
     {
-        return Cache::remember("dashboard.heavy.{$period}", now()->addMinutes(3), function () use ($from, $to) {
+        return $this->primaryPayloadMemo[$period] ??= Cache::remember(DashboardCache::primaryKey($period), now()->addMinutes(10), function () use ($from, $to) {
             return [
                 'weeklyData' => $this->metricsService->getWeeklyTrend(),
-                'dailyData' => $this->metricsService->getDailyTrend(),
-                'monthlyData' => $this->metricsService->getMonthlyTrend(),
                 'equipRank' => $this->metricsService->getEquipmentRanking(5, $from, $to),
                 'failByEquip' => $this->metricsService->getFailuresByEquipment(5, $from, $to),
+                'inspectorData' => $this->metricsService->getInspectorData(5, $from, $to),
+            ];
+        });
+    }
+
+    private function getSecondaryPayload(string $period, Carbon $from, Carbon $to): array
+    {
+        return $this->secondaryPayloadMemo[$period] ??= Cache::remember(DashboardCache::secondaryKey($period), now()->addMinutes(10), function () use ($from, $to) {
+            return [
+                'dailyData' => $this->metricsService->getDailyTrend(),
+                'monthlyData' => $this->metricsService->getMonthlyTrend(),
                 'inspectorEff' => $this->metricsService->getInspectorEfficiency(5, $from, $to),
                 'recentActivities' => $this->metricsService->getRecentActivities(5, $from, $to),
-                'inspectorData' => $this->metricsService->getInspectorData(5, $from, $to),
             ];
         });
     }

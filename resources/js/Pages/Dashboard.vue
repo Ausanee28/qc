@@ -11,6 +11,8 @@ const showHeavySections = ref(false);
 const showTrendArchive = ref(false);
 const trendArchiveSentinel = ref(null);
 const prefersReducedMotion = ref(false);
+const secondaryPayloadReady = ref(false);
+const secondaryPayloadLoading = ref(false);
 let realtimeRefreshTimer = null;
 let dashboardEcho = null;
 let realtimeBootTimer = null;
@@ -19,6 +21,7 @@ let trendArchiveObserver = null;
 let metricsAnimationFrame = null;
 let motionPreferenceQuery = null;
 let motionPreferenceListener = null;
+let secondaryPayloadTimer = null;
 const BarChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Bar));
 const LineChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Line));
 const DoughnutChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Doughnut));
@@ -56,18 +59,26 @@ const props = defineProps({
 const selectedPeriod = ref(props.currentPeriod);
 const isLoading = ref(false);
 
-const dashboardPayloadKeys = [
+const dashboardSummaryKeys = [
     'currentPeriod',
     'metrics',
+];
+
+const dashboardPrimaryKeys = [
     'weeklyData',
-    'dailyData',
-    'monthlyData',
     'equipRank',
     'failByEquip',
-    'inspectorEff',
-    'recentActivities',
     'inspectorData',
 ];
+
+const dashboardSecondaryKeys = [
+    'dailyData',
+    'monthlyData',
+    'inspectorEff',
+    'recentActivities',
+];
+
+const dashboardPrimaryPayloadKeys = [...dashboardSummaryKeys, ...dashboardPrimaryKeys];
 
 const periodOptions = [
     { value: 'today', label: 'Today' },
@@ -85,15 +96,60 @@ const periodLabels = {
     quarter: 'This Quarter',
 };
 
+const loadSecondaryDashboardPayload = ({ idle = false, force = false } = {}) => {
+    if ((secondaryPayloadReady.value && !force) || secondaryPayloadLoading.value) {
+        return;
+    }
+
+    const run = () => {
+        secondaryPayloadLoading.value = true;
+
+        router.reload({
+            only: dashboardSecondaryKeys,
+            preserveState: true,
+            preserveScroll: true,
+            onFinish: () => {
+                secondaryPayloadLoading.value = false;
+                secondaryPayloadReady.value = true;
+            },
+        });
+    };
+
+    if (!idle) {
+        run();
+        return;
+    }
+
+    if (secondaryPayloadTimer !== null) {
+        window.clearTimeout(secondaryPayloadTimer);
+        secondaryPayloadTimer = null;
+    }
+
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => run(), { timeout: 650 });
+        return;
+    }
+
+    secondaryPayloadTimer = window.setTimeout(() => {
+        secondaryPayloadTimer = null;
+        run();
+    }, 220);
+};
+
 watch(selectedPeriod, (val) => {
+    secondaryPayloadReady.value = false;
     isLoading.value = true;
     router.get(route('dashboard'), { period: val }, {
-        only: dashboardPayloadKeys,
+        only: dashboardPrimaryPayloadKeys,
         replace: true,
         preserveState: true,
         preserveScroll: true,
         onFinish: () => {
             isLoading.value = false;
+
+            if (showHeavySections.value) {
+                loadSecondaryDashboardPayload({ idle: true, force: true });
+            }
         },
     });
 });
@@ -105,16 +161,24 @@ const reloadDashboard = () => {
 
     isLoading.value = true;
     router.reload({
-        only: dashboardPayloadKeys,
+        only: dashboardPrimaryPayloadKeys,
         preserveState: true,
         preserveScroll: true,
         onFinish: () => {
             isLoading.value = false;
+
+            if (showHeavySections.value && document.visibilityState === 'visible') {
+                loadSecondaryDashboardPayload({ idle: true, force: true });
+            }
         },
     });
 };
 
 const scheduleRealtimeReload = () => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return;
+    }
+
     if (realtimeRefreshTimer !== null) {
         return;
     }
@@ -126,6 +190,13 @@ const scheduleRealtimeReload = () => {
 };
 
 onMounted(() => {
+    secondaryPayloadReady.value = Boolean(
+        props.dailyData.length
+        || props.monthlyData.length
+        || props.inspectorEff.length
+        || props.recentActivities.length
+    );
+
     if (typeof window.matchMedia === 'function') {
         motionPreferenceQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
         prefersReducedMotion.value = motionPreferenceQuery.matches;
@@ -147,6 +218,7 @@ onMounted(() => {
 
     const revealHeavySections = () => {
         showHeavySections.value = true;
+        loadSecondaryDashboardPayload({ idle: true });
     };
 
     const revealTrendArchive = () => {
@@ -218,6 +290,11 @@ onBeforeUnmount(() => {
     if (metricsAnimationFrame !== null) {
         window.cancelAnimationFrame(metricsAnimationFrame);
         metricsAnimationFrame = null;
+    }
+
+    if (secondaryPayloadTimer !== null) {
+        window.clearTimeout(secondaryPayloadTimer);
+        secondaryPayloadTimer = null;
     }
 
     if (realtimeRefreshTimer !== null) {
@@ -967,7 +1044,7 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
                 </article>
             </section>
 
-            <template v-if="showHeavySections">
+            <template v-if="showHeavySections && secondaryPayloadReady">
                 <div ref="trendArchiveSentinel" class="h-px w-full"></div>
 
                 <section class="space-y-4 reveal-section">
@@ -1058,6 +1135,13 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
                     </section>
                 </template>
             </template>
+
+            <section v-else-if="showHeavySections" class="surface-card reveal-section p-5 sm:p-6">
+                <div class="dash-kicker">Loading</div>
+                <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Detailed sections are warming up</h2>
+                <p class="mt-3 text-sm leading-7 text-stone-300/80">Deeper charts and activity tables load after the live overview so the dashboard stays responsive.</p>
+                <div class="mt-5 grid gap-3 sm:grid-cols-3"><div class="dash-skeleton"></div><div class="dash-skeleton"></div><div class="dash-skeleton"></div></div>
+            </section>
 
             <section v-else class="surface-card reveal-section p-5 sm:p-6">
                 <div class="dash-kicker">Loading</div>

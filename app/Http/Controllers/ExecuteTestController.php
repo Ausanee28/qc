@@ -8,6 +8,7 @@ use App\Models\TransactionDetail;
 use App\Models\TestMethod;
 use App\Models\User;
 use App\Support\PendingJobsVersion;
+use App\Support\DashboardCache;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -145,6 +146,7 @@ class ExecuteTestController extends Controller
             ]);
         });
         $this->forgetPerformanceCaches();
+        DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('execute-test.create')
@@ -168,6 +170,7 @@ class ExecuteTestController extends Controller
             'remark' => $validated['remark'] ?? null,
         ]);
         $this->forgetPerformanceCaches();
+        DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('execute-test.create')
@@ -183,6 +186,7 @@ class ExecuteTestController extends Controller
         $detail = TransactionDetail::findOrFail($id);
         $detail->delete();
         $this->forgetPerformanceCaches();
+        DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('execute-test.create')
@@ -203,6 +207,7 @@ class ExecuteTestController extends Controller
         $detail = TransactionDetail::onlyTrashed()->findOrFail($id);
         $detail->restore();
         $this->forgetPerformanceCaches();
+        DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('execute-test.create')
