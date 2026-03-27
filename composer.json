@@ -13,6 +13,7 @@
         "laravel/reverb": "^1.8",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
+        "predis/predis": "^3.4",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
@@ -75,7 +76,9 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [
+                "laravel/pulse"
+            ]
         }
     },
     "config": {

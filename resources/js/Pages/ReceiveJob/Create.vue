@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Deferred, Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
 const props = defineProps({ externals: Array, internals: Array, jobs: Object, filters: Object });
@@ -39,8 +39,9 @@ const externalOptions = computed(() => props.externals ?? []);
 const internalOptions = computed(() => props.internals ?? []);
 const externalOptionsReady = computed(() => Array.isArray(props.externals));
 const internalOptionsReady = computed(() => Array.isArray(props.internals));
-const jobRows = computed(() => props.jobs?.data ?? []);
-const jobLinks = computed(() => props.jobs?.links ?? []);
+const jobPaginator = computed(() => props.jobs ?? null);
+const jobRows = computed(() => jobPaginator.value?.data ?? []);
+const jobLinks = computed(() => jobPaginator.value?.links ?? []);
 const workflowReloadOnly = ['jobs', 'filters', 'flash'];
 
 const statusLabel = (job) => {
@@ -74,6 +75,7 @@ const filterPayload = () => ({
 
 const applyFilters = () => {
     router.get(route('receive-job.create'), filterPayload(), {
+        only: workflowReloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -87,7 +89,20 @@ const resetFilters = () => {
 
 const visitPage = (url) => {
     if (!url) return;
-    router.visit(url, {
+
+    const page = (() => {
+        try {
+            return new URL(url, window.location.origin).searchParams.get('page');
+        } catch {
+            return null;
+        }
+    })();
+
+    router.get(route('receive-job.create'), {
+        ...filterPayload(),
+        ...(page ? { page } : {}),
+    }, {
+        only: workflowReloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -295,71 +310,78 @@ const toggleJobStatus = (job) => {
                     </div>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Job</th>
-                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Sender / Receiver</th>
-                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Detail</th>
-                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
-                                <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 bg-white">
-                            <tr v-if="jobRows.length === 0">
-                                <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">No jobs found.</td>
-                            </tr>
-                            <tr v-for="job in jobRows" :key="job.transaction_id" class="align-top">
-                                <td class="px-6 py-4 text-sm text-gray-700">
-                                    <div class="font-mono font-semibold text-gray-900">#{{ job.transaction_id }}</div>
-                                    <div class="mt-1 text-xs text-gray-500">{{ job.receive_date }}</div>
-                                    <div class="mt-1 text-xs text-gray-500">{{ job.dmc || 'No DMC' }} / {{ job.line || 'No line' }}</div>
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-700">
-                                    <div>{{ job.external_name || '-' }}</div>
-                                    <div class="mt-1 text-xs text-gray-500">Receiver: {{ job.internal_name || '-' }}</div>
-                                    <div class="mt-1 text-xs text-gray-500">{{ job.details_count }} test result(s)</div>
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ job.detail || '-' }}</td>
-                                <td class="px-6 py-4 text-sm">
-                                    <span :class="statusClass(job)" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
-                                        {{ statusLabel(job) }}
-                                    </span>
-                                    <div v-if="job.return_date && !job.is_deleted" class="mt-2 text-xs text-gray-500">Closed: {{ job.return_date }}</div>
-                                    <div v-if="job.deleted_at" class="mt-2 text-xs text-gray-500">Deleted: {{ job.deleted_at }}</div>
-                                </td>
-                                <td class="px-6 py-4 text-right text-sm">
-                                    <div class="flex flex-wrap justify-end gap-2">
-                                        <button :disabled="!canEditJob(job)" @click="editJob(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
-                                        <button :disabled="!canDeleteJob(job)" @click="deleteJob(job)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can delete' : ''">Delete</button>
-                                        <button :disabled="!canToggleJobStatus(job)" @click="toggleJobStatus(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!job.is_closed && job.details_count === 0 ? 'Need at least 1 test result before closing' : ''">
-                                            {{ job.is_closed ? 'Reopen' : 'Close' }}
-                                        </button>
-                                        <button :disabled="!job.is_deleted || !canDelete" @click="restoreJob(job)" class="rounded-lg border border-orange-200 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <Deferred data="jobs">
+                    <template #fallback>
+                        <div class="px-6 py-10 text-sm text-gray-500">Loading recent jobs...</div>
+                    </template>
 
-                <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="text-sm text-gray-600">
-                        Showing {{ jobs.from ?? 0 }} to {{ jobs.to ?? 0 }} of {{ jobs.total ?? 0 }} jobs
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Job</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Sender / Receiver</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Detail</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 bg-white">
+                                <tr v-if="jobRows.length === 0">
+                                    <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">No jobs found.</td>
+                                </tr>
+                                <tr v-for="job in jobRows" :key="job.transaction_id" class="align-top">
+                                    <td class="px-6 py-4 text-sm text-gray-700">
+                                        <div class="font-mono font-semibold text-gray-900">#{{ job.transaction_id }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ job.receive_date }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ job.dmc || 'No DMC' }} / {{ job.line || 'No line' }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-700">
+                                        <div>{{ job.external_name || '-' }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">Receiver: {{ job.internal_name || '-' }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ job.details_count }} test result(s)</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-700">{{ job.detail || '-' }}</td>
+                                    <td class="px-6 py-4 text-sm">
+                                        <span :class="statusClass(job)" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
+                                            {{ statusLabel(job) }}
+                                        </span>
+                                        <div v-if="job.return_date && !job.is_deleted" class="mt-2 text-xs text-gray-500">Closed: {{ job.return_date }}</div>
+                                        <div v-if="job.deleted_at" class="mt-2 text-xs text-gray-500">Deleted: {{ job.deleted_at }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right text-sm">
+                                        <div class="flex flex-wrap justify-end gap-2">
+                                            <button :disabled="!canEditJob(job)" @click="editJob(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
+                                            <button :disabled="!canDeleteJob(job)" @click="deleteJob(job)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can delete' : ''">Delete</button>
+                                            <button :disabled="!canToggleJobStatus(job)" @click="toggleJobStatus(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!job.is_closed && job.details_count === 0 ? 'Need at least 1 test result before closing' : ''">
+                                                {{ job.is_closed ? 'Reopen' : 'Close' }}
+                                            </button>
+                                            <button :disabled="!job.is_deleted || !canDelete" @click="restoreJob(job)" class="rounded-lg border border-orange-200 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="flex flex-wrap justify-end gap-2">
-                        <button
-                            v-for="(link, index) in jobLinks"
-                            :key="index"
-                            :disabled="!link.url"
-                            @click="visitPage(link.url)"
-                            class="rounded-md border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
-                            :class="pagerButtonClass(link)"
-                            v-html="link.label"
-                        />
+
+                    <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="text-sm text-gray-600">
+                            Showing {{ jobPaginator?.from ?? 0 }} to {{ jobPaginator?.to ?? 0 }} of {{ jobPaginator?.total ?? 0 }} jobs
+                        </div>
+                        <div class="flex flex-wrap justify-end gap-2">
+                            <button
+                                v-for="(link, index) in jobLinks"
+                                :key="index"
+                                type="button"
+                                :disabled="!link.url"
+                                @click="visitPage(link.url)"
+                                class="rounded-md border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                                :class="pagerButtonClass(link)"
+                                v-html="link.label"
+                            />
+                        </div>
                     </div>
-                </div>
+                </Deferred>
             </section>
         </div>
     </AuthenticatedLayout>

@@ -7,19 +7,18 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const pages = import.meta.glob('./Pages/**/*.vue');
 let activeNavigationVisits = 0;
+let navBusyTimer = null;
 
 config.set({
     prefetch: {
-        cacheFor: '45s',
-        hoverDelay: 45,
+        cacheFor: '2m',
+        hoverDelay: 0,
     },
     visitOptions: (href, options) => {
-        const method = (options.method ?? 'get').toLowerCase();
-
         return {
             ...options,
-            viewTransition: typeof options.viewTransition === 'undefined' && method === 'get'
-                ? true
+            viewTransition: typeof options.viewTransition === 'undefined'
+                ? false
                 : options.viewTransition,
         };
     },
@@ -36,7 +35,28 @@ const updateNavigationBusyState = () => {
         return;
     }
 
-    document.documentElement.dataset.navBusy = activeNavigationVisits > 0 ? 'true' : 'false';
+    if (activeNavigationVisits > 0) {
+        if (navBusyTimer !== null) {
+            return;
+        }
+
+        navBusyTimer = window.setTimeout(() => {
+            navBusyTimer = null;
+
+            if (activeNavigationVisits > 0) {
+                document.documentElement.dataset.navBusy = 'true';
+            }
+        }, 140);
+
+        return;
+    }
+
+    if (navBusyTimer !== null) {
+        window.clearTimeout(navBusyTimer);
+        navBusyTimer = null;
+    }
+
+    document.documentElement.dataset.navBusy = 'false';
 };
 
 createInertiaApp({

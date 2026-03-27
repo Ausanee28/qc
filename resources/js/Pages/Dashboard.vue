@@ -22,6 +22,7 @@ let metricsAnimationFrame = null;
 let motionPreferenceQuery = null;
 let motionPreferenceListener = null;
 let secondaryPayloadTimer = null;
+let enableMotionTimer = null;
 const BarChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Bar));
 const LineChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Line));
 const DoughnutChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Doughnut));
@@ -58,6 +59,7 @@ const props = defineProps({
 
 const selectedPeriod = ref(props.currentPeriod);
 const isLoading = ref(false);
+const motionReady = ref(false);
 
 const dashboardSummaryKeys = [
     'currentPeriod',
@@ -284,6 +286,11 @@ onMounted(() => {
             bootRealtime();
         }, 900);
     }
+
+    enableMotionTimer = window.setTimeout(() => {
+        enableMotionTimer = null;
+        motionReady.value = true;
+    }, 220);
 });
 
 onBeforeUnmount(() => {
@@ -295,6 +302,11 @@ onBeforeUnmount(() => {
     if (secondaryPayloadTimer !== null) {
         window.clearTimeout(secondaryPayloadTimer);
         secondaryPayloadTimer = null;
+    }
+
+    if (enableMotionTimer !== null) {
+        window.clearTimeout(enableMotionTimer);
+        enableMotionTimer = null;
     }
 
     if (realtimeRefreshTimer !== null) {
@@ -339,14 +351,159 @@ const yieldPct = computed(() => Number(props.metrics.yieldRate || 0));
 const defectPct = computed(() => Number(props.metrics.defectRate || 0));
 const todayTotal = computed(() => Number(props.metrics.todayOK || 0) + Number(props.metrics.todayNG || 0));
 const todayYield = computed(() => todayTotal.value > 0 ? Number(((props.metrics.todayOK / todayTotal.value) * 100).toFixed(1)) : 0);
-const monthlyTotalOK = computed(() => props.monthlyData.reduce((sum, month) => sum + Number(month.ok || 0), 0));
-const monthlyTotalNG = computed(() => props.monthlyData.reduce((sum, month) => sum + Number(month.ng || 0), 0));
 const selectedPeriodLabel = computed(() => periodLabels[selectedPeriod.value] || 'This Month');
 const periodJobs = computed(() => Number(props.metrics.periodJobs || 0));
 const leadEquipment = computed(() => props.equipRank?.[0] ?? null);
 const leadFailure = computed(() => props.failByEquip?.[0] ?? null);
 const leadInspector = computed(() => props.inspectorData?.[0] ?? null);
 const pendingJobs = computed(() => Number(props.metrics.pendingCount || 0));
+const weeklySummary = computed(() => {
+    const rows = [];
+    const labels = [];
+    const okSeries = [];
+    const ngSeries = [];
+    const activeDays = [];
+    let okTotal = 0;
+    let ngTotal = 0;
+
+    for (const day of props.weeklyData) {
+        const ok = Number(day.ok || 0);
+        const ng = Number(day.ng || 0);
+        const total = ok + ng;
+        const yieldRate = total > 0 ? Number(((ok / total) * 100).toFixed(1)) : 0;
+        const row = {
+            label: day.label,
+            ok,
+            ng,
+            total,
+            yieldRate,
+        };
+
+        rows.push(row);
+        labels.push(day.label);
+        okSeries.push(ok);
+        ngSeries.push(ng);
+        okTotal += ok;
+        ngTotal += ng;
+
+        if (total > 0) {
+            activeDays.push(row);
+        }
+    }
+
+    const total = okTotal + ngTotal;
+    const yieldValue = total > 0 ? Number(((okTotal / total) * 100).toFixed(1)) : 0;
+
+    const highlights = !activeDays.length
+        ? [
+            { label: 'Strongest day', value: 'No activity yet', note: 'The busiest day appears once tests are recorded.' },
+            { label: 'Highest NG day', value: 'No failures yet', note: 'Use this spot to catch the roughest day quickly.' },
+            { label: 'Flow signal', value: pendingJobs.value ? 'Queue waiting' : 'Queue clear', note: `${formatNumber(pendingJobs.value)} open jobs need follow-up.` },
+        ]
+        : (() => {
+            const strongestDay = activeDays.reduce((best, day) => (day.total > best.total ? day : best), activeDays[0]);
+            const highestNgDay = activeDays.reduce((worst, day) => (day.ng > worst.ng ? day : worst), activeDays[0]);
+            const latestDay = activeDays[activeDays.length - 1];
+
+            return [
+                {
+                    label: 'Strongest day',
+                    value: strongestDay.label,
+                    note: `${formatNumber(strongestDay.total)} inspections moved through the lab.`,
+                },
+                {
+                    label: 'Highest NG day',
+                    value: highestNgDay.ng > 0 ? highestNgDay.label : 'No NG spike',
+                    note: highestNgDay.ng > 0
+                        ? `${formatNumber(highestNgDay.ng)} NG records were logged on that day.`
+                        : 'The week has not produced a visible fail cluster.',
+                },
+                {
+                    label: 'Latest flow signal',
+                    value: `${formatPercent(latestDay.yieldRate)} yield`,
+                    note: `${latestDay.label} closed with ${formatNumber(latestDay.total)} inspections.`,
+                },
+            ];
+        })();
+
+    return {
+        rows,
+        okTotal,
+        ngTotal,
+        total,
+        yield: yieldValue,
+        highlights,
+        chartData: {
+            labels,
+            datasets: [
+                { label: 'OK', data: okSeries, backgroundColor: '#f59e0b', borderRadius: 10, borderSkipped: false, maxBarThickness: 24 },
+                { label: 'NG', data: ngSeries, backgroundColor: '#9a3412', borderRadius: 10, borderSkipped: false, maxBarThickness: 24 },
+            ],
+        },
+    };
+});
+const monthlySummary = computed(() => {
+    const labels = [];
+    const okSeries = [];
+    const ngSeries = [];
+    const monthsWithData = [];
+    let totalOK = 0;
+    let totalNG = 0;
+
+    for (const month of props.monthlyData) {
+        const ok = Number(month.ok || 0);
+        const ng = Number(month.ng || 0);
+        const total = Number(month.total || (ok + ng));
+        const normalizedMonth = {
+            ...month,
+            ok,
+            ng,
+            total,
+            yield: Number(month.yield || 0),
+        };
+
+        labels.push(month.label);
+        okSeries.push(ok);
+        ngSeries.push(ng);
+        totalOK += ok;
+        totalNG += ng;
+
+        if (total > 0) {
+            monthsWithData.push(normalizedMonth);
+        }
+    }
+
+    const highlights = !monthsWithData.length
+        ? [
+            { label: 'Best month', value: 'No data', note: 'Monthly trend cards will populate once records exist.' },
+            { label: 'Worst month', value: 'No data', note: 'No monthly comparison available yet.' },
+            { label: 'Average yield', value: '0.0%', note: 'The six-month average updates automatically.' },
+        ]
+        : (() => {
+            const bestMonth = monthsWithData.reduce((best, month) => (month.yield > best.yield ? month : best), monthsWithData[0]);
+            const worstMonth = monthsWithData.reduce((worst, month) => (month.yield < worst.yield ? month : worst), monthsWithData[0]);
+            const averageYield = (monthsWithData.reduce((sum, month) => sum + month.yield, 0) / monthsWithData.length).toFixed(1);
+
+            return [
+                { label: 'Best month', value: bestMonth.label, note: `${formatPercent(bestMonth.yield)} yield` },
+                { label: 'Worst month', value: worstMonth.label, note: `${formatPercent(worstMonth.yield)} yield` },
+                { label: 'Average yield', value: `${averageYield}%`, note: 'Across the last six reported months' },
+            ];
+        })();
+
+    return {
+        totalOK,
+        totalNG,
+        highlights,
+        chartData: {
+            labels,
+            datasets: [
+                { label: 'OK', data: okSeries, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.16)', fill: true, pointBackgroundColor: '#f59e0b', pointBorderColor: '#ffffff', pointBorderWidth: 2 },
+                { label: 'NG', data: ngSeries, borderColor: '#fb923c', backgroundColor: 'transparent', fill: false, pointBackgroundColor: '#fb923c', pointBorderColor: '#ffffff', pointBorderWidth: 2 },
+            ],
+        },
+    };
+});
 
 const animatedMetrics = ref({
     periodJobs: 0,
@@ -483,10 +640,6 @@ const snapshotMetrics = computed(() => ([
     { label: 'Pending jobs', value: formatNumber(pendingJobs.value), note: 'Jobs still waiting to close' },
     { label: 'Avg test time', value: `${formatNumber(props.metrics.avgTestTime)} min`, note: 'Average time spent per inspection' },
 ]));
-const weeklyOkTotal = computed(() => props.weeklyData.reduce((sum, day) => sum + Number(day.ok || 0), 0));
-const weeklyNgTotal = computed(() => props.weeklyData.reduce((sum, day) => sum + Number(day.ng || 0), 0));
-const weeklyTotal = computed(() => weeklyOkTotal.value + weeklyNgTotal.value);
-const weeklyYield = computed(() => weeklyTotal.value > 0 ? Number(((weeklyOkTotal.value / weeklyTotal.value) * 100).toFixed(1)) : 0);
 const animatedMetricTargets = computed(() => ({
     periodJobs: periodJobs.value,
     totalTests: totalTests.value,
@@ -499,10 +652,10 @@ const animatedMetricTargets = computed(() => ({
     ngCount: Number(props.metrics.ngCount || 0),
     todayYield: todayYield.value,
     testsPerJob: Number(props.metrics.testsPerJob || 0),
-    weeklyTotal: weeklyTotal.value,
-    weeklyOkTotal: weeklyOkTotal.value,
-    weeklyNgTotal: weeklyNgTotal.value,
-    weeklyYield: weeklyYield.value,
+    weeklyTotal: weeklySummary.value.total,
+    weeklyOkTotal: weeklySummary.value.okTotal,
+    weeklyNgTotal: weeklySummary.value.ngTotal,
+    weeklyYield: weeklySummary.value.yield,
 }));
 
 const animateMetricValues = (targetValues, instant = false) => {
@@ -511,14 +664,14 @@ const animateMetricValues = (targetValues, instant = false) => {
         metricsAnimationFrame = null;
     }
 
-    if (instant || prefersReducedMotion.value || typeof window === 'undefined') {
+    if (instant || prefersReducedMotion.value || typeof window === 'undefined' || !motionReady.value || isLoading.value) {
         animatedMetrics.value = { ...targetValues };
         return;
     }
 
     const startValues = { ...animatedMetrics.value };
     const startTime = window.performance.now();
-    const duration = 820;
+    const duration = 320;
     const easeOutCubic = (t) => 1 - ((1 - t) ** 3);
 
     const step = (now) => {
@@ -553,55 +706,8 @@ const movementSummary = computed(() => ([
     { label: '7-day yield', value: formatPercent(animatedMetrics.value.weeklyYield), note: 'How clean the recent flow has been' },
     { label: 'Open queue', value: formatNumber(animatedMetrics.value.pendingJobs), note: 'Jobs currently waiting to close' },
 ]));
-const weeklyRows = computed(() => props.weeklyData.map((day) => {
-    const ok = Number(day.ok || 0);
-    const ng = Number(day.ng || 0);
-    const total = ok + ng;
-    const yieldRate = total > 0 ? Number(((ok / total) * 100).toFixed(1)) : 0;
-
-    return {
-        label: day.label,
-        ok,
-        ng,
-        total,
-        yieldRate,
-    };
-}));
-const movementHighlights = computed(() => {
-    const activeDays = weeklyRows.value.filter((day) => day.total > 0);
-
-    if (!activeDays.length) {
-        return [
-            { label: 'Strongest day', value: 'No activity yet', note: 'The busiest day appears once tests are recorded.' },
-            { label: 'Highest NG day', value: 'No failures yet', note: 'Use this spot to catch the roughest day quickly.' },
-            { label: 'Flow signal', value: pendingJobs.value ? 'Queue waiting' : 'Queue clear', note: `${formatNumber(pendingJobs.value)} open jobs need follow-up.` },
-        ];
-    }
-
-    const strongestDay = activeDays.reduce((best, day) => (day.total > best.total ? day : best), activeDays[0]);
-    const highestNgDay = activeDays.reduce((worst, day) => (day.ng > worst.ng ? day : worst), activeDays[0]);
-    const latestDay = activeDays[activeDays.length - 1];
-
-    return [
-        {
-            label: 'Strongest day',
-            value: strongestDay.label,
-            note: `${formatNumber(strongestDay.total)} inspections moved through the lab.`,
-        },
-        {
-            label: 'Highest NG day',
-            value: highestNgDay.ng > 0 ? highestNgDay.label : 'No NG spike',
-            note: highestNgDay.ng > 0
-                ? `${formatNumber(highestNgDay.ng)} NG records were logged on that day.`
-                : 'The week has not produced a visible fail cluster.',
-        },
-        {
-            label: 'Latest flow signal',
-            value: `${formatPercent(latestDay.yieldRate)} yield`,
-            note: `${latestDay.label} closed with ${formatNumber(latestDay.total)} inspections.`,
-        },
-    ];
-});
+const weeklyRows = computed(() => weeklySummary.value.rows);
+const movementHighlights = computed(() => weeklySummary.value.highlights);
 const attentionItems = computed(() => {
     if (!totalTests.value) {
         return [
@@ -681,27 +787,7 @@ const attentionItems = computed(() => {
     return items;
 });
 
-const monthlyHighlights = computed(() => {
-    const withData = props.monthlyData.filter((month) => Number(month.total || 0) > 0);
-
-    if (!withData.length) {
-        return [
-            { label: 'Best month', value: 'No data', note: 'Monthly trend cards will populate once records exist.' },
-            { label: 'Worst month', value: 'No data', note: 'No monthly comparison available yet.' },
-            { label: 'Average yield', value: '0.0%', note: 'The six-month average updates automatically.' },
-        ];
-    }
-
-    const bestMonth = withData.reduce((best, month) => (Number(month.yield) > Number(best.yield) ? month : best), withData[0]);
-    const worstMonth = withData.reduce((worst, month) => (Number(month.yield) < Number(worst.yield) ? month : worst), withData[0]);
-    const averageYield = (withData.reduce((sum, month) => sum + Number(month.yield || 0), 0) / withData.length).toFixed(1);
-
-    return [
-        { label: 'Best month', value: bestMonth.label, note: `${formatPercent(bestMonth.yield)} yield` },
-        { label: 'Worst month', value: worstMonth.label, note: `${formatPercent(worstMonth.yield)} yield` },
-        { label: 'Average yield', value: `${averageYield}%`, note: 'Across the last six reported months' },
-    ];
-});
+const monthlyHighlights = computed(() => monthlySummary.value.highlights);
 
 const dailyLineData = computed(() => ({
     labels: props.dailyData.map((day) => day.label),
@@ -711,13 +797,7 @@ const dailyLineData = computed(() => ({
     ],
 }));
 
-const weeklyChartData = computed(() => ({
-    labels: props.weeklyData.map((day) => day.label),
-    datasets: [
-        { label: 'OK', data: props.weeklyData.map((day) => day.ok), backgroundColor: '#f59e0b', borderRadius: 10, borderSkipped: false, maxBarThickness: 24 },
-        { label: 'NG', data: props.weeklyData.map((day) => day.ng), backgroundColor: '#9a3412', borderRadius: 10, borderSkipped: false, maxBarThickness: 24 },
-    ],
-}));
+const weeklyChartData = computed(() => weeklySummary.value.chartData);
 
 const equipUsageData = computed(() => ({
     labels: props.equipRank?.length ? props.equipRank.map((item) => item.name) : ['No data'],
@@ -734,13 +814,7 @@ const inspectorEffData = computed(() => ({
     datasets: [{ label: 'Avg (min)', data: props.inspectorEff?.length ? props.inspectorEff.map((item) => item.avgMinutes) : [0], backgroundColor: ['#f59e0b', '#fb923c', '#fbbf24', '#a16207', '#292524'], borderRadius: 10, borderSkipped: false }],
 }));
 
-const monthlyLineData = computed(() => ({
-    labels: props.monthlyData.map((month) => month.label),
-    datasets: [
-        { label: 'OK', data: props.monthlyData.map((month) => month.ok), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.16)', fill: true, pointBackgroundColor: '#f59e0b', pointBorderColor: '#ffffff', pointBorderWidth: 2 },
-        { label: 'NG', data: props.monthlyData.map((month) => month.ng), borderColor: '#fb923c', backgroundColor: 'transparent', fill: false, pointBackgroundColor: '#fb923c', pointBorderColor: '#ffffff', pointBorderWidth: 2 },
-    ],
-}));
+const monthlyLineData = computed(() => monthlySummary.value.chartData);
 
 const sharedCartesianScale = {
     x: { ticks: { color: '#a8a29e', font: { size: 11, family: chartFontFamily } }, grid: { display: false }, border: { display: false } },
@@ -749,18 +823,12 @@ const sharedCartesianScale = {
 
 const tooltipOpts = { backgroundColor: '#120c08', padding: 12, titleFont: { family: chartFontFamily, size: 12, weight: '700' }, bodyFont: { family: chartFontFamily, size: 11 } };
 const chartEnterAnimation = computed(() => (
-    prefersReducedMotion.value
+    prefersReducedMotion.value || !motionReady.value || isLoading.value
         ? false
         : {
-            duration: 760,
+            duration: 260,
             easing: 'easeOutCubic',
-            delay(context) {
-                if (context.type !== 'data' || context.mode !== 'default') {
-                    return 0;
-                }
-
-                return (context.dataIndex * 70) + (context.datasetIndex * 120);
-            },
+            delay: 0,
         }
 ));
 
@@ -971,15 +1039,15 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
                     </div>
 
                     <div class="mt-5 space-y-3">
-                        <Link :href="route('receive-job.create')" prefetch="click" cache-for="45s" view-transition class="quick-link">
+                        <Link :href="route('receive-job.create')" prefetch="hover" cache-for="2m" :view-transition="false" class="quick-link">
                             <div><div class="text-base font-semibold tracking-tight text-stone-50">Receive new job</div><div class="mt-1 text-sm text-stone-400">Open intake and register incoming work.</div></div>
                             <span class="text-lg text-white/50">></span>
                         </Link>
-                        <Link :href="route('execute-test.create')" prefetch="click" cache-for="45s" view-transition class="quick-link">
+                        <Link :href="route('execute-test.create')" prefetch="hover" cache-for="2m" :view-transition="false" class="quick-link">
                             <div><div class="text-base font-semibold tracking-tight text-stone-50">Record test result</div><div class="mt-1 text-sm text-stone-400">Jump straight to active inspections.</div></div>
                             <span class="text-lg text-white/50">></span>
                         </Link>
-                        <Link :href="route('report.index')" prefetch="click" cache-for="45s" view-transition class="quick-link">
+                        <Link :href="route('report.index')" prefetch="hover" cache-for="2m" :view-transition="false" class="quick-link">
                             <div><div class="text-base font-semibold tracking-tight text-stone-50">Open reporting</div><div class="mt-1 text-sm text-stone-400">Review history and export filtered reports.</div></div>
                             <span class="text-lg text-white/50">></span>
                         </Link>
@@ -1121,7 +1189,7 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
                             </article>
                             <div class="grid gap-6">
                                 <article class="surface-card p-5 sm:p-6"><div class="text-xl font-semibold tracking-tight text-stone-50">Daily trend</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Day-by-day inspection movement this month.</p><div class="mt-6 h-[220px]"><LineChart :data="dailyLineData" :options="lineOpts" /></div></article>
-                                <article class="surface-card p-5 sm:p-6"><div class="text-xl font-semibold tracking-tight text-stone-50">Six-month totals</div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="metric-chip metric-chip--accent"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-200/80">Total OK</div><div class="mt-2 text-2xl font-semibold tracking-tight text-orange-100">{{ formatNumber(monthlyTotalOK) }}</div><div class="mt-2 text-sm text-orange-100/70">Across reported months</div></div><div class="metric-chip metric-chip--dark"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Total NG</div><div class="mt-2 text-2xl font-semibold tracking-tight text-stone-100">{{ formatNumber(monthlyTotalNG) }}</div><div class="mt-2 text-sm text-stone-400">Across reported months</div></div></div></article>
+                                <article class="surface-card p-5 sm:p-6"><div class="text-xl font-semibold tracking-tight text-stone-50">Six-month totals</div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="metric-chip metric-chip--accent"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-200/80">Total OK</div><div class="mt-2 text-2xl font-semibold tracking-tight text-orange-100">{{ formatNumber(monthlySummary.totalOK) }}</div><div class="mt-2 text-sm text-orange-100/70">Across reported months</div></div><div class="metric-chip metric-chip--dark"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Total NG</div><div class="mt-2 text-2xl font-semibold tracking-tight text-stone-100">{{ formatNumber(monthlySummary.totalNG) }}</div><div class="mt-2 text-sm text-stone-400">Across reported months</div></div></div></article>
                             </div>
                         </div>
                     </section>
@@ -1156,7 +1224,7 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
 <style scoped>
 .dashboard-shell {
     position: relative;
-    transition: filter 220ms ease;
+    transition: opacity 140ms ease;
 }
 
 .dashboard-shell::before {
@@ -1169,7 +1237,6 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
         radial-gradient(circle at 15% 20%, rgba(251, 146, 60, 0.08), transparent 26%),
         radial-gradient(circle at 85% 0%, rgba(120, 53, 15, 0.12), transparent 24%);
     z-index: 0;
-    animation: dash-ambient-drift 18s ease-in-out infinite alternate;
 }
 
 .dashboard-shell::after {
@@ -1184,12 +1251,11 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
 }
 
 .dashboard-shell[data-loading='true'] {
-    filter: saturate(0.92);
+    opacity: 0.98;
 }
 
 .dashboard-shell[data-loading='true']::after {
-    opacity: 1;
-    animation: dash-shell-sheen 1.1s linear infinite;
+    opacity: 0.35;
 }
 
 .dashboard-shell[data-loading='true'] .dash-hero,
@@ -1199,8 +1265,8 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
 .dashboard-shell[data-loading='true'] .pulse-card,
 .dashboard-shell[data-loading='true'] .quick-link,
 .dashboard-shell[data-loading='true'] .leaderboard-row {
-    opacity: 0.74;
-    transform: translateY(4px) scale(0.995);
+    opacity: 0.9;
+    transform: none;
 }
 
 .dash-hero {
@@ -1231,9 +1297,8 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
     position: absolute;
     border-radius: 9999px;
     filter: blur(24px);
-    opacity: 0.7;
+    opacity: 0.55;
     pointer-events: none;
-    animation: dash-float 11s ease-in-out infinite;
 }
 
 .dash-hero__glow--one {
@@ -1376,7 +1441,6 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
     border-radius: 9999px;
     background: #fb923c;
     box-shadow: 0 0 0 6px rgba(251, 146, 60, 0.16);
-    animation: dash-pulse-dot 1.9s ease-out infinite;
 }
 
 .dash-select {
@@ -1550,10 +1614,8 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, #fb923c, #fdba74);
-    background-size: 200% 100%;
     box-shadow: 0 0 20px rgba(251, 146, 60, 0.3);
-    transition: width 360ms ease;
-    animation: dash-progress-sheen 3.6s linear infinite;
+    transition: width 220ms ease;
 }
 
 .spotlight-note {
@@ -1787,33 +1849,7 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
 }
 
 .reveal-section {
-    animation: dash-rise 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-
-.hero-summary-grid > *:nth-child(1),
-.hero-support-grid > *:nth-child(1),
-.attention-card:nth-child(1),
-.spotlight-note:nth-child(1),
-.leaderboard-row:nth-child(1),
-.quick-link:nth-child(1) {
-    animation-delay: 70ms;
-}
-
-.hero-summary-grid > *:nth-child(2),
-.hero-support-grid > *:nth-child(2),
-.attention-card:nth-child(2),
-.spotlight-note:nth-child(2),
-.leaderboard-row:nth-child(2),
-.quick-link:nth-child(2) {
-    animation-delay: 130ms;
-}
-
-.hero-summary-grid > *:nth-child(3),
-.attention-card:nth-child(3),
-.spotlight-note:nth-child(3),
-.leaderboard-row:nth-child(3),
-.quick-link:nth-child(3) {
-    animation-delay: 190ms;
+    animation: dash-rise 220ms ease-out both;
 }
 
 .hero-summary-grid > *,
@@ -1822,7 +1858,7 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
 .spotlight-note,
 .leaderboard-row,
 .quick-link {
-    animation: dash-rise 540ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation: none;
 }
 
 .dash-skeleton {
@@ -1834,39 +1870,13 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
 }
 
 @keyframes dash-rise {
-    from { opacity: 0; transform: translateY(14px) scale(0.985); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes dash-shimmer {
     from { background-position: 200% 0; }
     to { background-position: -200% 0; }
-}
-
-@keyframes dash-float {
-    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-    50% { transform: translate3d(0, 12px, 0) scale(1.04); }
-}
-
-@keyframes dash-pulse-dot {
-    0% { box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.24); }
-    70% { box-shadow: 0 0 0 10px rgba(251, 146, 60, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(251, 146, 60, 0); }
-}
-
-@keyframes dash-progress-sheen {
-    from { background-position: 0% 50%; }
-    to { background-position: 200% 50%; }
-}
-
-@keyframes dash-ambient-drift {
-    from { transform: translate3d(0, 0, 0) scale(1); }
-    to { transform: translate3d(0, -18px, 0) scale(1.04); }
-}
-
-@keyframes dash-shell-sheen {
-    from { transform: translateX(-120%); }
-    to { transform: translateX(120%); }
 }
 
 @media (prefers-reduced-motion: reduce) {

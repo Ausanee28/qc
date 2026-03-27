@@ -15,6 +15,9 @@ class DashboardDataChanged implements ShouldBroadcastNow
     use InteractsWithSockets;
     use SerializesModels;
 
+    private const TRANSPORT_CHECK_CACHE_KEY = 'dashboard.broadcast.transport.available';
+    private const TRANSPORT_CHECK_FAILURE_CACHE_KEY = 'dashboard.broadcast.transport.unavailable';
+
     public string $updatedAt;
 
     public function __construct()
@@ -59,6 +62,14 @@ class DashboardDataChanged implements ShouldBroadcastNow
             return true;
         }
 
+        if (cache()->get(self::TRANSPORT_CHECK_CACHE_KEY, false) === true) {
+            return true;
+        }
+
+        if (cache()->get(self::TRANSPORT_CHECK_FAILURE_CACHE_KEY, false) === true) {
+            return false;
+        }
+
         $options = (array) config('broadcasting.connections.reverb.options', []);
         $host = (string) ($options['host'] ?? '127.0.0.1');
         $port = (int) ($options['port'] ?? 8080);
@@ -70,10 +81,12 @@ class DashboardDataChanged implements ShouldBroadcastNow
         $socket = @fsockopen($host, $port, $errno, $errstr, 0.05);
 
         if ($socket === false) {
+            cache()->put(self::TRANSPORT_CHECK_FAILURE_CACHE_KEY, true, now()->addSeconds(15));
             return false;
         }
 
         fclose($socket);
+        cache()->put(self::TRANSPORT_CHECK_CACHE_KEY, true, now()->addSeconds(30));
 
         return true;
     }

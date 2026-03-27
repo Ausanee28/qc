@@ -82,11 +82,33 @@ const mobileNavClass = (routeName) => (
         ? 'bg-orange-500/15 text-orange-100 font-semibold border border-orange-500/20'
         : 'text-stone-300 hover:bg-white/5'
 );
+const navCacheFor = (routeName) => (
+    routeName === 'receive-job.create' || routeName === 'execute-test.create'
+        ? '5m'
+        : '2m'
+);
 const userInitial = computed(() => user.value.name.charAt(0).toUpperCase());
 const userRoleLabel = computed(() => (user.value.role === 'admin' ? 'Admin' : 'QC Tech'));
 const navPrefetchTimers = [];
 const navPrefetchIdleHandles = [];
-const prefetchableNavRoutes = computed(() => groupedNav.value.flatMap((group) => group.items.map((item) => item.route)));
+const workflowNavRoutes = computed(() => {
+    const availableRoutes = new Set(groupedNav.value.flatMap((group) => group.items.map((item) => item.route)));
+
+    return ['receive-job.create', 'execute-test.create']
+        .filter((routeName) => availableRoutes.has(routeName) && !isActiveRoute(routeName));
+});
+const secondaryNavRoutes = computed(() => {
+    const priority = [
+        'dashboard',
+        'report.index',
+        'certificates.index',
+        'performance.index',
+    ];
+
+    const availableRoutes = new Set(groupedNav.value.flatMap((group) => group.items.map((item) => item.route)));
+
+    return priority.filter((routeName) => availableRoutes.has(routeName) && !isActiveRoute(routeName));
+});
 
 const clearNavPrefetchSchedule = () => {
     while (navPrefetchTimers.length) {
@@ -106,41 +128,37 @@ const clearNavPrefetchSchedule = () => {
 
 const scheduleIdlePrefetch = (callback, delay = 0) => {
     if (typeof window.requestIdleCallback === 'function') {
-        const handle = window.requestIdleCallback(callback, { timeout: 1500 + delay });
+        const handle = window.requestIdleCallback(callback, { timeout: 900 + delay });
         navPrefetchIdleHandles.push(handle);
         return;
     }
 
-    const handle = window.setTimeout(callback, 300 + delay);
+    const handle = window.setTimeout(callback, 180 + delay);
     navPrefetchIdleHandles.push(handle);
 };
 
-const prefetchVisibleNavRoutes = () => {
+const prefetchNavRoutes = (routeNames, cacheFor, delayStep = 120) => {
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+
     if (connection?.saveData) {
         return;
     }
 
-    prefetchableNavRoutes.value
-        .filter((routeName) => !isActiveRoute(routeName))
-        .forEach((routeName, index) => {
-            const timer = window.setTimeout(() => {
-                router.prefetch(
-                    route(routeName),
-                    {},
-                    {
-                        cacheFor: '1m',
-                        cacheTags: [`nav:${routeName}`],
-                    },
-                );
-            }, index * 180);
+    routeNames.forEach((routeName, index) => {
+        const timer = window.setTimeout(() => {
+            router.prefetch(route(routeName), {}, {
+                cacheFor,
+                cacheTags: [`nav:${routeName}`],
+            });
+        }, index * delayStep);
 
-            navPrefetchTimers.push(timer);
-        });
+        navPrefetchTimers.push(timer);
+    });
 };
 
 onMounted(() => {
-    scheduleIdlePrefetch(prefetchVisibleNavRoutes, 600);
+    prefetchNavRoutes(workflowNavRoutes.value, '5m', 80);
+    scheduleIdlePrefetch(() => prefetchNavRoutes(secondaryNavRoutes.value, '3m'), 180);
 });
 
 onUnmounted(() => {
@@ -170,9 +188,9 @@ onUnmounted(() => {
                                 :key="item.route"
                                 :href="route(item.route)"
                                 preserve-scroll
-                                prefetch="click"
-                                cache-for="1m"
-                                view-transition
+                                prefetch="hover"
+                                :cache-for="navCacheFor(item.route)"
+                                :view-transition="false"
                                 class="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors duration-150 decoration-none text-left"
                                 :class="desktopNavClass(item.route)"
                             >
@@ -292,9 +310,9 @@ onUnmounted(() => {
                                  :key="item.route"
                                  :href="route(item.route)"
                                  preserve-scroll
-                                 prefetch="click"
-                                 cache-for="1m"
-                                 view-transition
+                                 prefetch="hover"
+                                 :cache-for="navCacheFor(item.route)"
+                                 :view-transition="false"
                                  @click="showMobileMenu = false"
                                  :class="['flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1 text-left', mobileNavClass(item.route)]"
                              >
