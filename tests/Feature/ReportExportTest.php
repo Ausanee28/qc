@@ -26,7 +26,10 @@ class ReportExportTest extends TestCase
         $this->assertStringNotContainsString("\r", $disposition);
         $this->assertStringNotContainsString("\n", $disposition);
         $this->assertStringNotContainsString('/', $disposition);
-        $this->assertStringContainsString('.csv', $disposition);
+        $this->assertStringContainsString('.xlsx', $disposition);
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $response->headers->get('Content-Type')
+        );
     }
 }
-

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\SimpleXlsxExporter;
 use App\Support\SchemaCapabilities;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -79,51 +80,40 @@ class ReportController extends Controller
         $customName = $request->get('filename', '');
 
         $baseFilename = $this->sanitizeFilename($customName ?: 'QC_Report_' . $dateFrom . '_to_' . $dateTo);
-        $filename = str_ends_with(strtolower($baseFilename), '.csv') ? $baseFilename : "{$baseFilename}.csv";
+        $filename = str_ends_with(strtolower($baseFilename), '.xlsx') ? $baseFilename : "{$baseFilename}.xlsx";
 
         return new StreamedResponse(function () use ($dateFrom, $dateTo, $dmc, $ids) {
-            $handle = fopen('php://output', 'w');
+            $tempWorkbook = tempnam(sys_get_temp_dir(), 'qc-report-');
 
-            // UTF-8 BOM for Excel to recognize Thai characters
-            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
-
-            // Header row
-            fputcsv($handle, [
-                'Transaction ID',
-                'Line',
-                'DMC',
-                'Detail',
-                'Receive Date',
-                'Sender',
-                'Process',
-                'Inspector',
-                'Start Time',
-                'End Time',
-                'Result',
-                'Remark',
-            ]);
-
-            // Data rows
-            foreach ($this->streamResults($dateFrom, $dateTo, $dmc, $ids) as $r) {
-                fputcsv($handle, [
-                    $r->transaction_id,
-                    $r->line ?? '',
-                    $r->dmc ?? '',
-                    $r->detail ?? '',
-                    $r->receive_date ?? '',
-                    $r->sender ?? '',
-                    $r->method_name ?? '',
-                    $r->inspector ?? '',
-                    $r->start_time ?? '',
-                    $r->end_time ?? '',
-                    $r->judgement ?? '',
-                    $r->remark ?? '',
-                ]);
+            if ($tempWorkbook === false) {
+                abort(500, 'Unable to create the Excel export file.');
             }
 
-            fclose($handle);
+            try {
+                $rows = $this->buildExportRows($dateFrom, $dateTo, $dmc, $ids);
+
+                (new SimpleXlsxExporter())->store(
+                    $rows,
+                    $tempWorkbook,
+                    [16, 14, 20, 36, 16, 24, 22, 22, 12, 12, 10, 42],
+                    'QC Report'
+                );
+
+                $stream = fopen($tempWorkbook, 'rb');
+
+                if ($stream === false) {
+                    abort(500, 'Unable to open the Excel export file.');
+                }
+
+                fpassthru($stream);
+                fclose($stream);
+            } finally {
+                if (is_file($tempWorkbook)) {
+                    @unlink($tempWorkbook);
+                }
+            }
         }, 200, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
     }
@@ -214,6 +204,61 @@ class ReportController extends Controller
         $value = trim($value, " .\t\n\r\0\x0B");
 
         return $value !== '' ? $value : 'QC_Report';
+    }
+
+    private function formatExportDate(mixed $value): string
+    {
+        if (blank($value)) {
+            return '';
+        }
+
+        return Carbon::parse($value)->format('Y-m-d');
+    }
+
+    private function formatExportTime(mixed $value): string
+    {
+        if (blank($value)) {
+            return '';
+        }
+
+        return Carbon::parse($value)->format('H:i');
+    }
+
+    private function buildExportRows(string $dateFrom, string $dateTo, ?string $dmc, array $ids): array
+    {
+        $rows = [[
+            'Transaction ID',
+            'Line',
+            'DMC',
+            'Detail',
+            'Receive Date',
+            'Sender',
+            'Process',
+            'Inspector',
+            'Start Time',
+            'End Time',
+            'Result',
+            'Remark',
+        ]];
+
+        foreach ($this->streamResults($dateFrom, $dateTo, $dmc, $ids) as $r) {
+            $rows[] = [
+                $r->transaction_id,
+                $r->line ?? '',
+                $r->dmc ?? '',
+                $r->detail ?? '',
+                $this->formatExportDate($r->receive_date),
+                $r->sender ?? '',
+                $r->method_name ?? '',
+                $r->inspector ?? '',
+                $this->formatExportTime($r->start_time),
+                $this->formatExportTime($r->end_time),
+                $r->judgement ?? '',
+                $r->remark ?? '',
+            ];
+        }
+
+        return $rows;
     }
 
     private function reportCacheKey(string $segment, array $payload): string

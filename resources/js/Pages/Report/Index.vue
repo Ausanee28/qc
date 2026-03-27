@@ -86,20 +86,88 @@ watch(
 const showExportModal = ref(false);
 const customFilename = ref('');
 const exportMode = ref('all');
+const exportBusy = ref(false);
+const exportError = ref('');
+const supportsSavePicker = computed(() => typeof window !== 'undefined' && 'showSaveFilePicker' in window);
 
 const openExport = (mode) => {
     exportMode.value = mode;
     customFilename.value = `QC_Report_${dateFrom.value}_to_${dateTo.value}`;
+    exportError.value = '';
     showExportModal.value = true;
 };
 
-const doExport = () => {
+const normalizedExportFilename = computed(() => {
+    const base = (customFilename.value || 'export').trim() || 'export';
+    return base.toLowerCase().endsWith('.xlsx') ? base : `${base}.xlsx`;
+});
+
+const buildExportUrl = () => {
     const ids = exportMode.value === 'selected' ? selectedIds.value.join(',') : 'all';
     const name = encodeURIComponent(customFilename.value || 'export');
     const dmc = encodeURIComponent(dmcSearch.value || '');
-    const url = route('report.export') + `?ids=${ids}&date_from=${dateFrom.value}&date_to=${dateTo.value}&dmc=${dmc}&filename=${name}`;
+    return route('report.export') + `?ids=${ids}&date_from=${dateFrom.value}&date_to=${dateTo.value}&dmc=${dmc}&filename=${name}`;
+};
+
+const fallbackBrowserDownload = (url) => {
     window.location.href = url;
-    showExportModal.value = false;
+};
+
+const saveWithPicker = async (url) => {
+    const handle = await window.showSaveFilePicker({
+        suggestedName: normalizedExportFilename.value,
+        types: [
+            {
+                description: 'Excel workbook',
+                accept: {
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+                },
+            },
+        ],
+    });
+
+    const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`Export request failed with status ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+};
+
+const doExport = async () => {
+    const url = buildExportUrl();
+    exportBusy.value = true;
+    exportError.value = '';
+
+    try {
+        if (supportsSavePicker.value) {
+            await saveWithPicker(url);
+        } else {
+            fallbackBrowserDownload(url);
+        }
+
+        showExportModal.value = false;
+    } catch (error) {
+        if (error?.name === 'AbortError') {
+            return;
+        }
+
+        exportError.value = supportsSavePicker.value
+            ? 'Could not save the file to the selected path. You can try again or use the browser download fallback.'
+            : 'Could not start the browser download.';
+    } finally {
+        exportBusy.value = false;
+    }
 };
 </script>
 
@@ -240,22 +308,24 @@ const doExport = () => {
             <div v-if="showExportModal" class="modal-overlay" @click.self="showExportModal = false">
                 <div class="modal-card">
                     <div class="modal-header">
-                        <h3 class="modal-title">Export to CSV</h3>
+                        <h3 class="modal-title">Export to Excel</h3>
                         <button class="modal-close" @click="showExportModal = false">×</button>
                     </div>
                     <div class="modal-body">
                         <label class="modal-label">File name</label>
                         <div style="display:flex;align-items:center;gap:0">
                             <input v-model="customFilename" type="text" class="modal-input" placeholder="Enter file name" @keyup.enter="doExport" autofocus />
-                            <span class="modal-ext">.csv</span>
+                            <span class="modal-ext">.xlsx</span>
                         </div>
                         <div class="modal-hint">{{ exportMode === 'selected' ? `${selectedIds.length} job(s) selected` : `All ${totalRows} result(s)` }}</div>
+                        <div class="modal-hint" v-if="supportsSavePicker">A save dialog will let you choose the folder and file path before saving the Excel file.</div>
+                        <div v-if="exportError" class="modal-error">{{ exportError }}</div>
                     </div>
                     <div class="modal-footer">
-                        <button class="export-btn export-btn-outline" @click="showExportModal = false">Cancel</button>
-                        <button class="export-btn export-btn-primary" @click="doExport">
+                        <button class="export-btn export-btn-outline" :disabled="exportBusy" @click="showExportModal = false">Cancel</button>
+                        <button class="export-btn export-btn-primary" :disabled="exportBusy" @click="doExport">
                             <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            Download
+                            {{ exportBusy ? 'Preparing...' : (supportsSavePicker ? 'Choose Path & Save' : 'Download') }}
                         </button>
                     </div>
                 </div>
@@ -505,6 +575,16 @@ const doExport = () => {
     display: flex; align-items: center; box-sizing: border-box;
 }
 .modal-hint { font-size: 11px; color: #78716c; margin-top: 8px; }
+.modal-error {
+    margin-top: 10px;
+    border: 1px solid rgba(248, 113, 113, 0.2);
+    border-radius: 12px;
+    background: rgba(127, 29, 29, 0.18);
+    padding: 10px 12px;
+    color: #fecaca;
+    font-size: 12px;
+    line-height: 1.5;
+}
 .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
