@@ -185,23 +185,26 @@ const doExport = async () => {
             </div>
 
             <section class="card card-fill report-toolbar">
-                <div class="report-toolbar__intro">
-                    <h2 class="report-toolbar__title">Filtered Result Window</h2>
-                    <p class="report-toolbar__sub">Server-side pagination keeps long date ranges usable without dragging the whole table into the browser.</p>
-                </div>
-
-                <div class="report-toolbar__filters">
-                    <input v-model="dmcSearch" @keyup.enter="search" type="text" placeholder="Search DMC..." class="form-inp report-filter-input">
+                <div class="report-toolbar__bar">
+                    <input v-model="dmcSearch" @keyup.enter="search" type="text" placeholder="Search DMC..." class="form-inp report-filter-input report-filter-input-search">
                     <input v-model="dateFrom" type="date" class="form-inp report-filter-input">
                     <input v-model="dateTo" type="date" class="form-inp report-filter-input">
-                    <select v-model="perPage" class="form-inp report-filter-input">
+                    <select v-model="perPage" class="form-inp report-filter-input report-filter-input-select">
                         <option value="25">25 / page</option>
                         <option value="50">50 / page</option>
                         <option value="100">100 / page</option>
                         <option value="200">200 / page</option>
                     </select>
-                    <button @click="resetFilters" class="export-btn export-btn-outline">Reset</button>
-                    <button @click="search" class="export-btn export-btn-primary">Apply</button>
+                </div>
+                <div class="report-toolbar__footer">
+                    <div class="report-toolbar__meta">
+                        <span class="report-toolbar__tag">Filters</span>
+                        <span class="report-toolbar__hint">DMC, date range, and row count</span>
+                    </div>
+                    <div class="report-toolbar__actions">
+                        <button @click="resetFilters" class="export-btn export-btn-outline">Reset</button>
+                        <button @click="search" class="export-btn export-btn-primary">Apply</button>
+                    </div>
                 </div>
             </section>
             
@@ -337,40 +340,74 @@ const doExport = async () => {
 <style scoped>
 .report-toolbar {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 16px;
-    align-items: end;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 18px;
+    background: linear-gradient(180deg, rgba(24, 18, 14, 0.96), rgba(17, 12, 10, 0.98));
 }
 
-.report-toolbar__intro {
-    max-width: 540px;
-}
-
-.report-toolbar__title {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    color: #fafaf9;
-}
-
-.report-toolbar__sub {
-    margin: 6px 0 0;
-    font-size: 13px;
-    color: #a8a29e;
-    line-height: 1.6;
-}
-
-.report-toolbar__filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: flex-end;
+.report-toolbar__bar {
+    display: grid;
+    grid-template-columns: minmax(240px, 1.4fr) repeat(3, minmax(120px, 0.55fr));
+    gap: 10px;
+    align-items: center;
 }
 
 .report-filter-input {
-    min-width: 140px;
+    min-width: 0;
+    height: 40px;
     padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(7, 7, 7, 0.52);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #fafaf9;
+    font-size: 13px;
+}
+
+.report-filter-input:focus {
+    border-color: rgba(251, 146, 60, 0.32);
+    box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.08);
+}
+
+.report-toolbar__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.report-toolbar__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.report-toolbar__tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(251, 146, 60, 0.08);
+    border: 1px solid rgba(251, 146, 60, 0.18);
+    color: #fdba74;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.report-toolbar__hint {
+    color: #a8a29e;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.report-toolbar__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .report-meta {
@@ -590,12 +627,26 @@ const doExport = async () => {
 @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 @media (max-width: 900px) {
-    .report-toolbar__filters {
+    .report-toolbar {
+        padding: 14px;
+    }
+
+    .report-toolbar__bar {
+        width: 100%;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .report-toolbar__footer {
+        align-items: stretch;
+    }
+
+    .report-toolbar__meta {
         width: 100%;
     }
 
-    .report-filter-input {
-        flex: 1 1 160px;
+    .report-toolbar__actions {
+        width: 100%;
+        justify-content: flex-end;
     }
 
     .report-pagination {
@@ -604,6 +655,12 @@ const doExport = async () => {
 
     .report-pagination__links {
         justify-content: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    .report-toolbar__bar {
+        grid-template-columns: 1fr;
     }
 }
 </style>
