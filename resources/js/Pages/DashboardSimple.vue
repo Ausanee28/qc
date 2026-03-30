@@ -12,19 +12,10 @@ const props = defineProps({
     metrics: {
         type: Object,
         default: () => ({
-            todayCount: 0,
-            monthCount: 0,
-            periodJobs: 0,
-            okCount: 0,
-            ngCount: 0,
-            pendingCount: 0,
-            todayOK: 0,
-            todayNG: 0,
-            yieldRate: 0,
-            defectRate: 0,
-            avgTestTime: 0,
-            totalTests: 0,
-            testsPerJob: 0,
+            todayCount: 0, monthCount: 0, periodJobs: 0,
+            okCount: 0, ngCount: 0, pendingCount: 0,
+            todayOK: 0, todayNG: 0, yieldRate: 0, defectRate: 0,
+            avgTestTime: 0, totalTests: 0, testsPerJob: 0,
         }),
     },
     weeklyData: { type: Array, default: () => [] },
@@ -41,434 +32,226 @@ const periodOptions = [
 ];
 
 const periodLabels = {
-    today: 'Today',
-    week: 'Last 7 Days',
-    month: 'This Month',
-    '30days': 'Last 30 Days',
-    quarter: 'This Quarter',
+    today: 'Today', week: 'Last 7 Days', month: 'This Month',
+    '30days': 'Last 30 Days', quarter: 'This Quarter',
 };
 
 const selectedPeriod = ref(props.currentPeriod);
 const isChangingPeriod = ref(false);
-const metrics = computed(() => props.metrics);
 const currentPeriodLabel = computed(() => periodLabels[props.currentPeriod] || 'This Month');
 
-watch(() => props.currentPeriod, (value) => {
-    selectedPeriod.value = value;
-});
-
-watch(selectedPeriod, (value, previous) => {
-    if (!value || value === previous) {
-        return;
-    }
-
+watch(() => props.currentPeriod, (v) => { selectedPeriod.value = v; });
+watch(selectedPeriod, (v, prev) => {
+    if (!v || v === prev) return;
     isChangingPeriod.value = true;
-    router.get(route('dashboard'), { period: value }, {
-        replace: true,
-        preserveState: true,
-        preserveScroll: true,
-        onFinish: () => {
-            isChangingPeriod.value = false;
-        },
+    router.get(route('dashboard'), { period: v }, {
+        replace: true, preserveState: true, preserveScroll: true,
+        onFinish: () => { isChangingPeriod.value = false; },
     });
 });
 
-const formatNumber = (value) => Number(value || 0).toLocaleString();
-const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`;
-const formatMinutes = (value) => `${Number(value || 0).toFixed(0)} min`;
+const fmt = (v) => Number(v || 0).toLocaleString();
+const pct = (v) => `${Number(v || 0).toFixed(1)}%`;
 
-const summaryCards = computed(() => ([
-    {
-        label: 'Jobs In Period',
-        value: formatNumber(props.metrics.periodJobs),
-        note: `${formatNumber(props.metrics.pendingCount)} pending`,
-        tone: 'amber',
-    },
-    {
-        label: 'Total Tests',
-        value: formatNumber(props.metrics.totalTests),
-        note: `${formatNumber(props.metrics.testsPerJob)} tests / job`,
-        tone: 'orange',
-    },
-    {
-        label: 'Yield',
-        value: formatPercent(props.metrics.yieldRate),
-        note: `${formatPercent(props.metrics.defectRate)} NG`,
-        tone: 'stone',
-    },
-    {
-        label: 'Avg Test Time',
-        value: formatMinutes(props.metrics.avgTestTime),
-        note: 'Per completed test',
-        tone: 'ink',
-    },
+/* ── KPI cards ── */
+const kpiCards = computed(() => ([
+    { label: 'OK %', value: pct(props.metrics.yieldRate), accent: true },
+    { label: 'NG %', value: pct(props.metrics.defectRate), accent: false, danger: true },
+    { label: 'Jobs', value: fmt(props.metrics.periodJobs) },
+    { label: 'Total Tests', value: fmt(props.metrics.totalTests) },
+    { label: 'Pending', value: fmt(props.metrics.pendingCount) },
 ]));
 
-const heroQuickStats = computed(() => ([
-    {
-        label: 'Today Jobs',
-        value: formatNumber(props.metrics.todayCount),
-        note: 'received today',
-    },
-    {
-        label: 'Today OK',
-        value: formatNumber(props.metrics.todayOK),
-        note: 'passed today',
-    },
-    {
-        label: 'Today NG',
-        value: formatNumber(props.metrics.todayNG),
-        note: 'failed today',
-    },
-]));
-
+/* ── Quality doughnut ── */
 const qualityChartData = computed(() => ({
     labels: ['OK', 'NG'],
     datasets: [{
         data: [Number(props.metrics.okCount || 0), Number(props.metrics.ngCount || 0)],
-        backgroundColor: ['#f59e0b', '#9a3412'],
-        borderWidth: 0,
-        hoverOffset: 4,
-        cutout: '72%',
+        backgroundColor: ['#f59e0b', '#ef4444'],
+        borderWidth: 0, hoverOffset: 6,
     }],
 }));
 
-const qualitySummaryItems = computed(() => {
-    const total = Number(props.metrics.totalTests || 0);
-    const ok = Number(props.metrics.okCount || 0);
-    const ng = Number(props.metrics.ngCount || 0);
-    const okShare = total > 0 ? (ok / total) * 100 : 0;
-    const ngShare = total > 0 ? (ng / total) * 100 : 0;
-    const todayTotal = Number(props.metrics.todayOK || 0) + Number(props.metrics.todayNG || 0);
-
-    return [
-        {
-            label: 'Total Checked',
-            value: formatNumber(total),
-            note: 'records in this period',
-        },
-        {
-            label: 'OK Share',
-            value: formatPercent(okShare),
-            note: `${formatNumber(ok)} passed`,
-        },
-        {
-            label: 'NG Share',
-            value: formatPercent(ngShare),
-            note: `${formatNumber(ng)} failed`,
-        },
-        {
-            label: 'Today Volume',
-            value: formatNumber(todayTotal),
-            note: 'today only',
-        },
-    ];
-});
-
-const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
+const doughnutOpts = {
+    responsive: true, maintainAspectRatio: false, cutout: '72%',
     plugins: {
-        legend: {
-            position: 'bottom',
-            labels: {
-                color: '#d6d3d1',
-                padding: 18,
-                usePointStyle: true,
-            },
-        },
+        legend: { display: false },
         tooltip: {
-            backgroundColor: 'rgba(12,12,12,0.95)',
-            borderColor: 'rgba(251,146,60,0.2)',
-            borderWidth: 1,
-            titleColor: '#fafaf9',
-            bodyColor: '#e7e5e4',
+            backgroundColor: 'rgba(10,10,10,0.95)', titleColor: '#fafaf9', bodyColor: '#f5f5f4',
+            borderColor: 'rgba(251,146,60,0.2)', borderWidth: 1,
+            callbacks: {
+                label: (ctx) => {
+                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                    const p = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : '0.0';
+                    return `${ctx.label}: ${ctx.parsed.toLocaleString()} (${p}%)`;
+                },
+            },
         },
     },
 };
 
-const lineOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
+/* ── Shared chart config ── */
+const axisColor = '#a8a29e';
+const gridColor = 'rgba(255,255,255,0.06)';
+const tooltipStyle = {
+    backgroundColor: 'rgba(10,10,10,0.95)', titleColor: '#fafaf9', bodyColor: '#f5f5f4',
+    borderColor: 'rgba(251,146,60,0.2)', borderWidth: 1,
+};
+
+const lineOpts = {
+    responsive: true, maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-        legend: {
-            labels: {
-                color: '#d6d3d1',
-                usePointStyle: true,
-                padding: 16,
-            },
-        },
-        tooltip: {
-            backgroundColor: 'rgba(12,12,12,0.95)',
-            borderColor: 'rgba(251,146,60,0.2)',
-            borderWidth: 1,
-            titleColor: '#fafaf9',
-            bodyColor: '#e7e5e4',
-        },
+        legend: { labels: { color: '#e7e5e4', usePointStyle: true, padding: 14 } },
+        tooltip: tooltipStyle,
     },
     scales: {
-        x: {
-            ticks: { color: '#a8a29e' },
-            grid: { display: false },
-            border: { display: false },
-        },
-        y: {
-            beginAtZero: true,
-            ticks: { color: '#a8a29e' },
-            grid: { color: 'rgba(255,255,255,0.06)' },
-            border: { display: false },
-        },
+        x: { ticks: { color: axisColor }, grid: { display: false }, border: { display: false } },
+        y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor }, border: { display: false } },
     },
+    elements: { line: { tension: 0.35, borderWidth: 2.5 }, point: { radius: 2, hoverRadius: 5 } },
 };
 
-const barOptions = {
-    ...lineOptions,
-    plugins: {
-        ...lineOptions.plugins,
-        legend: { display: false },
-    },
+const barOpts = {
+    ...lineOpts,
+    elements: undefined,
+    plugins: { ...lineOpts.plugins, legend: { display: false } },
 };
 
-const dailySeries = computed(() => {
-    const rows = (props.dailyData?.length ? props.dailyData : props.weeklyData).map((item) => {
-        const ok = Number(item.ok || 0);
-        const ng = Number(item.ng || 0);
-        return {
-            label: item.label,
-            ok,
-            ng,
-            total: ok + ng,
-        };
-    });
-
-    return {
-        rows,
-        total: rows.reduce((sum, row) => sum + row.total, 0),
-        peak: rows.reduce((best, row) => (row.total > best.total ? row : best), { label: '-', total: 0 }),
-        latest: rows.at(-1) ?? { label: '-', total: 0, ok: 0, ng: 0 },
-        average: rows.length ? rows.reduce((sum, row) => sum + row.total, 0) / rows.length : 0,
-    };
+/* ── Daily trend ── */
+const dailyRows = computed(() => {
+    const src = props.dailyData?.length ? props.dailyData : props.weeklyData;
+    return src.map((d) => ({ label: d.label, ok: Number(d.ok || 0), ng: Number(d.ng || 0) }));
 });
 
-const dailyHighlights = computed(() => ([
-    {
-        label: 'Latest Day',
-        value: dailySeries.value.latest.label,
-        note: `${formatNumber(dailySeries.value.latest.total)} total`,
-    },
-    {
-        label: 'Peak Day',
-        value: dailySeries.value.peak.label,
-        note: `${formatNumber(dailySeries.value.peak.total)} total`,
-    },
-    {
-        label: 'Daily Avg',
-        value: formatNumber(dailySeries.value.average.toFixed(0)),
-        note: 'tests per day',
-    },
-]));
-
 const dailyTrendData = computed(() => ({
-    labels: dailySeries.value.rows.map((item) => item.label),
+    labels: dailyRows.value.map((d) => d.label),
     datasets: [
-        {
-            label: 'OK',
-            data: dailySeries.value.rows.map((item) => item.ok),
-            borderColor: '#f59e0b',
-            backgroundColor: 'rgba(245,158,11,0.18)',
-            fill: true,
-            tension: 0.35,
-            pointRadius: 2,
-            pointHoverRadius: 4,
-        },
-        {
-            label: 'NG',
-            data: dailySeries.value.rows.map((item) => item.ng),
-            borderColor: '#9a3412',
-            backgroundColor: 'rgba(154,52,18,0.14)',
-            fill: true,
-            tension: 0.35,
-            pointRadius: 2,
-            pointHoverRadius: 4,
-        },
+        { label: 'OK', data: dailyRows.value.map((d) => d.ok), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.15)', fill: true, tension: 0.35, pointRadius: 2, pointHoverRadius: 5 },
+        { label: 'NG', data: dailyRows.value.map((d) => d.ng), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.10)', fill: true, tension: 0.35, pointRadius: 2, pointHoverRadius: 5 },
     ],
 }));
 
+/* ── Monthly trend ── */
 const monthlySeries = computed(() => {
-    const rows = (props.monthlyData || []).map((item) => ({
-        label: item.fullLabel || item.label,
-        shortLabel: item.label,
-        total: Number(item.total || 0),
-        yield: Number(item.yield || 0),
-        ok: Number(item.ok || 0),
-        ng: Number(item.ng || 0),
+    return (props.monthlyData || []).map((m) => ({
+        label: m.label, fullLabel: m.fullLabel || m.label,
+        total: Number(m.total || 0), yield: Number(m.yield || 0),
+        ok: Number(m.ok || 0), ng: Number(m.ng || 0),
+        ngRate: Number(m.total || 0) > 0 ? (Number(m.ng || 0) / Number(m.total || 0)) * 100 : 0,
     }));
-
-    const bestMonth = rows.reduce((best, row) => (row.yield > best.yield ? row : best), { label: '-', yield: 0, total: 0 });
-    const weakestMonth = rows.reduce((worst, row) => {
-        if (worst.label === '-') {
-            return row;
-        }
-
-        return row.yield < worst.yield ? row : worst;
-    }, { label: '-', yield: 0, total: 0 });
-
-    return { rows, bestMonth, weakestMonth };
 });
 
 const monthlyTrendData = computed(() => ({
-    labels: monthlySeries.value.rows.map((item) => item.shortLabel),
+    labels: monthlySeries.value.map((m) => m.label),
     datasets: [
-        {
-            type: 'bar',
-            label: 'Total tests',
-            data: monthlySeries.value.rows.map((item) => item.total),
-            backgroundColor: 'rgba(245,158,11,0.28)',
-            borderRadius: 10,
-            yAxisID: 'y',
-        },
-        {
-            type: 'line',
-            label: 'Yield %',
-            data: monthlySeries.value.rows.map((item) => item.yield),
-            borderColor: '#fb923c',
-            backgroundColor: '#fb923c',
-            tension: 0.32,
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            yAxisID: 'y1',
-        },
+        { type: 'bar', label: 'Total Tests', data: monthlySeries.value.map((m) => m.total), backgroundColor: 'rgba(245,158,11,0.3)', borderRadius: 8, yAxisID: 'y' },
+        { type: 'line', label: 'OK %', data: monthlySeries.value.map((m) => m.yield), borderColor: '#fb923c', backgroundColor: '#fb923c', tension: 0.3, pointRadius: 4, pointHoverRadius: 6, yAxisID: 'y1' },
+        { type: 'line', label: 'NG %', data: monthlySeries.value.map((m) => m.ngRate), borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.3, pointRadius: 4, pointHoverRadius: 6, borderDash: [6, 5], yAxisID: 'y1' },
     ],
 }));
 
-const monthlyMixedOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
+const monthlyMixedOpts = {
+    responsive: true, maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
-    plugins: lineOptions.plugins,
-    scales: {
-        x: lineOptions.scales.x,
-        y: {
-            beginAtZero: true,
-            ticks: { color: '#a8a29e' },
-            grid: { color: 'rgba(255,255,255,0.06)' },
-            border: { display: false },
-        },
-        y1: {
-            beginAtZero: true,
-            position: 'right',
-            min: 0,
-            max: 100,
-            ticks: {
-                color: '#fb923c',
-                callback: (value) => `${value}%`,
+    plugins: {
+        legend: { labels: { color: '#e7e5e4', usePointStyle: true, padding: 14 } },
+        tooltip: {
+            ...tooltipStyle,
+            callbacks: {
+                label: (ctx) => {
+                    const value = Number(ctx.parsed.y || 0);
+                    return ctx.dataset.yAxisID === 'y1'
+                        ? `${ctx.dataset.label}: ${value.toFixed(1)}%`
+                        : `${ctx.dataset.label}: ${value.toLocaleString()}`;
+                },
             },
-            grid: { display: false },
-            border: { display: false },
         },
+    },
+    scales: {
+        x: { ticks: { color: axisColor }, grid: { display: false }, border: { display: false } },
+        y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor }, border: { display: false } },
+        y1: { beginAtZero: true, position: 'right', min: 0, max: 100, ticks: { color: '#fb923c', callback: (v) => `${v}%` }, grid: { display: false }, border: { display: false } },
     },
 };
 
-const regressionForecast = (series, clamp = null) => {
-    if (series.length === 0) {
-        return 0;
-    }
+/* ── Weekly bar ── */
+const weeklyBarData = computed(() => ({
+    labels: (props.weeklyData || []).map((d) => d.label),
+    datasets: [
+        { label: 'OK', data: (props.weeklyData || []).map((d) => Number(d.ok || 0)), backgroundColor: '#f59e0b', borderRadius: 6 },
+        { label: 'NG', data: (props.weeklyData || []).map((d) => Number(d.ng || 0)), backgroundColor: '#ef4444', borderRadius: 6 },
+    ],
+}));
 
-    if (series.length === 1) {
-        return series[0];
-    }
-
-    const n = series.length;
-    const meanX = (n - 1) / 2;
-    const meanY = series.reduce((sum, value) => sum + value, 0) / n;
-
-    let numerator = 0;
-    let denominator = 0;
-
-    series.forEach((value, index) => {
-        numerator += (index - meanX) * (value - meanY);
-        denominator += (index - meanX) ** 2;
-    });
-
-    const slope = denominator === 0 ? 0 : numerator / denominator;
-    const intercept = meanY - (slope * meanX);
-    let projection = intercept + (slope * n);
-
-    if (clamp) {
-        projection = Math.min(clamp.max, Math.max(clamp.min, projection));
-    }
-
-    return projection;
+const weeklyBarOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#e7e5e4', usePointStyle: true, pointStyle: 'circle', padding: 12 } }, tooltip: tooltipStyle },
+    scales: {
+        x: { stacked: true, ticks: { color: axisColor }, grid: { display: false }, border: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor }, border: { display: false } },
+    },
 };
 
-const forecastSummary = computed(() => {
-    const totals = monthlySeries.value.rows.map((item) => item.total);
-    const yields = monthlySeries.value.rows.map((item) => item.yield);
-    const nextTotal = Math.max(0, Math.round(regressionForecast(totals)));
-    const nextYield = regressionForecast(yields, { min: 0, max: 100 });
-    const latest = monthlySeries.value.rows.at(-1);
-    const delta = latest ? Number((nextYield - latest.yield).toFixed(1)) : 0;
+/* ── Forecast ── */
+const regressionForecast = (series, clamp = null) => {
+    if (!series.length) return 0;
+    if (series.length === 1) return series[0];
+    const n = series.length;
+    const mx = (n - 1) / 2;
+    const my = series.reduce((s, v) => s + v, 0) / n;
+    let num = 0, den = 0;
+    series.forEach((v, i) => { num += (i - mx) * (v - my); den += (i - mx) ** 2; });
+    const slope = den === 0 ? 0 : num / den;
+    let proj = my - (slope * mx) + (slope * n);
+    if (clamp) proj = Math.min(clamp.max, Math.max(clamp.min, proj));
+    return proj;
+};
 
-    return {
-        nextTotal,
-        nextYield: Number(nextYield.toFixed(1)),
-        delta,
-        latestLabel: latest?.label || '-',
-    };
+const forecast = computed(() => {
+    const totals = monthlySeries.value.map((m) => m.total);
+    const yields = monthlySeries.value.map((m) => m.yield);
+    const nextTotal = Math.max(0, Math.round(regressionForecast(totals)));
+    const nextYield = Number(regressionForecast(yields, { min: 0, max: 100 }).toFixed(1));
+    const latest = monthlySeries.value.at(-1);
+    const delta = latest ? Number((nextYield - latest.yield).toFixed(1)) : 0;
+    const best = monthlySeries.value.reduce((b, m) => m.yield > b.yield ? m : b, { label: '-', yield: 0 });
+    const worst = monthlySeries.value.reduce((w, m) => {
+        if (w.label === '-') return m;
+        return m.yield < w.yield ? m : w;
+    }, { label: '-', yield: 0 });
+    return { nextTotal, nextYield, delta, latestLabel: latest?.label || '-', best, worst };
 });
 
-const archiveHighlights = computed(() => ([
-    {
-        label: 'Best Month',
-        value: monthlySeries.value.bestMonth.label,
-        note: `${formatPercent(monthlySeries.value.bestMonth.yield)} yield`,
-    },
-    {
-        label: 'Weakest Month',
-        value: monthlySeries.value.weakestMonth.label,
-        note: `${formatPercent(monthlySeries.value.weakestMonth.yield)} yield`,
-    },
-    {
-        label: 'Forecast',
-        value: `${formatPercent(forecastSummary.value.nextYield)}`,
-        note: `${forecastSummary.value.delta >= 0 ? '+' : ''}${forecastSummary.value.delta.toFixed(1)} pts vs ${forecastSummary.value.latestLabel}`,
-    },
-]));
-
-const monthlyHighlights = computed(() => {
-    const totalTests = monthlySeries.value.rows.reduce((sum, row) => sum + row.total, 0);
-    const averageYield = monthlySeries.value.rows.length
-        ? monthlySeries.value.rows.reduce((sum, row) => sum + row.yield, 0) / monthlySeries.value.rows.length
-        : 0;
+const monthlyInsights = computed(() => {
+    const latest = monthlySeries.value.at(-1) || { label: '-', total: 0, yield: 0, ngRate: 0 };
+    const previous = monthlySeries.value.at(-2);
+    const totalHistory = monthlySeries.value.reduce((sum, month) => sum + month.total, 0);
+    const delta = previous ? latest.yield - previous.yield : 0;
 
     return [
         {
-            label: '6-Month Total',
-            value: formatNumber(totalTests),
-            note: 'all recorded tests',
+            label: 'Latest Month',
+            value: latest.label,
+            note: previous ? `vs ${previous.label}` : 'current period edge',
         },
         {
-            label: 'Average Yield',
-            value: formatPercent(averageYield),
-            note: 'across history window',
+            label: 'Latest Volume',
+            value: fmt(latest.total),
+            note: `${fmt(totalHistory)} total in view`,
         },
         {
-            label: 'Next Yield',
-            value: formatPercent(forecastSummary.value.nextYield),
-            note: 'forecast line',
+            label: 'Latest Split',
+            value: `${pct(latest.yield)} / ${pct(latest.ngRate)}`,
+            note: 'OK % / NG %',
+        },
+        {
+            label: 'Yield Change',
+            value: `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts`,
+            note: previous ? `compared with ${previous.label}` : 'no prior month',
         },
     ];
 });
-
-const historyBars = computed(() => ({
-    labels: (props.weeklyData || []).map((item) => item.label),
-    datasets: [{
-        data: (props.weeklyData || []).map((item) => Number(item.ok || 0) + Number(item.ng || 0)),
-        backgroundColor: '#fb923c',
-        borderRadius: 10,
-    }],
-}));
 </script>
 
 <template>
@@ -476,207 +259,121 @@ const historyBars = computed(() => ({
     <AuthenticatedLayout>
         <template #title>Dashboard</template>
 
-        <div class="dashboard-clean space-y-6">
-            <section class="hero-panel">
-                <div class="hero-panel__copy">
-                    <div class="dashboard-kicker">QC Dashboard</div>
-                    <h1 class="hero-panel__title">Read the lab in one glance.</h1>
-                    <p class="hero-panel__text">
-                        The layout below keeps only the essentials: workload, OK/NG quality, daily movement, monthly history, and a simple forward view.
-                    </p>
-                </div>
-
-                <div class="hero-panel__aside">
-                    <div class="hero-panel__controls">
-                        <label class="hero-select">
-                            <span>Period</span>
-                            <select v-model="selectedPeriod" :disabled="isChangingPeriod">
-                                <option v-for="option in periodOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                            </select>
-                        </label>
-                        <div class="hero-badge">
-                            <span class="hero-badge__dot"></span>
-                            {{ currentPeriodLabel }}
-                        </div>
-                    </div>
-
-                    <div class="hero-quick-grid">
-                        <div v-for="item in heroQuickStats" :key="item.label" class="hero-quick-card">
-                            <span>{{ item.label }}</span>
-                            <strong>{{ item.value }}</strong>
-                            <small>{{ item.note }}</small>
-                        </div>
+        <div class="db" :class="{ 'db--loading': isChangingPeriod }">
+            <!-- ═══ HEADER ═══ -->
+            <header class="db-header">
+                <div class="db-header__left">
+                    <h1 class="db-header__title">QC Dashboard</h1>
+                    <div class="db-badge">
+                        <span class="db-badge__dot"></span>
+                        {{ currentPeriodLabel }}
                     </div>
                 </div>
-            </section>
+                <label class="db-period">
+                    <select v-model="selectedPeriod" :disabled="isChangingPeriod">
+                        <option v-for="o in periodOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+                    </select>
+                </label>
+            </header>
 
-            <section class="summary-grid">
-                <article v-for="card in summaryCards" :key="card.label" class="summary-card" :data-tone="card.tone">
-                    <div class="summary-card__label">{{ card.label }}</div>
-                    <div class="summary-card__value">{{ card.value }}</div>
-                    <div class="summary-card__note">{{ card.note }}</div>
+            <!-- ═══ KPI STRIP ═══ -->
+            <section class="kpi-strip">
+                <article v-for="card in kpiCards" :key="card.label" class="kpi" :class="{ 'kpi--accent': card.accent, 'kpi--danger': card.danger }">
+                    <div class="kpi__label">{{ card.label }}</div>
+                    <div class="kpi__value">{{ card.value }}</div>
                 </article>
             </section>
 
-            <section class="dashboard-main">
-                <article class="surface-panel surface-panel--quality">
-                    <div class="panel-head">
-                        <div>
-                            <div class="dashboard-kicker">Quality Summary</div>
-                            <h2 class="panel-title">OK / NG overview</h2>
-                            <p class="panel-subtitle">See the pass-fail split immediately, without digging into tables.</p>
+            <!-- ═══ ROW: Quality Doughnut + Daily Trend ═══ -->
+            <section class="chart-row">
+                <article class="card card--doughnut">
+                    <div class="card__head">OK / NG Ratio</div>
+                    <div class="doughnut-wrap">
+                        <DoughnutChart :data="qualityChartData" :options="doughnutOpts" />
+                        <div class="doughnut-center">
+                            <div class="doughnut-center__ok"><strong>{{ pct(metrics.yieldRate) }}</strong> <span>OK</span></div>
+                            <div class="doughnut-center__ng"><strong>{{ pct(metrics.defectRate) }}</strong> <span>NG</span></div>
                         </div>
                     </div>
-
-                    <div class="quality-layout">
-                        <div class="quality-chart">
-                            <DoughnutChart :data="qualityChartData" :options="doughnutOptions" />
-                            <div class="quality-chart__center">
-                                <strong>{{ formatPercent(metrics.yieldRate) }}</strong>
-                                <span>Yield</span>
-                            </div>
+                    <div class="doughnut-legend">
+                        <div class="doughnut-legend__item">
+                            <span class="dot dot--ok"></span>
+                            <span>OK</span>
+                            <strong>{{ fmt(metrics.okCount) }}</strong>
                         </div>
-
-                        <div class="quality-stats">
-                            <div class="quality-stat">
-                                <span>OK</span>
-                                <strong>{{ formatNumber(metrics.okCount) }}</strong>
-                            </div>
-                            <div class="quality-stat">
-                                <span>NG</span>
-                                <strong>{{ formatNumber(metrics.ngCount) }}</strong>
-                            </div>
-                            <div class="quality-stat">
-                                <span>Pending</span>
-                                <strong>{{ formatNumber(metrics.pendingCount) }}</strong>
-                            </div>
-                            <div class="quality-stat">
-                                <span>Today</span>
-                                <strong>{{ formatNumber(metrics.todayOK + metrics.todayNG) }}</strong>
-                            </div>
+                        <div class="doughnut-legend__item">
+                            <span class="dot dot--ng"></span>
+                            <span>NG</span>
+                            <strong>{{ fmt(metrics.ngCount) }}</strong>
                         </div>
-                    </div>
-
-                    <div class="quality-strip">
-                        <div v-for="item in qualitySummaryItems" :key="item.label" class="quality-strip__item">
-                            <span>{{ item.label }}</span>
-                            <strong>{{ item.value }}</strong>
-                            <small>{{ item.note }}</small>
+                        <div class="doughnut-legend__item">
+                            <span class="dot dot--today"></span>
+                            <span>Today</span>
+                            <strong>{{ fmt(metrics.todayOK + metrics.todayNG) }}</strong>
                         </div>
                     </div>
                 </article>
 
-                <article class="surface-panel">
-                    <div class="panel-head">
-                        <div>
-                            <div class="dashboard-kicker">Daily Trend</div>
-                            <h2 class="panel-title">Daily OK / NG movement</h2>
-                            <p class="panel-subtitle">Quickly spot which day rose, dipped, or produced more failures.</p>
-                        </div>
-                        <div class="panel-note">Peak: {{ dailySeries.peak.label }} ({{ formatNumber(dailySeries.peak.total) }})</div>
-                    </div>
-
+                <article class="card card--chart">
+                    <div class="card__head">Daily OK / NG Trend</div>
                     <Deferred data="dailyData">
-                        <template #fallback>
-                            <div class="chart-shell"></div>
-                        </template>
+                        <template #fallback><div class="shimmer"></div></template>
+                        <div class="chart-area"><LineChart :data="dailyTrendData" :options="lineOpts" /></div>
+                    </Deferred>
+                </article>
+            </section>
 
-                        <div class="chart-wrap">
-                            <LineChart :data="dailyTrendData" :options="lineOptions" />
-                        </div>
+            <!-- ═══ ROW: Monthly Trend + Forecast & Weekly ═══ -->
+            <section class="chart-row chart-row--bottom">
+                <article class="card card--chart card--monthly">
+                    <div class="card__head">Monthly Tests, OK % and NG %</div>
+                    <Deferred data="monthlyData">
+                        <template #fallback><div class="shimmer shimmer--tall"></div></template>
+                        <div class="chart-area chart-area--tall"><BarChart :data="monthlyTrendData" :options="monthlyMixedOpts" /></div>
                     </Deferred>
 
-                    <div class="insight-grid">
-                        <div v-for="item in dailyHighlights" :key="item.label" class="insight-card">
-                            <span>{{ item.label }}</span>
-                            <strong>{{ item.value }}</strong>
-                            <small>{{ item.note }}</small>
+                    <div class="monthly-insights">
+                        <div v-for="item in monthlyInsights" :key="item.label" class="monthly-insight">
+                            <div class="monthly-insight__label">{{ item.label }}</div>
+                            <div class="monthly-insight__value">{{ item.value }}</div>
+                            <div class="monthly-insight__note">{{ item.note }}</div>
                         </div>
                     </div>
                 </article>
-            </section>
 
-            <section class="dashboard-secondary">
-                <article class="surface-panel surface-panel--monthly">
-                    <div class="panel-head">
-                        <div>
-                            <div class="dashboard-kicker">Monthly History</div>
-                            <h2 class="panel-title">Monthly history and yield trend</h2>
-                            <p class="panel-subtitle">Read the past clearly before trusting the forecast.</p>
-                        </div>
-                    </div>
-
-                    <div class="monthly-layout">
-                        <Deferred data="monthlyData">
-                            <template #fallback>
-                                <div class="chart-shell chart-shell--tall"></div>
-                            </template>
-
-                            <div class="chart-wrap chart-wrap--tall chart-wrap--monthly">
-                                <BarChart :data="monthlyTrendData" :options="monthlyMixedOptions" />
+                <div class="side-stack">
+                    <article class="card card--forecast">
+                        <div class="card__head">Forecast</div>
+                        <div class="forecast-grid">
+                            <div class="fc">
+                                <div class="fc__label">Next Month Tests</div>
+                                <div class="fc__value">{{ fmt(forecast.nextTotal) }}</div>
                             </div>
-                        </Deferred>
-
-                        <div class="monthly-side">
-                            <div class="insight-grid insight-grid--monthly insight-grid--stack">
-                                <div v-for="item in monthlyHighlights" :key="item.label" class="insight-card">
-                                    <span>{{ item.label }}</span>
-                                    <strong>{{ item.value }}</strong>
-                                    <small>{{ item.note }}</small>
+                            <div class="fc fc--accent">
+                                <div class="fc__label">Next Month OK %</div>
+                                <div class="fc__value">{{ pct(forecast.nextYield) }}</div>
+                                <div class="fc__delta" :class="forecast.delta >= 0 ? 'fc__delta--up' : 'fc__delta--down'">
+                                    {{ forecast.delta >= 0 ? '+' : '' }}{{ forecast.delta.toFixed(1) }} pts
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </article>
-
-                <div class="dashboard-secondary__aside">
-                    <article class="surface-panel surface-panel--stack">
-                        <div class="panel-head">
-                            <div>
-                                <div class="dashboard-kicker">Forecast</div>
-                                <h2 class="panel-title">Simple next-step view</h2>
-                                <p class="panel-subtitle">A lightweight projection from recent monthly direction.</p>
+                            <div class="fc">
+                                <div class="fc__label">Best Month</div>
+                                <div class="fc__value">{{ forecast.best.label }}</div>
+                                <div class="fc__sub">{{ pct(forecast.best.yield) }}</div>
                             </div>
-                        </div>
-
-                        <div class="forecast-card">
-                            <span>Projected next month tests</span>
-                            <strong>{{ formatNumber(forecastSummary.nextTotal) }}</strong>
-                        </div>
-
-                        <div class="forecast-card forecast-card--accent">
-                            <span>Projected next month yield</span>
-                            <strong>{{ formatPercent(forecastSummary.nextYield) }}</strong>
-                            <small>{{ forecastSummary.delta >= 0 ? '+' : '' }}{{ forecastSummary.delta.toFixed(1) }} pts vs {{ forecastSummary.latestLabel }}</small>
-                        </div>
-
-                        <div class="history-highlights">
-                            <div v-for="item in archiveHighlights" :key="item.label" class="history-highlight">
-                                <span>{{ item.label }}</span>
-                                <strong>{{ item.value }}</strong>
-                                <small>{{ item.note }}</small>
+                            <div class="fc">
+                                <div class="fc__label">Worst Month</div>
+                                <div class="fc__value">{{ forecast.worst.label }}</div>
+                                <div class="fc__sub">{{ pct(forecast.worst.yield) }}</div>
                             </div>
                         </div>
                     </article>
 
-                    <article class="surface-panel surface-panel--compact">
-                        <div class="panel-head">
-                            <div>
-                                <div class="dashboard-kicker">Weekly Snapshot</div>
-                                <h2 class="panel-title">Recent 7-day volume</h2>
-                                <p class="panel-subtitle">A compact volume check that balances the monthly block.</p>
-                            </div>
-                            <div class="panel-note">{{ formatNumber(dailySeries.total) }} total checks</div>
-                        </div>
-
+                    <article class="card card--chart card--compact">
+                        <div class="card__head">Weekly OK / NG</div>
                         <Deferred data="weeklyData">
-                            <template #fallback>
-                                <div class="chart-shell chart-shell--short"></div>
-                            </template>
-
-                            <div class="chart-wrap chart-wrap--short">
-                                <BarChart :data="historyBars" :options="barOptions" />
-                            </div>
+                            <template #fallback><div class="shimmer shimmer--short"></div></template>
+                            <div class="chart-area chart-area--short"><BarChart :data="weeklyBarData" :options="weeklyBarOpts" /></div>
                         </Deferred>
                     </article>
                 </div>
@@ -686,526 +383,308 @@ const historyBars = computed(() => ({
 </template>
 
 <style scoped>
-.dashboard-clean {
-    position: relative;
-}
-
-.hero-panel,
-.surface-panel,
-.summary-card {
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: linear-gradient(180deg, rgba(17, 13, 11, 0.94), rgba(10, 9, 8, 0.97));
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.2);
-}
-
-.hero-panel {
+/* ── Base ── */
+.db {
     display: grid;
-    gap: 1.75rem;
-    border-radius: 30px;
-    padding: 1.8rem;
-    background:
-        radial-gradient(circle at top right, rgba(251, 146, 60, 0.12), transparent 24%),
-        linear-gradient(135deg, rgba(15, 12, 11, 0.98), rgba(25, 18, 14, 0.95));
+    gap: 1.25rem;
+    transition: opacity 160ms ease;
 }
+.db--loading { opacity: 0.6; pointer-events: none; }
 
-.hero-panel__aside {
-    display: grid;
+/* ── Header ── */
+.db-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
     gap: 1rem;
 }
-
-.hero-panel__title {
-    margin-top: 0.35rem;
-    max-width: 11ch;
-    font-size: clamp(2.1rem, 3vw, 3.35rem);
-    line-height: 0.92;
-    letter-spacing: -0.05em;
-    color: #fff7ed;
-}
-
-.hero-panel__text {
-    margin-top: 0.9rem;
-    max-width: 48rem;
-    color: rgba(231, 229, 228, 0.78);
-    line-height: 1.7;
-}
-
-.hero-panel__controls {
+.db-header__left {
     display: flex;
+    align-items: center;
+    gap: 1rem;
     flex-wrap: wrap;
-    gap: 0.9rem;
-    align-items: flex-end;
 }
-
-.hero-select,
-.hero-badge {
-    display: inline-flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    border-radius: 18px;
-    padding: 0.85rem 1rem;
-    background: rgba(0, 0, 0, 0.22);
-}
-
-.hero-select span,
-.hero-badge {
-    font-size: 0.75rem;
+.db-header__title {
+    font-size: 1.5rem;
     font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    color: #fff7ed;
+    letter-spacing: -0.03em;
+}
+.db-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(251,146,60,0.12);
+    font-size: 0.82rem;
+    font-weight: 600;
     color: #fdba74;
 }
-
-.hero-select select {
-    border: 0;
-    background: transparent;
-    color: #fafaf9;
-    font-size: 0.95rem;
-    font-weight: 600;
-    outline: none;
-}
-
-.hero-badge {
-    align-items: flex-start;
-    justify-content: center;
-    min-width: 170px;
-    color: #f5f5f4;
-}
-
-.hero-quick-grid {
-    display: grid;
-    gap: 0.85rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.hero-quick-card {
-    border-radius: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.95rem 1rem;
-}
-
-.hero-quick-card span,
-.hero-quick-card small {
-    display: block;
-}
-
-.hero-quick-card span {
-    color: rgba(231, 229, 228, 0.58);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.hero-quick-card strong {
-    display: block;
-    margin-top: 0.45rem;
-    color: #fff7ed;
-    font-size: 1.55rem;
-    font-weight: 650;
-}
-
-.hero-quick-card small {
-    margin-top: 0.4rem;
-    color: #d6d3d1;
-}
-
-.hero-badge__dot {
-    width: 0.6rem;
-    height: 0.6rem;
-    border-radius: 999px;
+.db-badge__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
     background: #fb923c;
-    box-shadow: 0 0 0 6px rgba(251, 146, 60, 0.14);
+    box-shadow: 0 0 0 4px rgba(251,146,60,0.18);
 }
-
-.dashboard-kicker {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #fb923c;
+.db-period select {
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    background: rgba(0,0,0,0.3);
+    color: #fafaf9;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.55rem 1rem;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 160ms;
 }
+.db-period select:hover { border-color: rgba(251,146,60,0.35); }
+.db-period select option { background: #1c1917; color: #fafaf9; }
 
-.summary-grid {
+/* ── KPI Strip ── */
+.kpi-strip {
     display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    grid-template-columns: repeat(5, 1fr);
 }
-
-.summary-card {
-    border-radius: 24px;
-    padding: 1.2rem;
+.kpi {
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(20,16,13,0.95), rgba(12,10,9,0.97));
+    padding: 1.1rem 1.25rem;
+    transition: border-color 200ms, transform 200ms;
 }
-
-.summary-card[data-tone='amber'] {
-    background: linear-gradient(180deg, rgba(68, 36, 14, 0.96), rgba(24, 15, 11, 0.98));
-}
-
-.summary-card[data-tone='orange'] {
-    background: linear-gradient(180deg, rgba(58, 28, 12, 0.96), rgba(24, 15, 11, 0.98));
-}
-
-.summary-card__label {
+.kpi:hover { border-color: rgba(251,146,60,0.2); transform: translateY(-2px); }
+.kpi--accent { border-color: rgba(245,158,11,0.25); background: linear-gradient(135deg, rgba(60,30,10,0.7), rgba(20,14,10,0.95)); }
+.kpi__label {
     font-size: 0.78rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.52);
+    color: rgba(255,255,255,0.55);
 }
-
-.summary-card__value {
-    margin-top: 0.7rem;
-    font-size: 2.1rem;
-    font-weight: 650;
+.kpi--accent .kpi__label { color: #fdba74; }
+.kpi--danger { border-color: rgba(239,68,68,0.25); background: linear-gradient(135deg, rgba(60,15,15,0.7), rgba(20,10,10,0.95)); }
+.kpi--danger .kpi__label { color: #fca5a5; }
+.kpi--danger .kpi__value { color: #fecaca; }
+.kpi__value {
+    margin-top: 0.4rem;
+    font-size: 1.85rem;
+    font-weight: 700;
     letter-spacing: -0.04em;
     color: #fff7ed;
+    line-height: 1.1;
 }
 
-.summary-card__note {
-    margin-top: 0.55rem;
-    color: #d6d3d1;
-    font-size: 0.92rem;
+/* ── Cards ── */
+.card {
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(20,16,13,0.95), rgba(12,10,9,0.97));
+    padding: 1.25rem;
+    overflow: hidden;
+    transition: border-color 200ms;
+}
+.card:hover { border-color: rgba(251,146,60,0.18); }
+.card__head {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #e7e5e4;
+    margin-bottom: 1rem;
 }
 
-.dashboard-main,
-.dashboard-secondary {
+/* ── Chart rows ── */
+.chart-row {
     display: grid;
     gap: 1rem;
-    align-items: start;
-    grid-template-columns: 1.1fr 1fr;
-}
-
-.dashboard-secondary {
-    grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
-}
-
-.dashboard-secondary__aside {
-    display: grid;
-    gap: 1rem;
-    align-content: start;
-}
-
-.surface-panel {
-    border-radius: 26px;
-    padding: 1.4rem;
-}
-
-.surface-panel--quality {
-    background:
-        radial-gradient(circle at top right, rgba(251, 146, 60, 0.14), transparent 22%),
-        linear-gradient(180deg, rgba(19, 15, 13, 0.98), rgba(10, 9, 8, 0.98));
-}
-
-.surface-panel--stack {
-    display: grid;
-    gap: 0.9rem;
-    align-content: start;
-}
-
-.surface-panel--monthly {
-    padding-bottom: 1.2rem;
-}
-
-.surface-panel--compact {
-    padding-top: 1.2rem;
-}
-
-.panel-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1.1rem;
-}
-
-.panel-title {
-    margin-top: 0.35rem;
-    font-size: 1.4rem;
-    font-weight: 600;
-    letter-spacing: -0.03em;
-    color: #fff7ed;
-}
-
-.panel-subtitle {
-    margin-top: 0.45rem;
-    max-width: 36rem;
-    color: rgba(214, 211, 209, 0.72);
-    line-height: 1.6;
-}
-
-.panel-note {
-    color: #d6d3d1;
-    font-size: 0.88rem;
-}
-
-.quality-layout {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: minmax(220px, 0.86fr) minmax(0, 1.14fr);
+    grid-template-columns: minmax(280px, 0.42fr) minmax(0, 1fr);
     align-items: stretch;
 }
-
-.quality-chart {
-    position: relative;
-    height: 240px;
+.chart-row--bottom {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.48fr);
+    align-items: start;
+}
+.side-stack {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
 }
 
-.quality-chart__center {
+/* ── Doughnut ── */
+.card--doughnut { display: flex; flex-direction: column; }
+.doughnut-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 200px;
+    max-height: 280px;
+}
+.doughnut-center {
     position: absolute;
     inset: 50% auto auto 50%;
     transform: translate(-50%, -50%);
-    display: grid;
-    gap: 0.25rem;
     text-align: center;
     pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
 }
-
-.quality-chart__center strong {
-    font-size: 2rem;
+.doughnut-center__ok strong, .doughnut-center__ng strong {
+    font-weight: 700;
     color: #fff7ed;
+    line-height: 1;
 }
-
-.quality-chart__center span {
-    color: rgba(231, 229, 228, 0.72);
+.doughnut-center__ok strong { font-size: 1.65rem; }
+.doughnut-center__ng strong { font-size: 1.1rem; color: #fca5a5; }
+.doughnut-center__ok span, .doughnut-center__ng span {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(231,229,228,0.55);
+    margin-left: 0.2rem;
+}
+.doughnut-legend {
+    display: flex;
+    gap: 1.25rem;
+    justify-content: center;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.doughnut-legend__item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
+    color: #a8a29e;
 }
+.doughnut-legend__item strong { color: #e7e5e4; font-size: 0.95rem; }
+.dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; flex-shrink: 0; }
+.dot--ok { background: #f59e0b; }
+.dot--ng { background: #ef4444; }
+.dot--today { background: #8b5cf6; }
 
-.quality-stats {
-    display: grid;
-    gap: 0.8rem;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-content: start;
-    grid-auto-rows: minmax(0, 1fr);
-}
-
-.quality-strip {
-    display: grid;
-    gap: 0.75rem;
-    margin-top: 1rem;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.quality-strip__item {
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    background: rgba(255, 255, 255, 0.025);
-    padding: 0.85rem 0.95rem;
-}
-
-.quality-strip__item span,
-.quality-strip__item small {
-    display: block;
-}
-
-.quality-strip__item span {
-    color: rgba(231, 229, 228, 0.58);
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.quality-strip__item strong {
-    display: block;
-    margin-top: 0.4rem;
-    color: #fff7ed;
-    font-size: 1.1rem;
-}
-
-.quality-strip__item small {
-    margin-top: 0.35rem;
-    color: #d6d3d1;
-}
-
-.quality-stat,
-.forecast-card,
-.history-highlight {
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.035);
-    padding: 1rem;
-}
-
-.quality-stat span,
-.forecast-card span,
-.history-highlight span {
-    display: block;
-    color: rgba(231, 229, 228, 0.62);
-    font-size: 0.76rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.quality-stat strong,
-.forecast-card strong,
-.history-highlight strong {
-    display: block;
-    margin-top: 0.55rem;
-    color: #fff7ed;
-    font-size: 1.5rem;
-    font-weight: 650;
-}
-
-.forecast-card small,
-.history-highlight small {
-    display: block;
-    margin-top: 0.45rem;
-    color: #d6d3d1;
-}
-
-.forecast-card--accent {
-    border-color: rgba(251, 146, 60, 0.22);
-    background: rgba(251, 146, 60, 0.08);
-}
-
-.history-highlights {
-    display: grid;
-    gap: 0.8rem;
-}
-
-.monthly-layout {
+/* ── Chart areas ── */
+.chart-area { height: 280px; }
+.chart-area--tall { height: 320px; }
+.chart-area--short { height: 200px; }
+.card--compact { padding: 1rem; }
+.card--compact .card__head { margin-bottom: 0.65rem; }
+.card--monthly {
     display: grid;
     gap: 1rem;
-    align-items: stretch;
-    grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.75fr);
 }
 
-.monthly-side {
+.monthly-insights {
     display: grid;
-    align-content: stretch;
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-top: 0.9rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
 }
 
-.insight-grid {
-    display: grid;
-    gap: 0.8rem;
-    margin-top: 1rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+.monthly-insight {
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.03);
+    padding: 0.85rem;
 }
 
-.insight-grid--monthly {
-    margin-top: 0;
-}
-
-.insight-grid--stack {
-    grid-template-columns: 1fr;
-    height: 100%;
-}
-
-.insight-card {
-    border-radius: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    background: rgba(255, 255, 255, 0.03);
-    padding: 0.95rem 1rem;
-}
-
-.insight-card span,
-.insight-card small {
-    display: block;
-}
-
-.insight-card span {
-    color: rgba(231, 229, 228, 0.58);
-    font-size: 0.72rem;
+.monthly-insight__label {
+    font-size: 0.68rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.09em;
     text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
 }
 
-.insight-card strong {
-    display: block;
-    margin-top: 0.45rem;
+.monthly-insight__value {
+    margin-top: 0.35rem;
     font-size: 1.2rem;
+    font-weight: 700;
     color: #fff7ed;
+    line-height: 1.15;
 }
 
-.insight-card small {
-    margin-top: 0.4rem;
-    color: #d6d3d1;
+.monthly-insight__note {
+    margin-top: 0.2rem;
+    font-size: 0.8rem;
+    color: #a8a29e;
 }
 
-.chart-wrap {
-    height: 320px;
+/* ── Forecast ── */
+.card--forecast { padding: 1.1rem; }
+.forecast-grid {
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: 1fr 1fr;
+}
+.fc {
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.03);
+    padding: 0.85rem;
+}
+.fc--accent {
+    border-color: rgba(251,146,60,0.2);
+    background: rgba(251,146,60,0.06);
+}
+.fc__label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+}
+.fc--accent .fc__label { color: #fdba74; }
+.fc__value {
+    margin-top: 0.35rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff7ed;
+    line-height: 1.15;
+}
+.fc__delta {
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.fc__delta--up { color: #22c55e; }
+.fc__delta--down { color: #ef4444; }
+.fc__sub {
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    color: #a8a29e;
 }
 
-.chart-wrap--tall {
-    height: 310px;
-}
-
-.chart-wrap--monthly {
-    height: 100%;
-    min-height: 310px;
-}
-
-.chart-wrap--short {
-    height: 220px;
-}
-
-.chart-shell {
-    height: 320px;
-    border-radius: 22px;
-    background: linear-gradient(90deg, rgba(41, 37, 36, 0.9), rgba(68, 64, 60, 0.95), rgba(41, 37, 36, 0.9));
+/* ── Shimmer ── */
+.shimmer {
+    height: 280px;
+    border-radius: 16px;
+    background: linear-gradient(90deg, rgba(41,37,36,0.9), rgba(68,64,60,0.95), rgba(41,37,36,0.9));
     background-size: 200% 100%;
-    animation: dashboard-shimmer 1.6s linear infinite;
+    animation: shimmer 1.6s linear infinite;
 }
+.shimmer--tall { height: 320px; }
+.shimmer--short { height: 200px; }
 
-.chart-shell--tall {
-    height: 330px;
-}
-
-.chart-shell--short {
-    height: 220px;
-}
-
-@keyframes dashboard-shimmer {
+@keyframes shimmer {
     from { background-position: 200% 0; }
     to { background-position: -200% 0; }
 }
 
+/* ── Responsive ── */
 @media (max-width: 1023px) {
-    .summary-grid,
-    .dashboard-main,
-    .dashboard-secondary {
-        grid-template-columns: 1fr;
-    }
-
-    .hero-quick-grid,
-    .insight-grid,
-    .quality-strip {
-        grid-template-columns: 1fr;
-    }
-
-    .quality-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .monthly-layout {
-        grid-template-columns: 1fr;
-    }
+    .chart-row, .chart-row--bottom { grid-template-columns: 1fr; }
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
 }
 
-@media (max-width: 767px) {
-    .hero-panel,
-    .surface-panel,
-    .summary-card {
-        border-radius: 22px;
-    }
-
-    .summary-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .quality-stats {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (min-width: 1024px) {
-    .hero-panel {
-        grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-        align-items: start;
-    }
+@media (max-width: 639px) {
+    .kpi-strip { grid-template-columns: 1fr; }
+    .forecast-grid { grid-template-columns: 1fr; }
+    .monthly-insights { grid-template-columns: 1fr; }
 }
 </style>
