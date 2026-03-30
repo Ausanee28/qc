@@ -40,6 +40,7 @@ class DashboardController extends Controller
             'weeklyData' => Inertia::defer(fn () => $this->getTrendPayload($period)['weeklyData'], 'dashboard-trends'),
             'dailyData' => Inertia::defer(fn () => $this->getTrendPayload($period)['dailyData'], 'dashboard-trends'),
             'monthlyData' => Inertia::defer(fn () => $this->getTrendPayload($period)['monthlyData'], 'dashboard-trends'),
+            'inspectorData' => Inertia::defer(fn () => $this->metricsService->getInspectorData(5, $from, $to)->toArray(), 'dashboard-inspector'),
         ]);
     }
 

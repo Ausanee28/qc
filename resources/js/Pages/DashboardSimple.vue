@@ -21,6 +21,7 @@ const props = defineProps({
     weeklyData: { type: Array, default: () => [] },
     dailyData: { type: Array, default: () => [] },
     monthlyData: { type: Array, default: () => [] },
+    inspectorData: { type: Array, default: () => [] },
 });
 
 const periodOptions = [
@@ -59,6 +60,7 @@ const kpiCards = computed(() => ([
     { label: 'NG %', value: pct(props.metrics.defectRate), accent: false, danger: true },
     { label: 'Jobs', value: fmt(props.metrics.periodJobs) },
     { label: 'Total Tests', value: fmt(props.metrics.totalTests) },
+    { label: 'Avg Time', value: `${fmt(props.metrics.avgTestTime)} min`, icon: true },
     { label: 'Pending', value: fmt(props.metrics.pendingCount) },
 ]));
 
@@ -252,6 +254,7 @@ const monthlyInsights = computed(() => {
         },
     ];
 });
+const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 </script>
 
 <template>
@@ -378,6 +381,31 @@ const monthlyInsights = computed(() => {
                     </article>
                 </div>
             </section>
+
+            <!-- ═══ ROW: Inspector Leaderboard ═══ -->
+            <section class="card card--leaderboard">
+                <div class="card__head">Inspector Leaderboard</div>
+                <Deferred data="inspectorData">
+                    <template #fallback><div class="shimmer shimmer--short"></div></template>
+                    <div v-if="topInspectors.length" class="lb-list">
+                        <div v-for="(ins, idx) in topInspectors" :key="ins.name" class="lb-row">
+                            <div class="lb-rank">{{ idx + 1 }}</div>
+                            <div class="lb-info">
+                                <div class="lb-name">{{ ins.name }}</div>
+                                <div class="lb-meta">{{ fmt(ins.total) }} tests · {{ fmt(ins.ok) }} OK · {{ fmt(ins.ng) }} NG</div>
+                            </div>
+                            <div class="lb-yield">
+                                <div class="lb-yield__value">{{ pct(ins.yield) }}</div>
+                                <div class="lb-yield__label">OK %</div>
+                            </div>
+                            <div class="lb-bar">
+                                <div class="lb-bar__fill" :style="{ width: `${ins.yield}%` }"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="lb-empty">No inspector data for this period.</div>
+                </Deferred>
+            </section>
         </div>
     </AuthenticatedLayout>
 </template>
@@ -448,7 +476,7 @@ const monthlyInsights = computed(() => {
 .kpi-strip {
     display: grid;
     gap: 0.75rem;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
 }
 .kpi {
     border: 1px solid rgba(255,255,255,0.08);
@@ -676,15 +704,95 @@ const monthlyInsights = computed(() => {
     to { background-position: -200% 0; }
 }
 
+/* ── Leaderboard ── */
+.card--leaderboard { padding: 1.25rem; }
+.lb-list { display: grid; gap: 0.5rem; }
+.lb-row {
+    display: grid;
+    grid-template-columns: 2.2rem 1fr auto 120px;
+    gap: 0.85rem;
+    align-items: center;
+    padding: 0.75rem 0.85rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+    transition: border-color 180ms, background 180ms;
+}
+.lb-row:hover {
+    border-color: rgba(251,146,60,0.18);
+    background: rgba(255,255,255,0.04);
+}
+.lb-rank {
+    width: 2.2rem;
+    height: 2.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(251,146,60,0.12);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fdba74;
+}
+.lb-row:nth-child(1) .lb-rank { background: rgba(245,158,11,0.25); color: #f59e0b; }
+.lb-row:nth-child(2) .lb-rank { background: rgba(251,146,60,0.18); color: #fb923c; }
+.lb-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #f5f5f4;
+}
+.lb-meta {
+    margin-top: 0.15rem;
+    font-size: 0.78rem;
+    color: #a8a29e;
+}
+.lb-yield { text-align: right; }
+.lb-yield__value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fbbf24;
+    line-height: 1;
+}
+.lb-yield__label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.4);
+    margin-top: 0.15rem;
+}
+.lb-bar {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    overflow: hidden;
+}
+.lb-bar__fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #f59e0b, #fb923c);
+    transition: width 400ms ease;
+}
+.lb-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #78716c;
+    font-size: 0.9rem;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1023px) {
     .chart-row, .chart-row--bottom { grid-template-columns: 1fr; }
-    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+    .lb-row { grid-template-columns: 2.2rem 1fr auto; }
+    .lb-bar { display: none; }
 }
 
 @media (max-width: 639px) {
-    .kpi-strip { grid-template-columns: 1fr; }
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
     .forecast-grid { grid-template-columns: 1fr; }
     .monthly-insights { grid-template-columns: 1fr; }
+    .lb-row { grid-template-columns: 2rem 1fr; gap: 0.5rem; }
+    .lb-yield { display: none; }
 }
 </style>
