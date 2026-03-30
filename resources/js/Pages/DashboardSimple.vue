@@ -147,7 +147,7 @@ const monthlyTrendData = computed(() => ({
     datasets: [
         { type: 'bar', label: 'Total Tests', data: monthlySeries.value.map((m) => m.total), backgroundColor: 'rgba(245,158,11,0.3)', borderRadius: 8, yAxisID: 'y' },
         { type: 'line', label: 'OK %', data: monthlySeries.value.map((m) => m.yield), borderColor: '#fb923c', backgroundColor: '#fb923c', tension: 0.3, pointRadius: 4, pointHoverRadius: 6, yAxisID: 'y1' },
-        { type: 'line', label: 'NG %', data: monthlySeries.value.map((m) => m.ngRate), borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.3, pointRadius: 4, pointHoverRadius: 6, borderDash: [6, 5], yAxisID: 'y1' },
+        { type: 'line', label: 'NG %', data: monthlySeries.value.map((m) => m.ngRate), borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.3, pointRadius: 4, pointHoverRadius: 6, yAxisID: 'y1' },
     ],
 }));
 
