@@ -30,36 +30,45 @@ class ReportController extends Controller
             'per_page' => (int) ($validatedFilters['per_page'] ?? 25),
         ];
 
-        $summary = Cache::remember(
-            $this->reportCacheKey('summary', $filters),
-            now()->addMinutes(3),
-            fn () => $this->buildResultsSummary($filters['date_from'], $filters['date_to'], $filters['dmc'])
-        );
         $page = LengthAwarePaginator::resolveCurrentPage();
-        $pageResults = Cache::remember(
-            $this->reportCacheKey('page', [...$filters, 'page' => $page]),
-            now()->addMinutes(3),
-            fn () => $this->buildResultsQuery($filters['date_from'], $filters['date_to'], $filters['dmc'])
-                ->forPage($page, $filters['per_page'])
-                ->get()
-        );
-
-        $results = new LengthAwarePaginator(
-            $pageResults,
-            $summary['total_rows'],
-            $filters['per_page'],
-            $page,
-            [
-                'path' => $request->url(),
-                'query' => $request->query(),
-                'pageName' => 'page',
-            ]
-        );
 
         return Inertia::render('Report/Index', [
-            'results' => $results,
-            'summary' => $summary,
             'filters' => $filters,
+            'results' => Inertia::defer(function () use ($filters, $page, $request) {
+                $summary = Cache::remember(
+                    $this->reportCacheKey('summary', $filters),
+                    now()->addMinutes(3),
+                    fn () => $this->buildResultsSummary($filters['date_from'], $filters['date_to'], $filters['dmc'])
+                );
+
+                $pageResults = Cache::remember(
+                    $this->reportCacheKey('page', [...$filters, 'page' => $page]),
+                    now()->addMinutes(3),
+                    fn () => $this->buildResultsQuery($filters['date_from'], $filters['date_to'], $filters['dmc'])
+                        ->forPage($page, $filters['per_page'])
+                        ->get()
+                );
+
+                return new LengthAwarePaginator(
+                    $pageResults,
+                    $summary['total_rows'],
+                    $filters['per_page'],
+                    $page,
+                    [
+                        'path' => $request->url(),
+                        'query' => $request->query(),
+                        'pageName' => 'page',
+                    ]
+                );
+            }, 'report-results'),
+            'summary' => Inertia::defer(
+                fn () => Cache::remember(
+                    $this->reportCacheKey('summary', $filters),
+                    now()->addMinutes(3),
+                    fn () => $this->buildResultsSummary($filters['date_from'], $filters['date_to'], $filters['dmc'])
+                ),
+                'report-results'
+            ),
         ]);
     }
 

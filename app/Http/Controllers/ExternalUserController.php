@@ -20,29 +20,29 @@ class ExternalUserController extends Controller
         $search = trim((string) ($filters['search'] ?? ''));
         $perPage = (int) ($filters['per_page'] ?? 20);
 
-        $externalUsers = ExternalUser::query()
-            ->select(['external_id', 'external_name', 'department_id'])
-            ->with(['department:department_id,department_name'])
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($externalUserQuery) use ($search) {
-                    $externalUserQuery
-                        ->where('external_name', 'like', "%{$search}%")
-                        ->orWhereHas('department', function ($departmentQuery) use ($search) {
-                            $departmentQuery->where('department_name', 'like', "%{$search}%");
-                        });
-                });
-            })
-            ->orderBy('external_name')
-            ->paginate($perPage)
-            ->withQueryString();
-        
         return Inertia::render('MasterData/ExternalUsers/Index', [
-            'externalUsers' => $externalUsers,
             'departments' => Inertia::defer(fn () => Department::query()->select(['department_id', 'department_name'])->orderBy('department_name')->get(), 'master-data-options'),
             'filters' => [
                 'search' => $search,
                 'per_page' => (string) $perPage,
             ],
+            'externalUsers' => Inertia::defer(function () use ($search, $perPage) {
+                return ExternalUser::query()
+                    ->select(['external_id', 'external_name', 'department_id'])
+                    ->with(['department:department_id,department_name'])
+                    ->when($search !== '', function ($query) use ($search) {
+                        $query->where(function ($externalUserQuery) use ($search) {
+                            $externalUserQuery
+                                ->where('external_name', 'like', "%{$search}%")
+                                ->orWhereHas('department', function ($departmentQuery) use ($search) {
+                                    $departmentQuery->where('department_name', 'like', "%{$search}%");
+                                });
+                        });
+                    })
+                    ->orderBy('external_name')
+                    ->paginate($perPage)
+                    ->withQueryString();
+            }, 'master-data-list'),
         ]);
     }
 

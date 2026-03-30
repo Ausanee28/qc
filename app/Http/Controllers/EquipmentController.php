@@ -19,21 +19,21 @@ class EquipmentController extends Controller
         $search = trim((string) ($filters['search'] ?? ''));
         $perPage = (int) ($filters['per_page'] ?? 20);
 
-        $equipments = Equipment::query()
-            ->select(['equipment_id', 'equipment_name'])
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where('equipment_name', 'like', "%{$search}%");
-            })
-            ->orderBy('equipment_name')
-            ->paginate($perPage)
-            ->withQueryString();
-
         return Inertia::render('MasterData/Equipments/Index', [
-            'equipments' => $equipments,
             'filters' => [
                 'search' => $search,
                 'per_page' => (string) $perPage,
             ],
+            'equipments' => Inertia::defer(function () use ($search, $perPage) {
+                return Equipment::query()
+                    ->select(['equipment_id', 'equipment_name'])
+                    ->when($search !== '', function ($query) use ($search) {
+                        $query->where('equipment_name', 'like', "%{$search}%");
+                    })
+                    ->orderBy('equipment_name')
+                    ->paginate($perPage)
+                    ->withQueryString();
+            }, 'master-data-list'),
         ]);
     }
 

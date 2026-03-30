@@ -19,6 +19,14 @@ let activeNavigationVisits = 0;
 let navBusyTimer = null;
 const navBusyDelay = 260;
 
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+            // Keep the app usable even if the browser rejects SW registration.
+        });
+    });
+}
+
 config.set({
     prefetch: {
         cacheFor: '2m',

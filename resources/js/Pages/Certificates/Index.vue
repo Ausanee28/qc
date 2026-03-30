@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Deferred, Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 const props = defineProps({ jobs: Object, filters: Object });
@@ -29,7 +29,7 @@ const visitPage = (url) => {
 };
 
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-const jobRows = computed(() => props.jobs.data ?? []);
+const jobRows = computed(() => props.jobs?.data ?? []);
 </script>
 
 <template>
@@ -54,7 +54,23 @@ const jobRows = computed(() => props.jobs.data ?? []);
             </div>
         </div>
 
-        <div class="cert-grid">
+        <Deferred data="jobs">
+            <template #fallback>
+                <div class="cert-grid">
+                    <div v-for="index in 6" :key="index" class="cert-shell__card">
+                        <div class="cert-shell__line cert-shell__line-sm"></div>
+                        <div class="cert-shell__line cert-shell__line-lg"></div>
+                        <div class="cert-shell__stack">
+                            <div class="cert-shell__line"></div>
+                            <div class="cert-shell__line"></div>
+                            <div class="cert-shell__line cert-shell__line-md"></div>
+                        </div>
+                        <div class="cert-shell__button"></div>
+                    </div>
+                </div>
+            </template>
+
+            <div class="cert-grid">
             <div v-for="j in jobRows" :key="j.transaction_id" class="cert-card">
                 <div style="display:flex;justify-content:space-between;margin-bottom:12px">
                     <div>
@@ -80,15 +96,17 @@ const jobRows = computed(() => props.jobs.data ?? []);
             <div v-if="!jobRows.length" style="grid-column:1/-1;text-align:center;padding:40px;color:#a8a29e;font-size:13px;background:rgba(18,18,18,0.92);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
                 No certificates found for this period.
             </div>
-        </div>
+            </div>
+        </Deferred>
 
-        <div v-if="(props.jobs.links?.length ?? 0) > 3" class="mt-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 px-5 py-4 text-sm text-stone-300 sm:flex-row sm:items-center sm:justify-between">
+        <Deferred data="jobs">
+        <div v-if="(props.jobs?.links?.length ?? 0) > 3" class="mt-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 px-5 py-4 text-sm text-stone-300 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                Showing {{ jobRows.length }} certificate job(s) on page {{ props.jobs.current_page ?? 1 }}
+                Showing {{ jobRows.length }} certificate job(s) on page {{ props.jobs?.current_page ?? 1 }}
             </div>
             <div class="flex flex-wrap gap-2">
                 <button
-                    v-for="(link, index) in props.jobs.links"
+                    v-for="(link, index) in (props.jobs?.links ?? [])"
                     :key="index"
                     :disabled="!link.url"
                     @click="visitPage(link.url)"
@@ -98,5 +116,79 @@ const jobRows = computed(() => props.jobs.data ?? []);
                 />
             </div>
         </div>
+        </Deferred>
     </AuthenticatedLayout>
 </template>
+
+<style scoped>
+.cert-shell__card,
+.cert-shell__line,
+.cert-shell__button {
+    position: relative;
+    overflow: hidden;
+}
+
+.cert-shell__card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 224px;
+    padding: 18px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(24, 18, 14, 0.92), rgba(12, 12, 12, 0.96));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cert-shell__card::after,
+.cert-shell__line::after,
+.cert-shell__button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+    animation: cert-shell-shimmer 1.25s ease-in-out infinite;
+}
+
+.cert-shell__line,
+.cert-shell__button {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+}
+
+.cert-shell__line {
+    height: 14px;
+}
+
+.cert-shell__line-sm {
+    width: 72px;
+}
+
+.cert-shell__line-md {
+    width: 62%;
+}
+
+.cert-shell__line-lg {
+    width: 84%;
+    height: 18px;
+}
+
+.cert-shell__stack {
+    display: grid;
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.cert-shell__button {
+    margin-top: auto;
+    width: 100%;
+    height: 38px;
+    border-radius: 999px;
+}
+
+@keyframes cert-shell-shimmer {
+    to {
+        transform: translateX(100%);
+    }
+}
+</style>

@@ -18,25 +18,25 @@ class DepartmentController extends Controller
         $search = trim((string) ($filters['search'] ?? ''));
         $perPage = (int) ($filters['per_page'] ?? 20);
 
-        $departments = Department::query()
-            ->select(['department_id', 'department_name', 'internal_phone'])
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($departmentQuery) use ($search) {
-                    $departmentQuery
-                        ->where('department_name', 'like', "%{$search}%")
-                        ->orWhere('internal_phone', 'like', "%{$search}%");
-                });
-            })
-            ->orderBy('department_name')
-            ->paginate($perPage)
-            ->withQueryString();
-
         return Inertia::render('MasterData/Departments/Index', [
-            'departments' => $departments,
             'filters' => [
                 'search' => $search,
                 'per_page' => (string) $perPage,
             ],
+            'departments' => Inertia::defer(function () use ($search, $perPage) {
+                return Department::query()
+                    ->select(['department_id', 'department_name', 'internal_phone'])
+                    ->when($search !== '', function ($query) use ($search) {
+                        $query->where(function ($departmentQuery) use ($search) {
+                            $departmentQuery
+                                ->where('department_name', 'like', "%{$search}%")
+                                ->orWhere('internal_phone', 'like', "%{$search}%");
+                        });
+                    })
+                    ->orderBy('department_name')
+                    ->paginate($perPage)
+                    ->withQueryString();
+            }, 'master-data-list'),
         ]);
     }
 

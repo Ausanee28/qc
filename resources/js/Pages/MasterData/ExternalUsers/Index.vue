@@ -1,7 +1,7 @@
 <script setup>
 import CrudFormModal from '@/Components/CrudFormModal.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Deferred, Head, router, useForm } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
 const props = defineProps({ externalUsers: Object, departments: Array, filters: Object });
@@ -153,6 +153,15 @@ const deleteUser = (id) => {
                 </form>
             </div>
 
+            <Deferred data="externalUsers">
+                <template #fallback>
+                    <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+                        <div class="p-6 space-y-3">
+                            <div v-for="index in 6" :key="index" class="h-12 rounded-lg bg-gray-100 animate-pulse"></div>
+                        </div>
+                    </div>
+                </template>
+
             <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
@@ -190,7 +199,7 @@ const deleteUser = (id) => {
                 </div>
                 <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        Showing {{ externalUsers.from ?? 0 }} to {{ externalUsers.to ?? 0 }} of {{ externalUsers.total ?? 0 }} users
+                        Showing {{ externalUsers?.from ?? 0 }} to {{ externalUsers?.to ?? 0 }} of {{ externalUsers?.total ?? 0 }} users
                     </div>
                     <div class="flex flex-wrap justify-end gap-2">
                         <button
@@ -205,6 +214,7 @@ const deleteUser = (id) => {
                     </div>
                 </div>
             </div>
+            </Deferred>
         </div>
 
         <CrudFormModal :show="showModal" :title="isEditing ? 'Edit External User' : 'New External User'" @close="closeModal">

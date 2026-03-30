@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Deferred, Head, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps({ results: Object, summary: Object, filters: Object });
@@ -49,8 +49,8 @@ const formatTime = (value) => value
     ? new Date(value).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
     : '-';
 
-const rows = computed(() => props.results.data ?? []);
-const totalRows = computed(() => props.summary.total_rows ?? props.results.total ?? 0);
+const rows = computed(() => props.results?.data ?? []);
+const totalRows = computed(() => props.summary?.total_rows ?? props.results?.total ?? 0);
 const visibleTransactionIds = computed(() => [...new Set(rows.value.map((row) => row.transaction_id))]);
 
 const selectedIds = ref([]);
@@ -77,7 +77,7 @@ const toggleRow = (id) => {
 };
 
 watch(
-    () => [props.results.current_page, props.filters.date_from, props.filters.date_to, props.filters.dmc, props.filters.per_page],
+    () => [props.results?.current_page, props.filters.date_from, props.filters.date_to, props.filters.dmc, props.filters.per_page],
     () => {
         selectedIds.value = [];
     },
@@ -208,34 +208,56 @@ const doExport = async () => {
                 </div>
             </section>
             
-            <div class="report-meta">
-                <div class="report-meta__stats">
-                    <div>
-                        Showing <strong>{{ props.results.from ?? 0 }}-{{ props.results.to ?? 0 }}</strong> of <strong>{{ totalRows }}</strong> result(s)
-                    </div>
-                    <div v-if="totalRows > 0" class="report-pill-row">
-                        <div class="report-summary-pill report-summary-pill-ok">{{ props.summary.ok_count ?? 0 }} OK</div>
-                        <div class="report-summary-pill report-summary-pill-ng">{{ props.summary.ng_count ?? 0 }} NG</div>
-                    </div>
-                    <div v-if="hasSelection" class="report-summary-pill report-summary-pill-selected">
-                        {{ selectedIds.length }} job(s) selected
-                    </div>
-                </div>
-                <div class="report-meta__actions">
-                    <button v-if="hasSelection" @click="openExport('selected')" class="export-btn export-btn-primary">
-                        <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        Export Selected
-                    </button>
-                    <button v-if="totalRows > 0" @click="openExport('all')" class="export-btn export-btn-outline">
-                        <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        Export All
-                    </button>
-                </div>
-            </div>
+            <Deferred data="results">
+                <template #fallback>
+                    <section class="card card-fill report-shell">
+                        <div class="report-shell__meta">
+                            <div class="report-shell__line report-shell__line-wide"></div>
+                            <div class="report-shell__pill-row">
+                                <span class="report-shell__pill"></span>
+                                <span class="report-shell__pill"></span>
+                            </div>
+                        </div>
+                        <div class="report-shell__table">
+                            <div v-for="index in 7" :key="index" class="report-shell__row">
+                                <span class="report-shell__cell report-shell__cell-sm"></span>
+                                <span class="report-shell__cell"></span>
+                                <span class="report-shell__cell report-shell__cell-lg"></span>
+                                <span class="report-shell__cell"></span>
+                                <span class="report-shell__cell report-shell__cell-sm"></span>
+                            </div>
+                        </div>
+                    </section>
+                </template>
 
-            <section class="card card-fill">
-                <div class="tbl" style="margin-bottom:0">
-                    <table v-if="rows.length">
+                <div class="report-meta">
+                    <div class="report-meta__stats">
+                        <div>
+                            Showing <strong>{{ props.results?.from ?? 0 }}-{{ props.results?.to ?? 0 }}</strong> of <strong>{{ totalRows }}</strong> result(s)
+                        </div>
+                        <div v-if="totalRows > 0" class="report-pill-row">
+                            <div class="report-summary-pill report-summary-pill-ok">{{ props.summary?.ok_count ?? 0 }} OK</div>
+                            <div class="report-summary-pill report-summary-pill-ng">{{ props.summary?.ng_count ?? 0 }} NG</div>
+                        </div>
+                        <div v-if="hasSelection" class="report-summary-pill report-summary-pill-selected">
+                            {{ selectedIds.length }} job(s) selected
+                        </div>
+                    </div>
+                    <div class="report-meta__actions">
+                        <button v-if="hasSelection" @click="openExport('selected')" class="export-btn export-btn-primary">
+                            <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            Export Selected
+                        </button>
+                        <button v-if="totalRows > 0" @click="openExport('all')" class="export-btn export-btn-outline">
+                            <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            Export All
+                        </button>
+                    </div>
+                </div>
+
+                <section class="card card-fill">
+                    <div class="tbl" style="margin-bottom:0">
+                        <table v-if="rows.length">
                     <thead>
                         <tr>
                             <th style="width:36px;text-align:center">
@@ -282,29 +304,30 @@ const doExport = async () => {
                             </td>
                         </tr>
                     </tbody>
-                    </table>
-                    <div v-else class="report-empty-state">
-                        No results found. Try adjusting the date range or DMC filter.
+                        </table>
+                        <div v-else class="report-empty-state">
+                            No results found. Try adjusting the date range or DMC filter.
+                        </div>
                     </div>
-                </div>
 
-                <div class="report-pagination">
-                    <div class="report-pagination__summary">
-                        Page {{ props.results.current_page ?? 1 }} of {{ props.results.last_page ?? 1 }}
+                    <div class="report-pagination">
+                        <div class="report-pagination__summary">
+                            Page {{ props.results?.current_page ?? 1 }} of {{ props.results?.last_page ?? 1 }}
+                        </div>
+                        <div class="report-pagination__links">
+                            <button
+                                v-for="(link, index) in (props.results?.links ?? [])"
+                                :key="index"
+                                :disabled="!link.url"
+                                @click="visitPage(link.url)"
+                                class="pager-btn"
+                                :class="{ 'pager-btn-active': link.active }"
+                                v-html="link.label"
+                            />
+                        </div>
                     </div>
-                    <div class="report-pagination__links">
-                        <button
-                            v-for="(link, index) in props.results.links"
-                            :key="index"
-                            :disabled="!link.url"
-                            @click="visitPage(link.url)"
-                            class="pager-btn"
-                            :class="{ 'pager-btn-active': link.active }"
-                            v-html="link.label"
-                        />
-                    </div>
-                </div>
-            </section>
+                </section>
+            </Deferred>
         </div>
 
         <Teleport to="body">
@@ -480,6 +503,89 @@ const doExport = async () => {
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.report-shell {
+    padding: 18px;
+}
+
+.report-shell__meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.report-shell__line,
+.report-shell__pill,
+.report-shell__cell {
+    position: relative;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+}
+
+.report-shell__line::after,
+.report-shell__pill::after,
+.report-shell__cell::after,
+.cert-shell__card::after,
+.cert-shell__line::after,
+.cert-shell__button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+    animation: shell-shimmer 1.25s ease-in-out infinite;
+}
+
+.report-shell__line {
+    height: 14px;
+    width: 220px;
+}
+
+.report-shell__line-wide {
+    width: 320px;
+}
+
+.report-shell__pill-row {
+    display: flex;
+    gap: 8px;
+}
+
+.report-shell__pill {
+    width: 68px;
+    height: 24px;
+}
+
+.report-shell__table {
+    display: grid;
+    gap: 10px;
+}
+
+.report-shell__row {
+    display: grid;
+    grid-template-columns: 42px 1.1fr 1.6fr 1fr 96px;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.report-shell__cell {
+    height: 14px;
+    border-radius: 10px;
+}
+
+.report-shell__cell-sm {
+    width: 42px;
+}
+
+.report-shell__cell-lg {
+    width: 100%;
+}
+
 .report-pagination {
     display: flex;
     justify-content: space-between;
@@ -625,6 +731,7 @@ const doExport = async () => {
 .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes shell-shimmer { to { transform: translateX(100%); } }
 
 @media (max-width: 900px) {
     .report-toolbar {

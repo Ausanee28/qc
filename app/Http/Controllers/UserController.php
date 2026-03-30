@@ -23,27 +23,27 @@ class UserController extends Controller
         $search = trim((string) ($filters['search'] ?? ''));
         $perPage = (int) ($filters['per_page'] ?? 20);
 
-        $users = User::query()
-            ->select(['user_id', 'user_name', 'name', 'employee_id', 'role'])
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($userQuery) use ($search) {
-                    $userQuery
-                        ->where('name', 'like', "%{$search}%")
-                        ->orWhere('user_name', 'like', "%{$search}%")
-                        ->orWhere('employee_id', 'like', "%{$search}%")
-                        ->orWhere('role', 'like', "%{$search}%");
-                });
-            })
-            ->orderBy('name')
-            ->paginate($perPage)
-            ->withQueryString();
-
         return Inertia::render('MasterData/Users/Index', [
-            'users' => $users,
             'filters' => [
                 'search' => $search,
                 'per_page' => (string) $perPage,
             ],
+            'users' => Inertia::defer(function () use ($search, $perPage) {
+                return User::query()
+                    ->select(['user_id', 'user_name', 'name', 'employee_id', 'role'])
+                    ->when($search !== '', function ($query) use ($search) {
+                        $query->where(function ($userQuery) use ($search) {
+                            $userQuery
+                                ->where('name', 'like', "%{$search}%")
+                                ->orWhere('user_name', 'like', "%{$search}%")
+                                ->orWhere('employee_id', 'like', "%{$search}%")
+                                ->orWhere('role', 'like', "%{$search}%");
+                        });
+                    })
+                    ->orderBy('name')
+                    ->paginate($perPage)
+                    ->withQueryString();
+            }, 'master-data-list'),
         ]);
     }
 

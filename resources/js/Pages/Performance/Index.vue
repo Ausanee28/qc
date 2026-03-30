@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
+import { Deferred, Head } from '@inertiajs/vue3';
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
 
 const showCharts = ref(false);
@@ -106,6 +106,21 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
             </div>
         </div>
 
+        <Deferred data="inspectors">
+            <template #fallback>
+                <div class="perf-grid">
+                    <div v-for="index in 6" :key="index" class="card perf-card-shell">
+                        <div class="perf-shell-line perf-shell-line-sm"></div>
+                        <div class="perf-shell-line perf-shell-line-lg"></div>
+                        <div class="perf-shell-bars">
+                            <div class="perf-shell-bar"></div>
+                            <div class="perf-shell-bar"></div>
+                            <div class="perf-shell-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
         <div v-if="!inspectorRows.length" style="padding:40px;text-align:center;color:#a8a29e;font-size:13px;background:rgba(18,18,18,0.92);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
             No test data yet.
         </div>
@@ -174,6 +189,25 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
             </div>
 
             <!-- Test Duration History Table -->
+            <Deferred data="details">
+                <template #fallback>
+                    <div class="card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                            <div class="card-title" style="margin:0">Test Duration History</div>
+                            <span style="font-size:11px;color:#78716c">Loading...</span>
+                        </div>
+                        <div class="perf-table-shell">
+                            <div v-for="index in 6" :key="index" class="perf-table-shell__row">
+                                <span class="perf-shell-line perf-shell-line-sm"></span>
+                                <span class="perf-shell-line"></span>
+                                <span class="perf-shell-line"></span>
+                                <span class="perf-shell-line perf-shell-line-lg"></span>
+                                <span class="perf-shell-line perf-shell-line-sm"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
             <div class="card">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                     <div class="card-title" style="margin:0">Test Duration History</div>
@@ -208,11 +242,75 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
                     </table>
                 </div>
             </div>
+            </Deferred>
         </template>
+        </Deferred>
     </AuthenticatedLayout>
 </template>
 
 <style scoped>
+.perf-card-shell,
+.perf-shell-line,
+.perf-shell-bar {
+    position: relative;
+    overflow: hidden;
+}
+
+.perf-card-shell {
+    display: grid;
+    gap: 12px;
+    min-height: 180px;
+}
+
+.perf-shell-line,
+.perf-shell-bar {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+}
+
+.perf-shell-line::after,
+.perf-shell-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+    animation: perf-shimmer 1.6s linear infinite;
+}
+
+.perf-shell-line {
+    height: 14px;
+}
+
+.perf-shell-line-sm {
+    width: 72px;
+}
+
+.perf-shell-line-lg {
+    width: 78%;
+}
+
+.perf-shell-bars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.perf-shell-bar {
+    height: 64px;
+}
+
+.perf-table-shell {
+    display: grid;
+    gap: 10px;
+}
+
+.perf-table-shell__row {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr 1.4fr 90px;
+    gap: 10px;
+}
+
 .perf-skeleton {
     height: 100%;
     border-radius: 18px;
