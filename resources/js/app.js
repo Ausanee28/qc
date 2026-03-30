@@ -7,7 +7,7 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const pages = import.meta.glob('./Pages/**/*.vue');
 const eagerPages = import.meta.glob([
-    './Pages/Dashboard.vue',
+    './Pages/DashboardSimple.vue',
     './Pages/Certificates/Index.vue',
     './Pages/ExecuteTest/Create.vue',
     './Pages/ReceiveJob/Create.vue',
