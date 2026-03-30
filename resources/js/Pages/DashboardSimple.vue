@@ -104,6 +104,24 @@ const summaryCards = computed(() => ([
     },
 ]));
 
+const heroQuickStats = computed(() => ([
+    {
+        label: 'Today Jobs',
+        value: formatNumber(props.metrics.todayCount),
+        note: 'received today',
+    },
+    {
+        label: 'Today OK',
+        value: formatNumber(props.metrics.todayOK),
+        note: 'passed today',
+    },
+    {
+        label: 'Today NG',
+        value: formatNumber(props.metrics.todayNG),
+        note: 'failed today',
+    },
+]));
+
 const qualityChartData = computed(() => ({
     labels: ['OK', 'NG'],
     datasets: [{
@@ -114,6 +132,38 @@ const qualityChartData = computed(() => ({
         cutout: '72%',
     }],
 }));
+
+const qualitySummaryItems = computed(() => {
+    const total = Number(props.metrics.totalTests || 0);
+    const ok = Number(props.metrics.okCount || 0);
+    const ng = Number(props.metrics.ngCount || 0);
+    const okShare = total > 0 ? (ok / total) * 100 : 0;
+    const ngShare = total > 0 ? (ng / total) * 100 : 0;
+    const todayTotal = Number(props.metrics.todayOK || 0) + Number(props.metrics.todayNG || 0);
+
+    return [
+        {
+            label: 'Total Checked',
+            value: formatNumber(total),
+            note: 'records in this period',
+        },
+        {
+            label: 'OK Share',
+            value: formatPercent(okShare),
+            note: `${formatNumber(ok)} passed`,
+        },
+        {
+            label: 'NG Share',
+            value: formatPercent(ngShare),
+            note: `${formatNumber(ng)} failed`,
+        },
+        {
+            label: 'Today Volume',
+            value: formatNumber(todayTotal),
+            note: 'today only',
+        },
+    ];
+});
 
 const doughnutOptions = {
     responsive: true,
@@ -196,8 +246,28 @@ const dailySeries = computed(() => {
         rows,
         total: rows.reduce((sum, row) => sum + row.total, 0),
         peak: rows.reduce((best, row) => (row.total > best.total ? row : best), { label: '-', total: 0 }),
+        latest: rows.at(-1) ?? { label: '-', total: 0, ok: 0, ng: 0 },
+        average: rows.length ? rows.reduce((sum, row) => sum + row.total, 0) / rows.length : 0,
     };
 });
+
+const dailyHighlights = computed(() => ([
+    {
+        label: 'Latest Day',
+        value: dailySeries.value.latest.label,
+        note: `${formatNumber(dailySeries.value.latest.total)} total`,
+    },
+    {
+        label: 'Peak Day',
+        value: dailySeries.value.peak.label,
+        note: `${formatNumber(dailySeries.value.peak.total)} total`,
+    },
+    {
+        label: 'Daily Avg',
+        value: formatNumber(dailySeries.value.average.toFixed(0)),
+        note: 'tests per day',
+    },
+]));
 
 const dailyTrendData = computed(() => ({
     labels: dailySeries.value.rows.map((item) => item.label),
@@ -366,6 +436,31 @@ const archiveHighlights = computed(() => ([
     },
 ]));
 
+const monthlyHighlights = computed(() => {
+    const totalTests = monthlySeries.value.rows.reduce((sum, row) => sum + row.total, 0);
+    const averageYield = monthlySeries.value.rows.length
+        ? monthlySeries.value.rows.reduce((sum, row) => sum + row.yield, 0) / monthlySeries.value.rows.length
+        : 0;
+
+    return [
+        {
+            label: '6-Month Total',
+            value: formatNumber(totalTests),
+            note: 'all recorded tests',
+        },
+        {
+            label: 'Average Yield',
+            value: formatPercent(averageYield),
+            note: 'across history window',
+        },
+        {
+            label: 'Next Yield',
+            value: formatPercent(forecastSummary.value.nextYield),
+            note: 'forecast line',
+        },
+    ];
+});
+
 const historyBars = computed(() => ({
     labels: (props.weeklyData || []).map((item) => item.label),
     datasets: [{
@@ -385,22 +480,32 @@ const historyBars = computed(() => ({
             <section class="hero-panel">
                 <div class="hero-panel__copy">
                     <div class="dashboard-kicker">QC Dashboard</div>
-                    <h1 class="hero-panel__title">Summary first, trend second, decisions faster.</h1>
+                    <h1 class="hero-panel__title">Read the lab in one glance.</h1>
                     <p class="hero-panel__text">
-                        Focus on the signals that matter most: total workload, OK/NG quality, daily and monthly trend, plus a simple forward-looking forecast.
+                        The layout below keeps only the essentials: workload, OK/NG quality, daily movement, monthly history, and a simple forward view.
                     </p>
                 </div>
 
-                <div class="hero-panel__controls">
-                    <label class="hero-select">
-                        <span>Period</span>
-                        <select v-model="selectedPeriod" :disabled="isChangingPeriod">
-                            <option v-for="option in periodOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                        </select>
-                    </label>
-                    <div class="hero-badge">
-                        <span class="hero-badge__dot"></span>
-                        {{ currentPeriodLabel }}
+                <div class="hero-panel__aside">
+                    <div class="hero-panel__controls">
+                        <label class="hero-select">
+                            <span>Period</span>
+                            <select v-model="selectedPeriod" :disabled="isChangingPeriod">
+                                <option v-for="option in periodOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                            </select>
+                        </label>
+                        <div class="hero-badge">
+                            <span class="hero-badge__dot"></span>
+                            {{ currentPeriodLabel }}
+                        </div>
+                    </div>
+
+                    <div class="hero-quick-grid">
+                        <div v-for="item in heroQuickStats" :key="item.label" class="hero-quick-card">
+                            <span>{{ item.label }}</span>
+                            <strong>{{ item.value }}</strong>
+                            <small>{{ item.note }}</small>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -419,6 +524,7 @@ const historyBars = computed(() => ({
                         <div>
                             <div class="dashboard-kicker">Quality Summary</div>
                             <h2 class="panel-title">OK / NG overview</h2>
+                            <p class="panel-subtitle">See the pass-fail split immediately, without digging into tables.</p>
                         </div>
                     </div>
 
@@ -450,6 +556,14 @@ const historyBars = computed(() => ({
                             </div>
                         </div>
                     </div>
+
+                    <div class="quality-strip">
+                        <div v-for="item in qualitySummaryItems" :key="item.label" class="quality-strip__item">
+                            <span>{{ item.label }}</span>
+                            <strong>{{ item.value }}</strong>
+                            <small>{{ item.note }}</small>
+                        </div>
+                    </div>
                 </article>
 
                 <article class="surface-panel">
@@ -457,6 +571,7 @@ const historyBars = computed(() => ({
                         <div>
                             <div class="dashboard-kicker">Daily Trend</div>
                             <h2 class="panel-title">Daily OK / NG movement</h2>
+                            <p class="panel-subtitle">Quickly spot which day rose, dipped, or produced more failures.</p>
                         </div>
                         <div class="panel-note">Peak: {{ dailySeries.peak.label }} ({{ formatNumber(dailySeries.peak.total) }})</div>
                     </div>
@@ -470,50 +585,9 @@ const historyBars = computed(() => ({
                             <LineChart :data="dailyTrendData" :options="lineOptions" />
                         </div>
                     </Deferred>
-                </article>
-            </section>
 
-            <section class="dashboard-secondary">
-                <article class="surface-panel">
-                    <div class="panel-head">
-                        <div>
-                            <div class="dashboard-kicker">Monthly History</div>
-                            <h2 class="panel-title">ย้อนหลังรายเดือน + yield trend</h2>
-                        </div>
-                    </div>
-
-                    <Deferred data="monthlyData">
-                        <template #fallback>
-                            <div class="chart-shell chart-shell--tall"></div>
-                        </template>
-
-                        <div class="chart-wrap chart-wrap--tall">
-                            <BarChart :data="monthlyTrendData" :options="monthlyMixedOptions" />
-                        </div>
-                    </Deferred>
-                </article>
-
-                <article class="surface-panel surface-panel--stack">
-                    <div class="panel-head">
-                        <div>
-                            <div class="dashboard-kicker">Forecast</div>
-                            <h2 class="panel-title">Simple next-step view</h2>
-                        </div>
-                    </div>
-
-                    <div class="forecast-card">
-                        <span>Projected next month tests</span>
-                        <strong>{{ formatNumber(forecastSummary.nextTotal) }}</strong>
-                    </div>
-
-                    <div class="forecast-card forecast-card--accent">
-                        <span>Projected next month yield</span>
-                        <strong>{{ formatPercent(forecastSummary.nextYield) }}</strong>
-                        <small>{{ forecastSummary.delta >= 0 ? '+' : '' }}{{ forecastSummary.delta.toFixed(1) }} pts vs {{ forecastSummary.latestLabel }}</small>
-                    </div>
-
-                    <div class="history-highlights">
-                        <div v-for="item in archiveHighlights" :key="item.label" class="history-highlight">
+                    <div class="insight-grid">
+                        <div v-for="item in dailyHighlights" :key="item.label" class="insight-card">
                             <span>{{ item.label }}</span>
                             <strong>{{ item.value }}</strong>
                             <small>{{ item.note }}</small>
@@ -522,26 +596,90 @@ const historyBars = computed(() => ({
                 </article>
             </section>
 
-            <section class="dashboard-foot">
-                <article class="surface-panel">
+            <section class="dashboard-secondary">
+                <article class="surface-panel surface-panel--monthly">
                     <div class="panel-head">
                         <div>
-                            <div class="dashboard-kicker">Weekly Snapshot</div>
-                            <h2 class="panel-title">Recent 7-day volume</h2>
+                            <div class="dashboard-kicker">Monthly History</div>
+                            <h2 class="panel-title">Monthly history and yield trend</h2>
+                            <p class="panel-subtitle">Read the past clearly before trusting the forecast.</p>
                         </div>
-                        <div class="panel-note">{{ formatNumber(dailySeries.total) }} total checks</div>
                     </div>
 
-                    <Deferred data="weeklyData">
-                        <template #fallback>
-                            <div class="chart-shell chart-shell--short"></div>
-                        </template>
+                    <div class="monthly-layout">
+                        <Deferred data="monthlyData">
+                            <template #fallback>
+                                <div class="chart-shell chart-shell--tall"></div>
+                            </template>
 
-                        <div class="chart-wrap chart-wrap--short">
-                            <BarChart :data="historyBars" :options="barOptions" />
+                            <div class="chart-wrap chart-wrap--tall chart-wrap--monthly">
+                                <BarChart :data="monthlyTrendData" :options="monthlyMixedOptions" />
+                            </div>
+                        </Deferred>
+
+                        <div class="monthly-side">
+                            <div class="insight-grid insight-grid--monthly insight-grid--stack">
+                                <div v-for="item in monthlyHighlights" :key="item.label" class="insight-card">
+                                    <span>{{ item.label }}</span>
+                                    <strong>{{ item.value }}</strong>
+                                    <small>{{ item.note }}</small>
+                                </div>
+                            </div>
                         </div>
-                    </Deferred>
+                    </div>
                 </article>
+
+                <div class="dashboard-secondary__aside">
+                    <article class="surface-panel surface-panel--stack">
+                        <div class="panel-head">
+                            <div>
+                                <div class="dashboard-kicker">Forecast</div>
+                                <h2 class="panel-title">Simple next-step view</h2>
+                                <p class="panel-subtitle">A lightweight projection from recent monthly direction.</p>
+                            </div>
+                        </div>
+
+                        <div class="forecast-card">
+                            <span>Projected next month tests</span>
+                            <strong>{{ formatNumber(forecastSummary.nextTotal) }}</strong>
+                        </div>
+
+                        <div class="forecast-card forecast-card--accent">
+                            <span>Projected next month yield</span>
+                            <strong>{{ formatPercent(forecastSummary.nextYield) }}</strong>
+                            <small>{{ forecastSummary.delta >= 0 ? '+' : '' }}{{ forecastSummary.delta.toFixed(1) }} pts vs {{ forecastSummary.latestLabel }}</small>
+                        </div>
+
+                        <div class="history-highlights">
+                            <div v-for="item in archiveHighlights" :key="item.label" class="history-highlight">
+                                <span>{{ item.label }}</span>
+                                <strong>{{ item.value }}</strong>
+                                <small>{{ item.note }}</small>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="surface-panel surface-panel--compact">
+                        <div class="panel-head">
+                            <div>
+                                <div class="dashboard-kicker">Weekly Snapshot</div>
+                                <h2 class="panel-title">Recent 7-day volume</h2>
+                                <p class="panel-subtitle">A compact volume check that balances the monthly block.</p>
+                            </div>
+                            <div class="panel-note">{{ formatNumber(dailySeries.total) }} total checks</div>
+                        </div>
+
+                        <Deferred data="weeklyData">
+                            <template #fallback>
+                                <div class="chart-shell chart-shell--short"></div>
+                            </template>
+
+                            <div class="chart-wrap chart-wrap--short">
+                                <BarChart :data="historyBars" :options="barOptions" />
+                            </div>
+                        </Deferred>
+                    </article>
+                </div>
             </section>
         </div>
     </AuthenticatedLayout>
@@ -556,33 +694,39 @@ const historyBars = computed(() => ({
 .surface-panel,
 .summary-card {
     border: 1px solid rgba(255, 255, 255, 0.08);
-    background: linear-gradient(180deg, rgba(17, 13, 11, 0.96), rgba(10, 9, 8, 0.98));
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+    background: linear-gradient(180deg, rgba(17, 13, 11, 0.94), rgba(10, 9, 8, 0.97));
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.2);
 }
 
 .hero-panel {
     display: grid;
-    gap: 1.5rem;
-    border-radius: 32px;
-    padding: 1.6rem;
+    gap: 1.75rem;
+    border-radius: 30px;
+    padding: 1.8rem;
     background:
-        radial-gradient(circle at top right, rgba(251, 146, 60, 0.16), transparent 26%),
-        linear-gradient(135deg, rgba(15, 12, 11, 0.98), rgba(28, 18, 13, 0.96));
+        radial-gradient(circle at top right, rgba(251, 146, 60, 0.12), transparent 24%),
+        linear-gradient(135deg, rgba(15, 12, 11, 0.98), rgba(25, 18, 14, 0.95));
+}
+
+.hero-panel__aside {
+    display: grid;
+    gap: 1rem;
 }
 
 .hero-panel__title {
     margin-top: 0.35rem;
-    font-size: clamp(2rem, 3vw, 3.1rem);
-    line-height: 0.95;
+    max-width: 11ch;
+    font-size: clamp(2.1rem, 3vw, 3.35rem);
+    line-height: 0.92;
     letter-spacing: -0.05em;
     color: #fff7ed;
 }
 
 .hero-panel__text {
     margin-top: 0.9rem;
-    max-width: 56rem;
-    color: rgba(231, 229, 228, 0.82);
-    line-height: 1.8;
+    max-width: 48rem;
+    color: rgba(231, 229, 228, 0.78);
+    line-height: 1.7;
 }
 
 .hero-panel__controls {
@@ -627,6 +771,45 @@ const historyBars = computed(() => ({
     color: #f5f5f4;
 }
 
+.hero-quick-grid {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hero-quick-card {
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.95rem 1rem;
+}
+
+.hero-quick-card span,
+.hero-quick-card small {
+    display: block;
+}
+
+.hero-quick-card span {
+    color: rgba(231, 229, 228, 0.58);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.hero-quick-card strong {
+    display: block;
+    margin-top: 0.45rem;
+    color: #fff7ed;
+    font-size: 1.55rem;
+    font-weight: 650;
+}
+
+.hero-quick-card small {
+    margin-top: 0.4rem;
+    color: #d6d3d1;
+}
+
 .hero-badge__dot {
     width: 0.6rem;
     height: 0.6rem;
@@ -651,7 +834,7 @@ const historyBars = computed(() => ({
 
 .summary-card {
     border-radius: 24px;
-    padding: 1.15rem;
+    padding: 1.2rem;
 }
 
 .summary-card[data-tone='amber'] {
@@ -671,8 +854,8 @@ const historyBars = computed(() => ({
 }
 
 .summary-card__value {
-    margin-top: 0.65rem;
-    font-size: 2rem;
+    margin-top: 0.7rem;
+    font-size: 2.1rem;
     font-weight: 650;
     letter-spacing: -0.04em;
     color: #fff7ed;
@@ -688,17 +871,23 @@ const historyBars = computed(() => ({
 .dashboard-secondary {
     display: grid;
     gap: 1rem;
+    align-items: start;
     grid-template-columns: 1.1fr 1fr;
 }
 
-.dashboard-foot {
+.dashboard-secondary {
+    grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
+}
+
+.dashboard-secondary__aside {
     display: grid;
     gap: 1rem;
+    align-content: start;
 }
 
 .surface-panel {
-    border-radius: 28px;
-    padding: 1.35rem;
+    border-radius: 26px;
+    padding: 1.4rem;
 }
 
 .surface-panel--quality {
@@ -713,12 +902,20 @@ const historyBars = computed(() => ({
     align-content: start;
 }
 
+.surface-panel--monthly {
+    padding-bottom: 1.2rem;
+}
+
+.surface-panel--compact {
+    padding-top: 1.2rem;
+}
+
 .panel-head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.1rem;
 }
 
 .panel-title {
@@ -729,6 +926,13 @@ const historyBars = computed(() => ({
     color: #fff7ed;
 }
 
+.panel-subtitle {
+    margin-top: 0.45rem;
+    max-width: 36rem;
+    color: rgba(214, 211, 209, 0.72);
+    line-height: 1.6;
+}
+
 .panel-note {
     color: #d6d3d1;
     font-size: 0.88rem;
@@ -737,13 +941,13 @@ const historyBars = computed(() => ({
 .quality-layout {
     display: grid;
     gap: 1rem;
-    grid-template-columns: minmax(220px, 0.92fr) minmax(0, 1fr);
-    align-items: center;
+    grid-template-columns: minmax(220px, 0.86fr) minmax(0, 1.14fr);
+    align-items: stretch;
 }
 
 .quality-chart {
     position: relative;
-    height: 280px;
+    height: 240px;
 }
 
 .quality-chart__center {
@@ -770,8 +974,49 @@ const historyBars = computed(() => ({
 
 .quality-stats {
     display: grid;
-    gap: 0.9rem;
+    gap: 0.8rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    grid-auto-rows: minmax(0, 1fr);
+}
+
+.quality-strip {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.quality-strip__item {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.025);
+    padding: 0.85rem 0.95rem;
+}
+
+.quality-strip__item span,
+.quality-strip__item small {
+    display: block;
+}
+
+.quality-strip__item span {
+    color: rgba(231, 229, 228, 0.58);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.quality-strip__item strong {
+    display: block;
+    margin-top: 0.4rem;
+    color: #fff7ed;
+    font-size: 1.1rem;
+}
+
+.quality-strip__item small {
+    margin-top: 0.35rem;
+    color: #d6d3d1;
 }
 
 .quality-stat,
@@ -779,7 +1024,7 @@ const historyBars = computed(() => ({
 .history-highlight {
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.035);
     padding: 1rem;
 }
 
@@ -813,7 +1058,7 @@ const historyBars = computed(() => ({
 
 .forecast-card--accent {
     border-color: rgba(251, 146, 60, 0.22);
-    background: rgba(251, 146, 60, 0.09);
+    background: rgba(251, 146, 60, 0.08);
 }
 
 .history-highlights {
@@ -821,12 +1066,77 @@ const historyBars = computed(() => ({
     gap: 0.8rem;
 }
 
+.monthly-layout {
+    display: grid;
+    gap: 1rem;
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.75fr);
+}
+
+.monthly-side {
+    display: grid;
+    align-content: stretch;
+}
+
+.insight-grid {
+    display: grid;
+    gap: 0.8rem;
+    margin-top: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.insight-grid--monthly {
+    margin-top: 0;
+}
+
+.insight-grid--stack {
+    grid-template-columns: 1fr;
+    height: 100%;
+}
+
+.insight-card {
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.95rem 1rem;
+}
+
+.insight-card span,
+.insight-card small {
+    display: block;
+}
+
+.insight-card span {
+    color: rgba(231, 229, 228, 0.58);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.insight-card strong {
+    display: block;
+    margin-top: 0.45rem;
+    font-size: 1.2rem;
+    color: #fff7ed;
+}
+
+.insight-card small {
+    margin-top: 0.4rem;
+    color: #d6d3d1;
+}
+
 .chart-wrap {
     height: 320px;
 }
 
 .chart-wrap--tall {
-    height: 360px;
+    height: 310px;
+}
+
+.chart-wrap--monthly {
+    height: 100%;
+    min-height: 310px;
 }
 
 .chart-wrap--short {
@@ -842,7 +1152,7 @@ const historyBars = computed(() => ({
 }
 
 .chart-shell--tall {
-    height: 360px;
+    height: 330px;
 }
 
 .chart-shell--short {
@@ -861,7 +1171,17 @@ const historyBars = computed(() => ({
         grid-template-columns: 1fr;
     }
 
+    .hero-quick-grid,
+    .insight-grid,
+    .quality-strip {
+        grid-template-columns: 1fr;
+    }
+
     .quality-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .monthly-layout {
         grid-template-columns: 1fr;
     }
 }
@@ -879,6 +1199,13 @@ const historyBars = computed(() => ({
 
     .quality-stats {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (min-width: 1024px) {
+    .hero-panel {
+        grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+        align-items: start;
     }
 }
 </style>
