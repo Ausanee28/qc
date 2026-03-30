@@ -91,6 +91,7 @@ const userInitial = computed(() => user.value.name.charAt(0).toUpperCase());
 const userRoleLabel = computed(() => (user.value.role === 'admin' ? 'Admin' : 'QC Tech'));
 const navPrefetchTimers = [];
 const navPrefetchIdleHandles = [];
+const prefetchedNavRoutes = new Set();
 const workflowNavRoutes = computed(() => {
     const availableRoutes = new Set(groupedNav.value.flatMap((group) => group.items.map((item) => item.route)));
 
@@ -109,6 +110,11 @@ const secondaryNavRoutes = computed(() => {
 
     return priority.filter((routeName) => availableRoutes.has(routeName) && !isActiveRoute(routeName));
 });
+const allNavRoutes = computed(() => (
+    groupedNav.value
+        .flatMap((group) => group.items.map((item) => item.route))
+        .filter((routeName) => !isActiveRoute(routeName))
+));
 
 const clearNavPrefetchSchedule = () => {
     while (navPrefetchTimers.length) {
@@ -146,6 +152,7 @@ const prefetchNavRoutes = (routeNames, cacheFor, delayStep = 120) => {
 
     routeNames.forEach((routeName, index) => {
         const timer = window.setTimeout(() => {
+            prefetchedNavRoutes.add(routeName);
             router.prefetch(route(routeName), {}, {
                 cacheFor,
                 cacheTags: [`nav:${routeName}`],
@@ -156,9 +163,22 @@ const prefetchNavRoutes = (routeNames, cacheFor, delayStep = 120) => {
     });
 };
 
+const warmNavRoute = (routeName) => {
+    if (!routeName || isActiveRoute(routeName) || prefetchedNavRoutes.has(routeName)) {
+        return;
+    }
+
+    prefetchedNavRoutes.add(routeName);
+    router.prefetch(route(routeName), {}, {
+        cacheFor: navCacheFor(routeName),
+        cacheTags: [`nav:${routeName}`],
+    });
+};
+
 onMounted(() => {
     prefetchNavRoutes(workflowNavRoutes.value, '5m', 80);
     scheduleIdlePrefetch(() => prefetchNavRoutes(secondaryNavRoutes.value, '3m'), 180);
+    scheduleIdlePrefetch(() => prefetchNavRoutes(allNavRoutes.value, '10m', 110), 420);
 });
 
 onUnmounted(() => {
@@ -191,6 +211,9 @@ onUnmounted(() => {
                                 prefetch="hover"
                                 :cache-for="navCacheFor(item.route)"
                                 :view-transition="false"
+                                @mousedown="warmNavRoute(item.route)"
+                                @focus="warmNavRoute(item.route)"
+                                @mouseenter="warmNavRoute(item.route)"
                                 class="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors duration-150 decoration-none text-left"
                                 :class="desktopNavClass(item.route)"
                             >
@@ -313,6 +336,9 @@ onUnmounted(() => {
                                  prefetch="hover"
                                  :cache-for="navCacheFor(item.route)"
                                  :view-transition="false"
+                                 @mousedown="warmNavRoute(item.route)"
+                                 @focus="warmNavRoute(item.route)"
+                                 @mouseenter="warmNavRoute(item.route)"
                                  @click="showMobileMenu = false"
                                  :class="['flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-1 text-left', mobileNavClass(item.route)]"
                              >

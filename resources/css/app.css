@@ -900,10 +900,6 @@ tr:hover td {
     will-change: opacity, transform;
 }
 
-html[data-nav-busy='true'] {
-    cursor: progress;
-}
-
 html[data-nav-busy='true'] body::before {
     content: '';
     position: fixed;
@@ -919,9 +915,9 @@ html[data-nav-busy='true'] body::before {
 
 html[data-nav-busy='true'] .theme-shell main,
 html[data-nav-busy='true'] .theme-guest {
-    opacity: 0.985;
-    transform: translateY(1px);
-    filter: saturate(1.03);
+    opacity: 0.995;
+    transform: none;
+    filter: none;
 }
 
 @keyframes nav-progress-pulse {

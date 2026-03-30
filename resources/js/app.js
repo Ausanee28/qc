@@ -6,8 +6,18 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const pages = import.meta.glob('./Pages/**/*.vue');
+const eagerPages = import.meta.glob([
+    './Pages/Dashboard.vue',
+    './Pages/Certificates/Index.vue',
+    './Pages/ExecuteTest/Create.vue',
+    './Pages/ReceiveJob/Create.vue',
+    './Pages/Report/Index.vue',
+    './Pages/Performance/Index.vue',
+    './Pages/MasterData/**/*.vue',
+], { eager: true });
 let activeNavigationVisits = 0;
 let navBusyTimer = null;
+const navBusyDelay = 260;
 
 config.set({
     prefetch: {
@@ -46,7 +56,7 @@ const updateNavigationBusyState = () => {
             if (activeNavigationVisits > 0) {
                 document.documentElement.dataset.navBusy = 'true';
             }
-        }, 140);
+        }, navBusyDelay);
 
         return;
     }
@@ -62,6 +72,12 @@ const updateNavigationBusyState = () => {
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => {
+        const eagerPage = eagerPages[`./Pages/${name}.vue`];
+
+        if (eagerPage) {
+            return eagerPage.default ?? eagerPage;
+        }
+
         const page = pages[`./Pages/${name}.vue`];
 
         if (!page) {
@@ -99,7 +115,7 @@ createInertiaApp({
         return app;
     },
     progress: {
-        delay: 80,
+        delay: 220,
         color: '#f97316',
         showSpinner: false,
     },
