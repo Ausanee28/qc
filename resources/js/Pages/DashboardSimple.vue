@@ -778,6 +778,68 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     .lb-bar { display: none; }
 }
 
+:global(.theme-shell[data-theme='light']) .db-header__title,
+:global(.theme-shell[data-theme='light']) .card__head,
+:global(.theme-shell[data-theme='light']) .kpi__value,
+:global(.theme-shell[data-theme='light']) .monthly-insight__value,
+:global(.theme-shell[data-theme='light']) .fc__value,
+:global(.theme-shell[data-theme='light']) .lb-name {
+    color: #1c1917;
+}
+
+:global(.theme-shell[data-theme='light']) .db-badge {
+    background: rgba(251, 146, 60, 0.12);
+    color: #9a3412;
+}
+
+:global(.theme-shell[data-theme='light']) .db-period select,
+:global(.theme-shell[data-theme='light']) .kpi,
+:global(.theme-shell[data-theme='light']) .card,
+:global(.theme-shell[data-theme='light']) .monthly-insight,
+:global(.theme-shell[data-theme='light']) .fc,
+:global(.theme-shell[data-theme='light']) .lb-row {
+    background: linear-gradient(180deg, rgba(255, 253, 250, 0.98), rgba(247, 240, 232, 0.96));
+    border-color: rgba(120, 53, 15, 0.12);
+    box-shadow: 0 14px 30px rgba(120, 53, 15, 0.08);
+}
+
+:global(.theme-shell[data-theme='light']) .db-period select {
+    color: #1c1917;
+}
+
+:global(.theme-shell[data-theme='light']) .kpi__label,
+:global(.theme-shell[data-theme='light']) .monthly-insight__label,
+:global(.theme-shell[data-theme='light']) .fc__label,
+:global(.theme-shell[data-theme='light']) .lb-yield__label {
+    color: #78716c;
+}
+
+:global(.theme-shell[data-theme='light']) .monthly-insight__note,
+:global(.theme-shell[data-theme='light']) .fc__sub,
+:global(.theme-shell[data-theme='light']) .lb-meta,
+:global(.theme-shell[data-theme='light']) .lb-empty {
+    color: #57534e;
+}
+
+:global(.theme-shell[data-theme='light']) .doughnut-legend {
+    border-top-color: rgba(120, 53, 15, 0.1);
+}
+
+:global(.theme-shell[data-theme='light']) .doughnut-legend__item,
+:global(.theme-shell[data-theme='light']) .doughnut-center__ok span,
+:global(.theme-shell[data-theme='light']) .doughnut-center__ng span {
+    color: #78716c;
+}
+
+:global(.theme-shell[data-theme='light']) .doughnut-legend__item strong,
+:global(.theme-shell[data-theme='light']) .doughnut-center__ok strong {
+    color: #1c1917;
+}
+
+:global(.theme-shell[data-theme='light']) .lb-bar {
+    background: rgba(120, 53, 15, 0.08);
+}
+
 @media (max-width: 639px) {
     .kpi-strip { grid-template-columns: repeat(2, 1fr); }
     .forecast-grid { grid-template-columns: 1fr; }

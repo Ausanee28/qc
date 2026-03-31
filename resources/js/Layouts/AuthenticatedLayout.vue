@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 
+const THEME_STORAGE_KEY = 'qc-theme-preference';
+
 const navGroupsConfig = [
     {
         label: 'Analytics',
@@ -50,6 +52,7 @@ const dateFormatter = new Intl.DateTimeFormat('en-GB', {
 
 const showMobileMenu = ref(false);
 const page = usePage();
+const theme = ref('dark');
 
 const globalSearch = ref('');
 const handleGlobalSearch = () => {
@@ -57,6 +60,28 @@ const handleGlobalSearch = () => {
         router.get(route('report.index'), { dmc: globalSearch.value.trim() });
         globalSearch.value = ''; // clear after search
     }
+};
+
+const applyTheme = (value) => {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    document.documentElement.dataset.theme = value;
+    document.documentElement.style.colorScheme = value;
+};
+
+const setTheme = (value) => {
+    theme.value = value;
+    applyTheme(value);
+
+    if (typeof window !== 'undefined') {
+        window.localStorage.setItem(THEME_STORAGE_KEY, value);
+    }
+};
+
+const toggleTheme = () => {
+    setTheme(theme.value === 'light' ? 'dark' : 'light');
 };
 
 const groupedNav = computed(() => {
@@ -71,16 +96,25 @@ const groupedNav = computed(() => {
 
 const user = computed(() => page.props.auth?.user ?? { name: '', role: '' });
 const currentDate = dateFormatter.format(new Date());
+const isLightTheme = computed(() => theme.value === 'light');
 const isActiveRoute = (routeName) => route().current(routeName);
 const desktopNavClass = (routeName) => (
     isActiveRoute(routeName)
-        ? 'border border-orange-500/20 bg-[linear-gradient(135deg,rgba(251,146,60,0.2),rgba(249,115,22,0.1))] text-orange-100 shadow-[0_14px_28px_rgba(0,0,0,0.2)]'
-        : 'text-stone-300 hover:bg-white/5 hover:text-orange-100'
+        ? (isLightTheme.value
+            ? 'border border-orange-300/70 bg-orange-100 text-orange-900 shadow-[0_14px_30px_rgba(251,146,60,0.16)]'
+            : 'border border-orange-500/20 bg-[linear-gradient(135deg,rgba(251,146,60,0.2),rgba(249,115,22,0.1))] text-orange-100 shadow-[0_14px_28px_rgba(0,0,0,0.2)]')
+        : (isLightTheme.value
+            ? 'text-stone-700 hover:bg-orange-50 hover:text-orange-900'
+            : 'text-stone-300 hover:bg-white/5 hover:text-orange-100')
 );
 const mobileNavClass = (routeName) => (
     isActiveRoute(routeName)
-        ? 'bg-orange-500/15 text-orange-100 font-semibold border border-orange-500/20'
-        : 'text-stone-300 hover:bg-white/5'
+        ? (isLightTheme.value
+            ? 'bg-orange-100 text-orange-900 font-semibold border border-orange-300/70'
+            : 'bg-orange-500/15 text-orange-100 font-semibold border border-orange-500/20')
+        : (isLightTheme.value
+            ? 'text-stone-700 hover:bg-orange-50'
+            : 'text-stone-300 hover:bg-white/5')
 );
 const navCacheFor = (routeName) => (
     routeName === 'receive-job.create' || routeName === 'execute-test.create'
@@ -203,6 +237,15 @@ const warmNavRoute = (routeName) => {
 };
 
 onMounted(() => {
+    if (typeof window !== 'undefined') {
+        const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+
+        if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme.value = storedTheme;
+        }
+    }
+
+    applyTheme(theme.value);
     prefetchNavRoutes(workflowNavRoutes.value, 80);
     scheduleIdlePrefetch(() => prefetchNavRoutes(secondaryNavRoutes.value), 180);
     scheduleIdlePrefetch(() => prefetchNavRoutes(allNavRoutes.value, 110), 420);
@@ -214,9 +257,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="theme-shell flex h-screen w-full overflow-hidden bg-[#090909] text-stone-100">
+    <div :data-theme="theme" class="theme-shell shell-frame flex h-screen w-full overflow-hidden bg-[#090909] text-stone-100">
         <!-- SIDEBAR -->
-        <aside class="hidden w-[280px] flex-col shrink-0 h-screen border-r border-white/10 bg-[linear-gradient(180deg,#0a0a0a,#18110d_58%,#0b0b0b)] lg:flex">
+        <aside class="shell-sidebar hidden w-[280px] flex-col shrink-0 h-screen border-r border-white/10 bg-[linear-gradient(180deg,#0a0a0a,#18110d_58%,#0b0b0b)] lg:flex">
             <div class="border-b border-white/10 p-5 flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-[linear-gradient(135deg,#fb923c,#ea580c)] text-[#140d08] font-black text-sm shadow-[0_10px_24px_rgba(249,115,22,0.25)]">Q</div>
                 <div>
@@ -266,7 +309,7 @@ onUnmounted(() => {
 
         <!-- MAIN -->
         <main class="flex-1 flex flex-col min-w-0 bg-transparent">
-            <header class="h-16 bg-[#0c0c0c]/92 border-b border-white/10 px-4 sm:px-6 lg:px-8 flex items-center justify-between z-10 antialiased backdrop-blur">
+            <header class="shell-header h-16 bg-[#0c0c0c]/92 border-b border-white/10 px-4 sm:px-6 lg:px-8 flex items-center justify-between z-10 antialiased backdrop-blur">
                 
                 <!-- LEFT: Mobile Menu Toggle & Title Area -->
                 <div class="flex items-center gap-3">
@@ -295,22 +338,34 @@ onUnmounted(() => {
                         <input 
                             v-model="globalSearch" 
                             @keyup.enter="handleGlobalSearch" 
-                            class="block w-[240px] lg:w-[300px] pl-9 pr-12 py-2 border border-white/10 rounded-xl leading-5 bg-white/5 text-stone-100 placeholder-stone-500 focus:outline-none focus:bg-black/30 focus:ring-1 focus:ring-orange-400/30 focus:border-orange-400/30 sm:text-[13px] transition-all"
+                            class="shell-search-input block w-[240px] lg:w-[300px] pl-9 pr-3 py-2 border border-white/10 rounded-xl leading-5 bg-white/5 text-stone-100 placeholder-stone-500 focus:outline-none focus:bg-black/30 focus:ring-1 focus:ring-orange-400/30 focus:border-orange-400/30 sm:text-[13px] transition-all"
                             placeholder="Search DMC code..." 
                             type="text" 
                             autocomplete="off"
                         />
-                        <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-                            <span class="rounded border border-white/10 bg-black/40 px-1.5 py-0.5 text-[10px] font-mono font-medium text-stone-400 shadow-[0_1px_1px_rgba(0,0,0,0.2)]">CTRL+K</span>
-                        </div>
                     </div>
-
-                    <!-- Separator -->
-                    <div class="hidden lg:block h-5 w-px bg-white/10"></div>
 
                     <!-- User Actions Row -->
                     <div class="flex items-center gap-3 sm:gap-4">
-                        <span class="text-[12px] text-stone-400 font-medium hidden xl:block tracking-wide bg-white/5 px-2 py-1 rounded-md border border-white/10">{{ currentDate }}</span>
+                        <button
+                            type="button"
+                            class="shell-theme-toggle inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-300 transition-colors"
+                            :aria-pressed="isLightTheme"
+                            :title="isLightTheme ? 'Switch to dark mode' : 'Switch to light mode'"
+                            @click="toggleTheme"
+                        >
+                            <svg v-if="isLightTheme" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a8.96 8.96 0 008.354-5.646z" />
+                            </svg>
+                            <svg v-else class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2.25M12 18.75V21M4.22 4.22l1.59 1.59M18.19 18.19l1.59 1.59M3 12h2.25M18.75 12H21M4.22 19.78l1.59-1.59M18.19 5.81l1.59-1.59M12 16.5a4.5 4.5 0 100-9 4.5 4.5 0 000 9z" />
+                            </svg>
+                            <span class="hidden xl:inline">{{ isLightTheme ? 'Light' : 'Dark' }}</span>
+                        </button>
+
+                        <div class="hidden lg:block h-5 w-px bg-white/10"></div>
+
+                        <span class="shell-date-chip text-[12px] text-stone-400 font-medium hidden xl:block tracking-wide bg-white/5 px-2 py-1 rounded-md border border-white/10">{{ currentDate }}</span>
                         
                         <!-- User Identity -->
                         <div class="flex items-center gap-3">
@@ -340,7 +395,7 @@ onUnmounted(() => {
 
         <!-- Mobile Menu Overlay -->
         <div v-if="showMobileMenu" class="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" @click="showMobileMenu = false">
-            <div class="w-[260px] h-full bg-[linear-gradient(180deg,#0b0b0b,#18110d)] border-r border-white/10 flex flex-col pt-4" @click.stop>
+            <div class="shell-mobile-panel w-[260px] h-full bg-[linear-gradient(180deg,#0b0b0b,#18110d)] border-r border-white/10 flex flex-col pt-4" @click.stop>
                 <div class="flex items-center justify-between px-6 mb-6">
                      <div class="flex items-center gap-3">
                          <div class="w-8 h-8 bg-[linear-gradient(135deg,#fb923c,#ea580c)] rounded-lg flex items-center justify-center text-[#140d08] font-bold text-base shadow-sm">Q</div>
