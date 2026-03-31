@@ -29,8 +29,8 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta
 
 config.set({
     prefetch: {
-        cacheFor: '2m',
-        hoverDelay: 0,
+        cacheFor: ['45s', '10m'],
+        hoverDelay: 50,
     },
     visitOptions: (href, options) => {
         return {

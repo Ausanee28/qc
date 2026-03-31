@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Deferred, Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
 const props = defineProps({ externals: Array, internals: Array, jobs: Object, filters: Object });
@@ -43,6 +43,7 @@ const jobPaginator = computed(() => props.jobs ?? null);
 const jobRows = computed(() => jobPaginator.value?.data ?? []);
 const jobLinks = computed(() => jobPaginator.value?.links ?? []);
 const workflowReloadOnly = ['jobs', 'filters', 'flash'];
+const workflowInvalidateTags = ['workflow', 'dashboard', 'report', 'certificates', 'performance'];
 
 const statusLabel = (job) => {
     if (job.is_deleted) return 'Deleted';
@@ -119,6 +120,7 @@ const resetForm = () => {
 const submit = () => {
     const options = {
         only: workflowReloadOnly,
+        invalidateCacheTags: workflowInvalidateTags,
         preserveScroll: true,
         onSuccess: () => {
             resetForm();
@@ -155,6 +157,7 @@ const deleteJob = (job) => {
     if (confirm(`Delete job #${job.transaction_id}?`)) {
         form.delete(route('receive-job.destroy', job.transaction_id), {
             only: workflowReloadOnly,
+            invalidateCacheTags: workflowInvalidateTags,
             preserveScroll: true,
             onSuccess: resetForm,
         });
@@ -169,6 +172,7 @@ const restoreJob = (job) => {
     if (confirm(`Restore job #${job.transaction_id}?`)) {
         form.patch(route('receive-job.restore', job.transaction_id), {
             only: workflowReloadOnly,
+            invalidateCacheTags: workflowInvalidateTags,
             preserveScroll: true,
         });
     }
@@ -184,6 +188,7 @@ const toggleJobStatus = (job) => {
     if (job.is_closed) {
         form.patch(route('receive-job.reopen', job.transaction_id), {
             only: workflowReloadOnly,
+            invalidateCacheTags: workflowInvalidateTags,
             preserveScroll: true,
         });
         return;
@@ -191,6 +196,7 @@ const toggleJobStatus = (job) => {
 
     form.patch(route('receive-job.close', job.transaction_id), {
         only: workflowReloadOnly,
+        invalidateCacheTags: workflowInvalidateTags,
         preserveScroll: true,
     });
 };
@@ -310,12 +316,7 @@ const toggleJobStatus = (job) => {
                     </div>
                 </div>
 
-                <Deferred data="jobs">
-                    <template #fallback>
-                        <div class="px-6 py-10 text-sm text-gray-500">Loading recent jobs...</div>
-                    </template>
-
-                    <div class="overflow-x-auto">
+                <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
@@ -362,9 +363,9 @@ const toggleJobStatus = (job) => {
                                 </tr>
                             </tbody>
                         </table>
-                    </div>
+                </div>
 
-                    <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div class="text-sm text-gray-600">
                             Showing {{ jobPaginator?.from ?? 0 }} to {{ jobPaginator?.to ?? 0 }} of {{ jobPaginator?.total ?? 0 }} jobs
                         </div>
@@ -380,8 +381,7 @@ const toggleJobStatus = (job) => {
                                 v-html="link.label"
                             />
                         </div>
-                    </div>
-                </Deferred>
+                </div>
             </section>
         </div>
     </AuthenticatedLayout>

@@ -1,28 +1,13 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Deferred, Head } from '@inertiajs/vue3';
-import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
-
-const showCharts = ref(false);
-const BarChart = defineAsyncComponent(() => import('@/lib/performance-charts').then((module) => module.Bar));
+import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Bar } from '@/lib/performance-charts';
 
 const props = defineProps({ inspectors: Array, details: Array });
 
 const inspectorRows = computed(() => props.inspectors ?? []);
 const detailRows = computed(() => props.details ?? []);
-
-onMounted(() => {
-    const revealCharts = () => {
-        showCharts.value = true;
-    };
-
-    if (typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(revealCharts, { timeout: 500 });
-        return;
-    }
-
-    window.setTimeout(revealCharts, 150);
-});
 
 const fmt = (sec) => {
     if (!sec || sec < 0) return '—';
@@ -106,21 +91,6 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
             </div>
         </div>
 
-        <Deferred data="inspectors">
-            <template #fallback>
-                <div class="perf-grid">
-                    <div v-for="index in 6" :key="index" class="card perf-card-shell">
-                        <div class="perf-shell-line perf-shell-line-sm"></div>
-                        <div class="perf-shell-line perf-shell-line-lg"></div>
-                        <div class="perf-shell-bars">
-                            <div class="perf-shell-bar"></div>
-                            <div class="perf-shell-bar"></div>
-                            <div class="perf-shell-bar"></div>
-                        </div>
-                    </div>
-                </div>
-            </template>
-
         <div v-if="!inspectorRows.length" style="padding:40px;text-align:center;color:#a8a29e;font-size:13px;background:rgba(18,18,18,0.92);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
             No test data yet.
         </div>
@@ -166,48 +136,26 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
                     <div class="card-title" style="color:#fb923c">Average Duration</div>
                     <div class="card-desc">Mean time per test (lower = faster)</div>
                     <div style="height:180px">
-                        <BarChart v-if="showCharts" :data="avgChartData()" :options="perfOpts" />
-                        <div v-else class="perf-skeleton"></div>
+                        <Bar :data="avgChartData()" :options="perfOpts" />
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-title" style="color:#fdba74">Fastest Time</div>
                     <div class="card-desc">Best (shortest) test time recorded</div>
                     <div style="height:180px">
-                        <BarChart v-if="showCharts" :data="fastChartData()" :options="perfOpts" />
-                        <div v-else class="perf-skeleton"></div>
+                        <Bar :data="fastChartData()" :options="perfOpts" />
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-title" style="color:#e7e5e4">Slowest Time</div>
                     <div class="card-desc">Worst (longest) test time recorded</div>
                     <div style="height:180px">
-                        <BarChart v-if="showCharts" :data="slowChartData()" :options="perfOpts" />
-                        <div v-else class="perf-skeleton"></div>
+                        <Bar :data="slowChartData()" :options="perfOpts" />
                     </div>
                 </div>
             </div>
 
             <!-- Test Duration History Table -->
-            <Deferred data="details">
-                <template #fallback>
-                    <div class="card">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                            <div class="card-title" style="margin:0">Test Duration History</div>
-                            <span style="font-size:11px;color:#78716c">Loading...</span>
-                        </div>
-                        <div class="perf-table-shell">
-                            <div v-for="index in 6" :key="index" class="perf-table-shell__row">
-                                <span class="perf-shell-line perf-shell-line-sm"></span>
-                                <span class="perf-shell-line"></span>
-                                <span class="perf-shell-line"></span>
-                                <span class="perf-shell-line perf-shell-line-lg"></span>
-                                <span class="perf-shell-line perf-shell-line-sm"></span>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-
             <div class="card">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                     <div class="card-title" style="margin:0">Test Duration History</div>
@@ -242,9 +190,7 @@ const fmtDt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
                     </table>
                 </div>
             </div>
-            </Deferred>
         </template>
-        </Deferred>
     </AuthenticatedLayout>
 </template>
 

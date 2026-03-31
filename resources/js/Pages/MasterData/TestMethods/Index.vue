@@ -1,7 +1,7 @@
 <script setup>
 import CrudFormModal from '@/Components/CrudFormModal.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Deferred, Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
 const props = defineProps({ testMethods: Object, equipments: Array, filters: Object });
@@ -22,6 +22,7 @@ const equipmentOptionsReady = computed(() => Array.isArray(props.equipments));
 const methodRows = computed(() => props.testMethods?.data ?? []);
 const methodLinks = computed(() => props.testMethods?.links ?? []);
 const reloadOnly = ['testMethods', 'filters', 'flash'];
+const invalidateCacheTags = ['master-data', 'master-data:test-methods', 'master-data:equipments', 'workflow'];
 
 const form = useForm({
     method_id: null,
@@ -36,6 +37,7 @@ const filterPayload = () => ({
 
 const applyFilters = () => {
     router.get(route('master-data.test-methods.index'), filterPayload(), {
+        only: reloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -50,6 +52,7 @@ const resetFilters = () => {
 const visitPage = (url) => {
     if (!url) return;
     router.visit(url, {
+        only: reloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -80,12 +83,14 @@ const submit = () => {
     if (isEditing.value) {
         form.put(route('master-data.test-methods.update', form.method_id), {
             only: reloadOnly,
+            invalidateCacheTags,
             preserveScroll: true,
             onSuccess: () => { closeModal(); },
         });
     } else {
         form.post(route('master-data.test-methods.store'), {
             only: reloadOnly,
+            invalidateCacheTags,
             preserveScroll: true,
             onSuccess: () => { closeModal(); },
         });
@@ -96,6 +101,7 @@ const deleteMethod = (id) => {
     if (confirm('Are you sure you want to delete this test method?')) {
         form.delete(route('master-data.test-methods.destroy', id), {
             only: reloadOnly,
+            invalidateCacheTags,
             preserveScroll: true,
         });
     }
@@ -153,15 +159,6 @@ const deleteMethod = (id) => {
                 </form>
             </div>
 
-            <Deferred data="testMethods">
-                <template #fallback>
-                    <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
-                        <div class="p-6 space-y-3">
-                            <div v-for="index in 6" :key="index" class="h-12 rounded-lg bg-gray-100 animate-pulse"></div>
-                        </div>
-                    </div>
-                </template>
-
             <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
@@ -214,7 +211,6 @@ const deleteMethod = (id) => {
                     </div>
                 </div>
             </div>
-            </Deferred>
         </div>
 
         <CrudFormModal :show="showModal" :title="isEditing ? 'Edit Method' : 'New Method'" @close="closeModal">

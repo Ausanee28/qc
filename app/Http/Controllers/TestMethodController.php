@@ -21,28 +21,26 @@ class TestMethodController extends Controller
         $perPage = (int) ($filters['per_page'] ?? 20);
 
         return Inertia::render('MasterData/TestMethods/Index', [
-            'equipments' => Inertia::defer(fn () => Equipment::query()->select(['equipment_id', 'equipment_name'])->orderBy('equipment_name')->get(), 'master-data-options'),
+            'equipments' => fn () => Equipment::query()->select(['equipment_id', 'equipment_name'])->orderBy('equipment_name')->get(),
             'filters' => [
                 'search' => $search,
                 'per_page' => (string) $perPage,
             ],
-            'testMethods' => Inertia::defer(function () use ($search, $perPage) {
-                return TestMethod::query()
-                    ->select(['method_id', 'method_name', 'equipment_id'])
-                    ->with(['equipment:equipment_id,equipment_name'])
-                    ->when($search !== '', function ($query) use ($search) {
-                        $query->where(function ($methodQuery) use ($search) {
-                            $methodQuery
-                                ->where('method_name', 'like', "%{$search}%")
-                                ->orWhereHas('equipment', function ($equipmentQuery) use ($search) {
-                                    $equipmentQuery->where('equipment_name', 'like', "%{$search}%");
-                                });
-                        });
-                    })
-                    ->orderBy('method_name')
-                    ->paginate($perPage)
-                    ->withQueryString();
-            }, 'master-data-list'),
+            'testMethods' => fn () => TestMethod::query()
+                ->select(['method_id', 'method_name', 'equipment_id'])
+                ->with(['equipment:equipment_id,equipment_name'])
+                ->when($search !== '', function ($query) use ($search) {
+                    $query->where(function ($methodQuery) use ($search) {
+                        $methodQuery
+                            ->where('method_name', 'like', "%{$search}%")
+                            ->orWhereHas('equipment', function ($equipmentQuery) use ($search) {
+                                $equipmentQuery->where('equipment_name', 'like', "%{$search}%");
+                            });
+                    });
+                })
+                ->orderBy('method_name')
+                ->paginate($perPage)
+                ->withQueryString(),
         ]);
     }
 

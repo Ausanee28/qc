@@ -1,11 +1,10 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Deferred, Head, router } from '@inertiajs/vue3';
-import { computed, defineAsyncComponent, ref, watch } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import { Bar, Doughnut, Line } from '@/lib/dashboard-charts';
 
-const BarChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Bar));
-const LineChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Line));
-const DoughnutChart = defineAsyncComponent(() => import('@/lib/dashboard-charts').then((module) => module.Doughnut));
+const dashboardReloadOnly = ['currentPeriod', 'metrics', 'weeklyData', 'dailyData', 'monthlyData', 'inspectorData', 'flash'];
 
 const props = defineProps({
     currentPeriod: { type: String, default: 'month' },
@@ -40,12 +39,15 @@ const periodLabels = {
 const selectedPeriod = ref(props.currentPeriod);
 const isChangingPeriod = ref(false);
 const currentPeriodLabel = computed(() => periodLabels[props.currentPeriod] || 'This Month');
+const dashboardInvalidateTags = ['dashboard', 'workflow', 'performance', 'report', 'certificates'];
 
 watch(() => props.currentPeriod, (v) => { selectedPeriod.value = v; });
 watch(selectedPeriod, (v, prev) => {
     if (!v || v === prev) return;
     isChangingPeriod.value = true;
     router.get(route('dashboard'), { period: v }, {
+        only: dashboardReloadOnly,
+        cacheTags: dashboardInvalidateTags,
         replace: true, preserveState: true, preserveScroll: true,
         onFinish: () => { isChangingPeriod.value = false; },
     });
@@ -292,7 +294,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                 <article class="card card--doughnut">
                     <div class="card__head">OK / NG Ratio</div>
                     <div class="doughnut-wrap">
-                        <DoughnutChart :data="qualityChartData" :options="doughnutOpts" />
+                        <Doughnut :data="qualityChartData" :options="doughnutOpts" />
                         <div class="doughnut-center">
                             <div class="doughnut-center__ok"><strong>{{ pct(metrics.yieldRate) }}</strong> <span>OK</span></div>
                             <div class="doughnut-center__ng"><strong>{{ pct(metrics.defectRate) }}</strong> <span>NG</span></div>
@@ -319,10 +321,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 
                 <article class="card card--chart">
                     <div class="card__head">Daily OK / NG Trend</div>
-                    <Deferred data="dailyData">
-                        <template #fallback><div class="shimmer"></div></template>
-                        <div class="chart-area"><LineChart :data="dailyTrendData" :options="lineOpts" /></div>
-                    </Deferred>
+                    <div class="chart-area"><Line :data="dailyTrendData" :options="lineOpts" /></div>
                 </article>
             </section>
 
@@ -330,10 +329,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
             <section class="chart-row chart-row--bottom">
                 <article class="card card--chart card--monthly">
                     <div class="card__head">Monthly Tests, OK % and NG %</div>
-                    <Deferred data="monthlyData">
-                        <template #fallback><div class="shimmer shimmer--tall"></div></template>
-                        <div class="chart-area chart-area--tall"><BarChart :data="monthlyTrendData" :options="monthlyMixedOpts" /></div>
-                    </Deferred>
+                    <div class="chart-area chart-area--tall"><Bar :data="monthlyTrendData" :options="monthlyMixedOpts" /></div>
 
                     <div class="monthly-insights">
                         <div v-for="item in monthlyInsights" :key="item.label" class="monthly-insight">
@@ -374,10 +370,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 
                     <article class="card card--chart card--compact">
                         <div class="card__head">Weekly OK / NG</div>
-                        <Deferred data="weeklyData">
-                            <template #fallback><div class="shimmer shimmer--short"></div></template>
-                            <div class="chart-area chart-area--short"><BarChart :data="weeklyBarData" :options="weeklyBarOpts" /></div>
-                        </Deferred>
+                        <div class="chart-area chart-area--short"><Bar :data="weeklyBarData" :options="weeklyBarOpts" /></div>
                     </article>
                 </div>
             </section>
@@ -385,9 +378,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
             <!-- ═══ ROW: Inspector Leaderboard ═══ -->
             <section class="card card--leaderboard">
                 <div class="card__head">Inspector Leaderboard</div>
-                <Deferred data="inspectorData">
-                    <template #fallback><div class="shimmer shimmer--short"></div></template>
-                    <div v-if="topInspectors.length" class="lb-list">
+                <div v-if="topInspectors.length" class="lb-list">
                         <div v-for="(ins, idx) in topInspectors" :key="ins.name" class="lb-row">
                             <div class="lb-rank">{{ idx + 1 }}</div>
                             <div class="lb-info">
@@ -402,9 +393,8 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                                 <div class="lb-bar__fill" :style="{ width: `${ins.yield}%` }"></div>
                             </div>
                         </div>
-                    </div>
-                    <div v-else class="lb-empty">No inspector data for this period.</div>
-                </Deferred>
+                </div>
+                <div v-else class="lb-empty">No inspector data for this period.</div>
             </section>
         </div>
     </AuthenticatedLayout>

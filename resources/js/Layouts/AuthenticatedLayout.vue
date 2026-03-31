@@ -84,8 +84,35 @@ const mobileNavClass = (routeName) => (
 );
 const navCacheFor = (routeName) => (
     routeName === 'receive-job.create' || routeName === 'execute-test.create'
-        ? '5m'
-        : '2m'
+        ? ['2m', '20m']
+        : routeName === 'dashboard' || routeName === 'report.index' || routeName === 'certificates.index' || routeName === 'performance.index'
+            ? ['1m', '15m']
+            : ['45s', '8m']
+);
+const navCacheTags = (routeName) => (
+    routeName === 'dashboard'
+        ? ['dashboard']
+        : routeName === 'receive-job.create'
+            ? ['workflow', 'receive-job']
+            : routeName === 'execute-test.create'
+                ? ['workflow', 'execute-test', 'performance']
+                : routeName === 'report.index'
+                    ? ['report']
+                    : routeName === 'certificates.index'
+                        ? ['certificates']
+                        : routeName === 'performance.index'
+                            ? ['performance']
+                            : routeName === 'master-data.departments.index'
+                                ? ['master-data', 'master-data:departments']
+                                : routeName === 'master-data.equipments.index'
+                                    ? ['master-data', 'master-data:equipments']
+                                    : routeName === 'master-data.test-methods.index'
+                                        ? ['master-data', 'master-data:test-methods']
+                                        : routeName === 'master-data.users.index'
+                                            ? ['master-data', 'master-data:users']
+                                            : routeName === 'master-data.external-users.index'
+                                                ? ['master-data', 'master-data:external-users']
+                            : ['nav']
 );
 const userInitial = computed(() => user.value.name.charAt(0).toUpperCase());
 const userRoleLabel = computed(() => (user.value.role === 'admin' ? 'Admin' : 'QC Tech'));
@@ -143,7 +170,7 @@ const scheduleIdlePrefetch = (callback, delay = 0) => {
     navPrefetchIdleHandles.push(handle);
 };
 
-const prefetchNavRoutes = (routeNames, cacheFor, delayStep = 120) => {
+const prefetchNavRoutes = (routeNames, delayStep = 120) => {
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 
     if (connection?.saveData) {
@@ -154,8 +181,8 @@ const prefetchNavRoutes = (routeNames, cacheFor, delayStep = 120) => {
         const timer = window.setTimeout(() => {
             prefetchedNavRoutes.add(routeName);
             router.prefetch(route(routeName), {}, {
-                cacheFor,
-                cacheTags: [`nav:${routeName}`],
+                cacheFor: navCacheFor(routeName),
+                cacheTags: navCacheTags(routeName),
             });
         }, index * delayStep);
 
@@ -171,14 +198,14 @@ const warmNavRoute = (routeName) => {
     prefetchedNavRoutes.add(routeName);
     router.prefetch(route(routeName), {}, {
         cacheFor: navCacheFor(routeName),
-        cacheTags: [`nav:${routeName}`],
+        cacheTags: navCacheTags(routeName),
     });
 };
 
 onMounted(() => {
-    prefetchNavRoutes(workflowNavRoutes.value, '5m', 80);
-    scheduleIdlePrefetch(() => prefetchNavRoutes(secondaryNavRoutes.value, '3m'), 180);
-    scheduleIdlePrefetch(() => prefetchNavRoutes(allNavRoutes.value, '10m', 110), 420);
+    prefetchNavRoutes(workflowNavRoutes.value, 80);
+    scheduleIdlePrefetch(() => prefetchNavRoutes(secondaryNavRoutes.value), 180);
+    scheduleIdlePrefetch(() => prefetchNavRoutes(allNavRoutes.value, 110), 420);
 });
 
 onUnmounted(() => {

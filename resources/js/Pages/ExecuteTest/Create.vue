@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Deferred, Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { getEcho } from '@/lib/realtime';
 
@@ -72,7 +72,10 @@ const inspectorOptionsReady = computed(() => Array.isArray(props.inspectors));
 const resultPaginator = computed(() => props.results ?? null);
 const resultRows = computed(() => resultPaginator.value?.data ?? []);
 const resultLinks = computed(() => resultPaginator.value?.links ?? []);
-const workflowReloadOnly = ['pendingJobs', 'pendingJobsCount', 'pendingJobsVersion', 'results', 'filters', 'flash'];
+const historyReloadOnly = ['results', 'filters', 'flash'];
+const workflowMutationReloadOnly = ['pendingJobs', 'pendingJobsCount', 'pendingJobsVersion', 'results', 'filters', 'flash'];
+const pendingJobsReloadOnly = ['pendingJobs', 'pendingJobsCount', 'pendingJobsVersion'];
+const workflowInvalidateTags = ['workflow', 'dashboard', 'report', 'certificates', 'performance'];
 
 const judgementClass = (result) => result.judgement === 'OK'
     ? 'bg-emerald-100 text-emerald-700'
@@ -97,7 +100,7 @@ const filterPayload = () => ({
 
 const applyFilters = () => {
     router.get(route('execute-test.create'), filterPayload(), {
-        only: workflowReloadOnly,
+        only: historyReloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -124,7 +127,7 @@ const visitPage = (url) => {
         ...filterPayload(),
         ...(page ? { page } : {}),
     }, {
-        only: workflowReloadOnly,
+        only: historyReloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -140,7 +143,8 @@ const resetForm = () => {
 
 const submit = () => {
     const options = {
-        only: workflowReloadOnly,
+        only: workflowMutationReloadOnly,
+        invalidateCacheTags: workflowInvalidateTags,
         preserveScroll: true,
         onSuccess: () => {
             resetForm();
@@ -180,7 +184,8 @@ const deleteResult = (result) => {
 
     if (confirm(`Delete test result #${result.detail_id}?`)) {
         form.delete(route('execute-test.destroy', result.detail_id), {
-            only: workflowReloadOnly,
+            only: workflowMutationReloadOnly,
+            invalidateCacheTags: workflowInvalidateTags,
             preserveScroll: true,
             onSuccess: resetForm,
         });
@@ -194,7 +199,8 @@ const restoreResult = (result) => {
 
     if (confirm(`Restore test result #${result.detail_id}?`)) {
         form.patch(route('execute-test.restore', result.detail_id), {
-            only: workflowReloadOnly,
+            only: workflowMutationReloadOnly,
+            invalidateCacheTags: workflowInvalidateTags,
             preserveScroll: true,
         });
     }
@@ -241,7 +247,7 @@ const reloadPendingJobs = () => {
     }
 
     router.reload({
-        only: ['pendingJobs', 'pendingJobsCount', 'pendingJobsVersion'],
+        only: pendingJobsReloadOnly,
         preserveState: true,
         preserveScroll: true,
         onStart: () => {
@@ -526,12 +532,7 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <Deferred data="results">
-                    <template #fallback>
-                        <div class="px-6 py-10 text-sm text-gray-500">Loading recent test results...</div>
-                    </template>
-
-                    <div class="overflow-x-auto">
+                <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
@@ -578,9 +579,9 @@ onBeforeUnmount(() => {
                                 </tr>
                             </tbody>
                         </table>
-                    </div>
+                </div>
 
-                    <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div class="text-sm text-gray-600">
                             Showing {{ resultPaginator?.from ?? 0 }} to {{ resultPaginator?.to ?? 0 }} of {{ resultPaginator?.total ?? 0 }} results
                         </div>
@@ -596,8 +597,7 @@ onBeforeUnmount(() => {
                                 v-html="link.label"
                             />
                         </div>
-                    </div>
-                </Deferred>
+                </div>
             </section>
         </div>
     </AuthenticatedLayout>

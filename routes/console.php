@@ -221,23 +221,32 @@ Artisan::command('qc:warm', function (DashboardMetricsService $metricsService) {
             'quarter' => [now()->startOfQuarter(), now()->endOfDay()],
         };
 
-        Cache::remember(DashboardCache::summaryKey($period), now()->addMinutes(10), fn () => [
+        DashboardCache::store()->remember(DashboardCache::summaryKey($period), now()->addMinutes(10), fn () => [
             'currentPeriod' => $period,
             'metrics' => $metricsService->getOverviewMetrics($from, $to),
         ]);
 
-        Cache::remember(DashboardCache::primaryKey($period), now()->addMinutes(10), fn () => [
+        DashboardCache::store()->remember(DashboardCache::primaryKey($period), now()->addMinutes(10), fn () => [
             'weeklyData' => $metricsService->getWeeklyTrend(),
             'equipRank' => $metricsService->getEquipmentRanking(5, $from, $to),
             'failByEquip' => $metricsService->getFailuresByEquipment(5, $from, $to),
             'inspectorData' => $metricsService->getInspectorData(5, $from, $to),
         ]);
 
-        Cache::remember(DashboardCache::secondaryKey($period), now()->addMinutes(10), fn () => [
+        DashboardCache::store()->remember(DashboardCache::secondaryKey($period), now()->addMinutes(10), fn () => [
             'dailyData' => $metricsService->getDailyTrend(),
             'monthlyData' => $metricsService->getMonthlyTrend(),
             'inspectorEff' => $metricsService->getInspectorEfficiency(5, $from, $to),
             'recentActivities' => $metricsService->getRecentActivities(5, $from, $to),
+        ]);
+
+        DashboardCache::store()->remember(DashboardCache::pageKey($period), now()->addMinutes(10), fn () => [
+            'currentPeriod' => $period,
+            'metrics' => $metricsService->getOverviewMetrics($from, $to),
+            'weeklyData' => $metricsService->getWeeklyTrend(),
+            'dailyData' => $metricsService->getDailyTrend(),
+            'monthlyData' => $metricsService->getMonthlyTrend(),
+            'inspectorData' => $metricsService->getInspectorData(5, $from, $to)->toArray(),
         ]);
     }
 

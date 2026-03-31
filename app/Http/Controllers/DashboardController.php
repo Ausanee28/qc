@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use App\Services\DashboardMetricsService;
@@ -12,7 +11,6 @@ use App\Support\DashboardCache;
 class DashboardController extends Controller
 {
     private DashboardMetricsService $metricsService;
-    private array $trendPayloadMemo = [];
 
     public function __construct(DashboardMetricsService $metricsService)
     {
@@ -23,36 +21,19 @@ class DashboardController extends Controller
     {
         $period = $request->get('period', 'month');
 
-        // Compute date range based on period
         [$from, $to] = $this->getDateRange($period);
-
-        $cacheKey = DashboardCache::summaryKey($period);
-
-        $basePayload = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($period, $from, $to) {
+        $payload = DashboardCache::store()->remember(DashboardCache::pageKey($period), now()->addMinutes(10), function () use ($period, $from, $to) {
             return [
                 'currentPeriod' => $period,
                 'metrics' => $this->metricsService->getOverviewMetrics($from, $to),
-            ];
-        });
-
-        return Inertia::render('DashboardSimple', [
-            ...$basePayload,
-            'weeklyData' => Inertia::defer(fn () => $this->getTrendPayload($period)['weeklyData'], 'dashboard-trends'),
-            'dailyData' => Inertia::defer(fn () => $this->getTrendPayload($period)['dailyData'], 'dashboard-trends'),
-            'monthlyData' => Inertia::defer(fn () => $this->getTrendPayload($period)['monthlyData'], 'dashboard-trends'),
-            'inspectorData' => Inertia::defer(fn () => $this->metricsService->getInspectorData(5, $from, $to)->toArray(), 'dashboard-inspector'),
-        ]);
-    }
-
-    private function getTrendPayload(string $period): array
-    {
-        return $this->trendPayloadMemo[$period] ??= Cache::remember(DashboardCache::primaryKey($period), now()->addMinutes(10), function () {
-            return [
                 'weeklyData' => $this->metricsService->getWeeklyTrend(),
                 'dailyData' => $this->metricsService->getDailyTrend(),
                 'monthlyData' => $this->metricsService->getMonthlyTrend(),
+                'inspectorData' => $this->metricsService->getInspectorData(5, $from, $to)->toArray(),
             ];
         });
+
+        return Inertia::render('DashboardSimple', $payload);
     }
 
     private function getDateRange(string $period): array

@@ -34,7 +34,7 @@ class ReportController extends Controller
 
         return Inertia::render('Report/Index', [
             'filters' => $filters,
-            'results' => Inertia::defer(function () use ($filters, $page, $request) {
+            'results' => fn () => (function () use ($filters, $page, $request) {
                 $summary = Cache::remember(
                     $this->reportCacheKey('summary', $filters),
                     now()->addMinutes(3),
@@ -60,14 +60,11 @@ class ReportController extends Controller
                         'pageName' => 'page',
                     ]
                 );
-            }, 'report-results'),
-            'summary' => Inertia::defer(
-                fn () => Cache::remember(
-                    $this->reportCacheKey('summary', $filters),
-                    now()->addMinutes(3),
-                    fn () => $this->buildResultsSummary($filters['date_from'], $filters['date_to'], $filters['dmc'])
-                ),
-                'report-results'
+            })(),
+            'summary' => fn () => Cache::remember(
+                $this->reportCacheKey('summary', $filters),
+                now()->addMinutes(3),
+                fn () => $this->buildResultsSummary($filters['date_from'], $filters['date_to'], $filters['dmc'])
             ),
         ]);
     }

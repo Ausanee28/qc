@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Deferred, Head, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps({ results: Object, summary: Object, filters: Object });
@@ -8,6 +8,7 @@ const dateFrom = ref(props.filters.date_from);
 const dateTo = ref(props.filters.date_to);
 const dmcSearch = ref(props.filters.dmc || '');
 const perPage = ref(String(props.filters.per_page ?? 25));
+const reportReloadOnly = ['results', 'summary', 'filters', 'flash'];
 
 const search = () => router.get(route('report.index'), {
     date_from: dateFrom.value,
@@ -15,6 +16,7 @@ const search = () => router.get(route('report.index'), {
     dmc: dmcSearch.value,
     per_page: perPage.value,
 }, {
+    only: reportReloadOnly,
     preserveState: true,
     preserveScroll: true,
     replace: true,
@@ -24,6 +26,7 @@ const visitPage = (url) => {
     if (!url) return;
 
     router.visit(url, {
+        only: reportReloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -208,29 +211,7 @@ const doExport = async () => {
                 </div>
             </section>
             
-            <Deferred data="results">
-                <template #fallback>
-                    <section class="card card-fill report-shell">
-                        <div class="report-shell__meta">
-                            <div class="report-shell__line report-shell__line-wide"></div>
-                            <div class="report-shell__pill-row">
-                                <span class="report-shell__pill"></span>
-                                <span class="report-shell__pill"></span>
-                            </div>
-                        </div>
-                        <div class="report-shell__table">
-                            <div v-for="index in 7" :key="index" class="report-shell__row">
-                                <span class="report-shell__cell report-shell__cell-sm"></span>
-                                <span class="report-shell__cell"></span>
-                                <span class="report-shell__cell report-shell__cell-lg"></span>
-                                <span class="report-shell__cell"></span>
-                                <span class="report-shell__cell report-shell__cell-sm"></span>
-                            </div>
-                        </div>
-                    </section>
-                </template>
-
-                <div class="report-meta">
+            <div class="report-meta">
                     <div class="report-meta__stats">
                         <div>
                             Showing <strong>{{ props.results?.from ?? 0 }}-{{ props.results?.to ?? 0 }}</strong> of <strong>{{ totalRows }}</strong> result(s)
@@ -253,9 +234,9 @@ const doExport = async () => {
                             Export All
                         </button>
                     </div>
-                </div>
+            </div>
 
-                <section class="card card-fill">
+            <section class="card card-fill">
                     <div class="tbl" style="margin-bottom:0">
                         <table v-if="rows.length">
                     <thead>
@@ -326,8 +307,7 @@ const doExport = async () => {
                             />
                         </div>
                     </div>
-                </section>
-            </Deferred>
+            </section>
         </div>
 
         <Teleport to="body">

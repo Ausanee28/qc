@@ -1,18 +1,20 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Deferred, Head, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 const props = defineProps({ jobs: Object, filters: Object });
 const dateFrom = ref(props.filters.date_from);
 const dateTo = ref(props.filters.date_to);
 const perPage = ref(String(props.filters.per_page ?? 12));
+const certificateReloadOnly = ['jobs', 'filters', 'flash'];
 
 const search = () => router.get(route('certificates.index'), {
     date_from: dateFrom.value,
     date_to: dateTo.value,
     per_page: perPage.value,
 }, {
+    only: certificateReloadOnly,
     preserveState: true,
     preserveScroll: true,
     replace: true,
@@ -22,6 +24,7 @@ const visitPage = (url) => {
     if (!url) return;
 
     router.visit(url, {
+        only: certificateReloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -54,23 +57,7 @@ const jobRows = computed(() => props.jobs?.data ?? []);
             </div>
         </div>
 
-        <Deferred data="jobs">
-            <template #fallback>
-                <div class="cert-grid">
-                    <div v-for="index in 6" :key="index" class="cert-shell__card">
-                        <div class="cert-shell__line cert-shell__line-sm"></div>
-                        <div class="cert-shell__line cert-shell__line-lg"></div>
-                        <div class="cert-shell__stack">
-                            <div class="cert-shell__line"></div>
-                            <div class="cert-shell__line"></div>
-                            <div class="cert-shell__line cert-shell__line-md"></div>
-                        </div>
-                        <div class="cert-shell__button"></div>
-                    </div>
-                </div>
-            </template>
-
-            <div class="cert-grid">
+        <div class="cert-grid">
             <div v-for="j in jobRows" :key="j.transaction_id" class="cert-card">
                 <div style="display:flex;justify-content:space-between;margin-bottom:12px">
                     <div>
@@ -96,10 +83,8 @@ const jobRows = computed(() => props.jobs?.data ?? []);
             <div v-if="!jobRows.length" style="grid-column:1/-1;text-align:center;padding:40px;color:#a8a29e;font-size:13px;background:rgba(18,18,18,0.92);border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
                 No certificates found for this period.
             </div>
-            </div>
-        </Deferred>
+        </div>
 
-        <Deferred data="jobs">
         <div v-if="(props.jobs?.links?.length ?? 0) > 3" class="mt-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 px-5 py-4 text-sm text-stone-300 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 Showing {{ jobRows.length }} certificate job(s) on page {{ props.jobs?.current_page ?? 1 }}
@@ -116,7 +101,6 @@ const jobRows = computed(() => props.jobs?.data ?? []);
                 />
             </div>
         </div>
-        </Deferred>
     </AuthenticatedLayout>
 </template>
 

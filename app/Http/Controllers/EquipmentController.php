@@ -24,16 +24,14 @@ class EquipmentController extends Controller
                 'search' => $search,
                 'per_page' => (string) $perPage,
             ],
-            'equipments' => Inertia::defer(function () use ($search, $perPage) {
-                return Equipment::query()
-                    ->select(['equipment_id', 'equipment_name'])
-                    ->when($search !== '', function ($query) use ($search) {
-                        $query->where('equipment_name', 'like', "%{$search}%");
-                    })
-                    ->orderBy('equipment_name')
-                    ->paginate($perPage)
-                    ->withQueryString();
-            }, 'master-data-list'),
+            'equipments' => fn () => Equipment::query()
+                ->select(['equipment_id', 'equipment_name'])
+                ->when($search !== '', function ($query) use ($search) {
+                    $query->where('equipment_name', 'like', "%{$search}%");
+                })
+                ->orderBy('equipment_name')
+                ->paginate($perPage)
+                ->withQueryString(),
         ]);
     }
 

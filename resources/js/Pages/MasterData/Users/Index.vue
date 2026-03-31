@@ -1,7 +1,7 @@
 <script setup>
 import CrudFormModal from '@/Components/CrudFormModal.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Deferred, Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
 const props = defineProps({ users: Object, filters: Object });
@@ -29,6 +29,7 @@ const roleBadge = {
 const userRows = computed(() => props.users?.data ?? []);
 const userLinks = computed(() => props.users?.links ?? []);
 const reloadOnly = ['users', 'filters', 'flash'];
+const invalidateCacheTags = ['master-data', 'master-data:users', 'workflow'];
 
 const form = useForm({
     user_id: null,
@@ -53,6 +54,7 @@ const filterPayload = () => ({
 
 const applyFilters = () => {
     router.get(route('master-data.users.index'), filterPayload(), {
+        only: reloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -67,6 +69,7 @@ const resetFilters = () => {
 const visitPage = (url) => {
     if (!url) return;
     router.visit(url, {
+        only: reloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -114,12 +117,14 @@ const submit = () => {
     if (isEditing.value) {
         form.put(route('master-data.users.update', form.user_id), {
             only: reloadOnly,
+            invalidateCacheTags,
             preserveScroll: true,
             onSuccess: () => { closeModal(); },
         });
     } else {
         form.post(route('master-data.users.store'), {
             only: reloadOnly,
+            invalidateCacheTags,
             preserveScroll: true,
             onSuccess: () => { closeModal(); },
         });
@@ -130,6 +135,7 @@ const deleteUser = (id) => {
     if (confirm('Are you sure you want to delete this user?')) {
         form.delete(route('master-data.users.destroy', id), {
             only: reloadOnly,
+            invalidateCacheTags,
             preserveScroll: true,
         });
     }
@@ -140,6 +146,7 @@ const submitReset = () => {
 
     resetForm.post(route('master-data.users.reset-password', resetTarget.value.user_id), {
         only: reloadOnly,
+        invalidateCacheTags,
         preserveScroll: true,
         onSuccess: () => { closeResetModal(); },
     });
@@ -196,15 +203,6 @@ const submitReset = () => {
                     </div>
                 </form>
             </div>
-
-            <Deferred data="users">
-                <template #fallback>
-                    <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
-                        <div class="p-6 space-y-3">
-                            <div v-for="index in 6" :key="index" class="h-14 rounded-lg bg-gray-100 animate-pulse"></div>
-                        </div>
-                    </div>
-                </template>
 
             <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
                 <div class="overflow-x-auto">
@@ -273,7 +271,6 @@ const submitReset = () => {
                     </div>
                 </div>
             </div>
-            </Deferred>
         </div>
 
         <CrudFormModal :show="showModal" :title="isEditing ? 'Edit User' : 'New User'" max-width="2xl" @close="closeModal">

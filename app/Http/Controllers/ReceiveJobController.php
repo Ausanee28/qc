@@ -80,7 +80,7 @@ class ReceiveJobController extends Controller
                 return User::orderBy('name')
                     ->get(['user_id', 'name']);
             }),
-            'jobs' => Inertia::defer(fn () => $this->resolveJobsPayload($jobsQuery, $filters, $supportsHeaderSoftDeletes, $currentPage), 'receive-job-history'),
+            'jobs' => fn () => $this->resolveJobsPayload($jobsQuery, $filters, $supportsHeaderSoftDeletes, $currentPage),
             'filters' => $filters,
         ]);
     }

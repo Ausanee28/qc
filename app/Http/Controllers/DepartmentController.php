@@ -23,20 +23,18 @@ class DepartmentController extends Controller
                 'search' => $search,
                 'per_page' => (string) $perPage,
             ],
-            'departments' => Inertia::defer(function () use ($search, $perPage) {
-                return Department::query()
-                    ->select(['department_id', 'department_name', 'internal_phone'])
-                    ->when($search !== '', function ($query) use ($search) {
-                        $query->where(function ($departmentQuery) use ($search) {
-                            $departmentQuery
-                                ->where('department_name', 'like', "%{$search}%")
-                                ->orWhere('internal_phone', 'like', "%{$search}%");
-                        });
-                    })
-                    ->orderBy('department_name')
-                    ->paginate($perPage)
-                    ->withQueryString();
-            }, 'master-data-list'),
+            'departments' => fn () => Department::query()
+                ->select(['department_id', 'department_name', 'internal_phone'])
+                ->when($search !== '', function ($query) use ($search) {
+                    $query->where(function ($departmentQuery) use ($search) {
+                        $departmentQuery
+                            ->where('department_name', 'like', "%{$search}%")
+                            ->orWhere('internal_phone', 'like', "%{$search}%");
+                    });
+                })
+                ->orderBy('department_name')
+                ->paginate($perPage)
+                ->withQueryString(),
         ]);
     }
 

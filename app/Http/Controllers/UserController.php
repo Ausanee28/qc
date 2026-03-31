@@ -28,22 +28,20 @@ class UserController extends Controller
                 'search' => $search,
                 'per_page' => (string) $perPage,
             ],
-            'users' => Inertia::defer(function () use ($search, $perPage) {
-                return User::query()
-                    ->select(['user_id', 'user_name', 'name', 'employee_id', 'role'])
-                    ->when($search !== '', function ($query) use ($search) {
-                        $query->where(function ($userQuery) use ($search) {
-                            $userQuery
-                                ->where('name', 'like', "%{$search}%")
-                                ->orWhere('user_name', 'like', "%{$search}%")
-                                ->orWhere('employee_id', 'like', "%{$search}%")
-                                ->orWhere('role', 'like', "%{$search}%");
-                        });
-                    })
-                    ->orderBy('name')
-                    ->paginate($perPage)
-                    ->withQueryString();
-            }, 'master-data-list'),
+            'users' => fn () => User::query()
+                ->select(['user_id', 'user_name', 'name', 'employee_id', 'role'])
+                ->when($search !== '', function ($query) use ($search) {
+                    $query->where(function ($userQuery) use ($search) {
+                        $userQuery
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('user_name', 'like', "%{$search}%")
+                            ->orWhere('employee_id', 'like', "%{$search}%")
+                            ->orWhere('role', 'like', "%{$search}%");
+                    });
+                })
+                ->orderBy('name')
+                ->paginate($perPage)
+                ->withQueryString(),
         ]);
     }
 

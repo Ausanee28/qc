@@ -1,7 +1,7 @@
 <script setup>
 import CrudFormModal from '@/Components/CrudFormModal.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Deferred, Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
 const props = defineProps({ equipments: Object, filters: Object });
@@ -20,6 +20,7 @@ const filterForm = reactive({
 const equipmentRows = computed(() => props.equipments?.data ?? []);
 const equipmentLinks = computed(() => props.equipments?.links ?? []);
 const reloadOnly = ['equipments', 'filters', 'flash'];
+const invalidateCacheTags = ['master-data', 'master-data:equipments', 'master-data:test-methods'];
 
 const form = useForm({
     equipment_id: null,
@@ -33,6 +34,7 @@ const filterPayload = () => ({
 
 const applyFilters = () => {
     router.get(route('master-data.equipments.index'), filterPayload(), {
+        only: reloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -47,6 +49,7 @@ const resetFilters = () => {
 const visitPage = (url) => {
     if (!url) return;
     router.visit(url, {
+        only: reloadOnly,
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -76,12 +79,14 @@ const submit = () => {
     if (isEditing.value) {
         form.put(route('master-data.equipments.update', form.equipment_id), {
             only: reloadOnly,
+            invalidateCacheTags,
             preserveScroll: true,
             onSuccess: () => { closeModal(); },
         });
     } else {
         form.post(route('master-data.equipments.store'), {
             only: reloadOnly,
+            invalidateCacheTags,
             preserveScroll: true,
             onSuccess: () => { closeModal(); },
         });
@@ -92,6 +97,7 @@ const deleteEquipment = (id) => {
     if (confirm('Are you sure you want to delete this equipment?')) {
         form.delete(route('master-data.equipments.destroy', id), {
             only: reloadOnly,
+            invalidateCacheTags,
             preserveScroll: true,
         });
     }
@@ -149,15 +155,6 @@ const deleteEquipment = (id) => {
                 </form>
             </div>
 
-            <Deferred data="equipments">
-                <template #fallback>
-                    <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
-                        <div class="p-6 space-y-3">
-                            <div v-for="index in 6" :key="index" class="h-12 rounded-lg bg-gray-100 animate-pulse"></div>
-                        </div>
-                    </div>
-                </template>
-
             <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
@@ -204,7 +201,6 @@ const deleteEquipment = (id) => {
                     </div>
                 </div>
             </div>
-            </Deferred>
         </div>
 
         <CrudFormModal :show="showModal" :title="isEditing ? 'Edit Equipment' : 'New Equipment'" @close="closeModal">
