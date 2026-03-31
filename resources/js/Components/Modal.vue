@@ -105,7 +105,7 @@ const maxWidthClass = computed(() => {
             >
                 <div
                     v-show="show"
-                    class="fixed inset-0 transform transition-all"
+                    class="theme-modal-overlay fixed inset-0 transform transition-all"
                     @click="close"
                 >
                     <div
@@ -124,7 +124,7 @@ const maxWidthClass = computed(() => {
             >
                 <div v-show="show" class="flex min-h-full items-center justify-center">
                     <div
-                        class="w-full transform overflow-hidden rounded-2xl border border-orange-500/20 bg-[linear-gradient(180deg,rgba(20,16,13,0.98),rgba(12,10,9,0.96))] shadow-xl transition-all sm:mx-auto sm:w-full"
+                        class="theme-modal-surface w-full transform overflow-hidden rounded-2xl border border-orange-500/20 bg-[linear-gradient(180deg,rgba(20,16,13,0.98),rgba(12,10,9,0.96))] shadow-xl transition-all sm:mx-auto sm:w-full"
                         :class="maxWidthClass"
                     >
                         <slot v-if="showSlot" />

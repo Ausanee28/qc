@@ -81,7 +81,7 @@ onUnmounted(() => document.removeEventListener('keydown', closeOnEscape));
                 @click="open = false"
             >
                 <div
-                    class="rounded-xl ring-1 ring-orange-500/10"
+                    class="theme-dropdown-surface rounded-xl ring-1 ring-orange-500/10"
                     :class="contentClasses"
                 >
                     <slot name="content" />

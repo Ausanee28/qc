@@ -794,13 +794,22 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 
 :global(.theme-shell[data-theme='light']) .db-period select,
 :global(.theme-shell[data-theme='light']) .kpi,
+:global(.theme-shell[data-theme='light']) .kpi--accent,
+:global(.theme-shell[data-theme='light']) .kpi--danger,
 :global(.theme-shell[data-theme='light']) .card,
 :global(.theme-shell[data-theme='light']) .monthly-insight,
 :global(.theme-shell[data-theme='light']) .fc,
 :global(.theme-shell[data-theme='light']) .lb-row {
-    background: linear-gradient(180deg, rgba(255, 253, 250, 0.98), rgba(247, 240, 232, 0.96));
-    border-color: rgba(120, 53, 15, 0.12);
-    box-shadow: 0 14px 30px rgba(120, 53, 15, 0.08);
+    background: linear-gradient(180deg, rgba(255, 253, 250, 0.98), rgba(247, 240, 232, 0.96)) !important;
+    border-color: rgba(120, 53, 15, 0.12) !important;
+    box-shadow: 0 14px 30px rgba(120, 53, 15, 0.08) !important;
+}
+
+:global(.theme-shell[data-theme='light']) .kpi:hover,
+:global(.theme-shell[data-theme='light']) .card:hover,
+:global(.theme-shell[data-theme='light']) .lb-row:hover {
+    border-color: rgba(234, 88, 12, 0.16) !important;
+    background: linear-gradient(180deg, rgba(255, 249, 241, 0.98), rgba(245, 237, 228, 0.98)) !important;
 }
 
 :global(.theme-shell[data-theme='light']) .db-period select {
@@ -832,7 +841,8 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 }
 
 :global(.theme-shell[data-theme='light']) .doughnut-legend__item strong,
-:global(.theme-shell[data-theme='light']) .doughnut-center__ok strong {
+:global(.theme-shell[data-theme='light']) .doughnut-center__ok strong,
+:global(.theme-shell[data-theme='light']) .doughnut-center__ng strong {
     color: #1c1917;
 }
 
