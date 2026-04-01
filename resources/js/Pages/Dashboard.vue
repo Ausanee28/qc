@@ -1427,7 +1427,7 @@ const lineOpts = computed(() => ({
 <style scoped>
 .dashboard-shell {
     position: relative;
-    transition: opacity 140ms ease;
+    transition: none;
 }
 
 .dashboard-shell::before {
@@ -1436,9 +1436,7 @@ const lineOpts = computed(() => ({
     inset: auto 0 0 0;
     height: 60vh;
     pointer-events: none;
-    background:
-        radial-gradient(circle at 15% 20%, rgba(251, 146, 60, 0.08), transparent 26%),
-        radial-gradient(circle at 85% 0%, rgba(120, 53, 15, 0.12), transparent 24%);
+    background: radial-gradient(circle at 15% 20%, rgba(251, 146, 60, 0.06), transparent 26%);
     z-index: 0;
 }
 
@@ -1448,8 +1446,8 @@ const lineOpts = computed(() => ({
     inset: 0;
     pointer-events: none;
     opacity: 0;
-    background: linear-gradient(100deg, transparent 20%, rgba(251, 146, 60, 0.08) 50%, transparent 80%);
-    transition: opacity 180ms ease;
+    background: none;
+    transition: none;
     z-index: 0;
 }
 
@@ -1458,7 +1456,7 @@ const lineOpts = computed(() => ({
 }
 
 .dashboard-shell[data-loading='true']::after {
-    opacity: 0.35;
+    opacity: 0;
 }
 
 .dashboard-shell[data-loading='true'] .dash-hero,
@@ -1481,7 +1479,7 @@ const lineOpts = computed(() => ({
     background:
         linear-gradient(135deg, rgba(10, 10, 10, 0.98), rgba(27, 20, 16, 0.96) 58%, rgba(38, 21, 10, 0.95)),
         linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
-    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.34);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
     min-height: 0;
 }
 
@@ -1489,34 +1487,32 @@ const lineOpts = computed(() => ({
     content: '';
     position: absolute;
     inset: 0;
-    background:
-        linear-gradient(115deg, rgba(255, 255, 255, 0.05), transparent 26%),
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 110px);
-    opacity: 0.4;
+    background: linear-gradient(115deg, rgba(255, 255, 255, 0.04), transparent 30%);
+    opacity: 0.3;
     pointer-events: none;
 }
 
 .dash-hero__glow {
     position: absolute;
     border-radius: 9999px;
-    filter: blur(24px);
-    opacity: 0.55;
+    filter: blur(12px);
+    opacity: 0.32;
     pointer-events: none;
 }
 
 .dash-hero__glow--one {
     top: -30px;
     left: -20px;
-    width: 260px;
-    height: 260px;
+    width: 210px;
+    height: 210px;
     background: rgba(251, 146, 60, 0.16);
 }
 
 .dash-hero__glow--two {
     right: -40px;
     bottom: -60px;
-    width: 300px;
-    height: 300px;
+    width: 230px;
+    height: 230px;
     background: rgba(194, 65, 12, 0.18);
     animation-delay: -5s;
 }
@@ -1527,8 +1523,8 @@ const lineOpts = computed(() => ({
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 28px;
     background: linear-gradient(180deg, rgba(24, 18, 14, 0.95), rgba(14, 11, 9, 0.96));
-    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.26);
-    transition: transform 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+    transition: border-color 180ms ease, background 180ms ease;
 }
 
 .surface-card::after {
@@ -1537,17 +1533,17 @@ const lineOpts = computed(() => ({
     inset: 0;
     pointer-events: none;
     background: radial-gradient(circle at top right, rgba(251, 146, 60, 0.12), transparent 36%);
-    opacity: 0.7;
-    transition: opacity 240ms ease;
+    opacity: 0.36;
+    transition: none;
 }
 
 .surface-card:hover {
     border-color: rgba(251, 146, 60, 0.18);
-    box-shadow: 0 28px 62px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
 .surface-card:hover::after {
-    opacity: 1;
+    opacity: 0.36;
 }
 
 .surface-card--deep {
@@ -1631,7 +1627,7 @@ const lineOpts = computed(() => ({
     font-size: 0.92rem;
     font-weight: 600;
     color: #f5f5f4;
-    backdrop-filter: blur(14px);
+    backdrop-filter: none;
 }
 
 .dash-chip--select {
@@ -1665,7 +1661,7 @@ const lineOpts = computed(() => ({
     border-radius: 22px;
     background: rgba(0, 0, 0, 0.18);
     padding: 1rem 1.1rem;
-    backdrop-filter: blur(14px);
+    backdrop-filter: none;
 }
 
 .metric-glass--compact {
@@ -1778,13 +1774,12 @@ const lineOpts = computed(() => ({
     min-height: 0;
     border-radius: 24px;
     padding: 0.95rem;
-    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    transition: border-color 160ms ease, background 160ms ease;
 }
 
 .summary-tile--compact:hover {
-    transform: translateY(-2px);
     border-color: rgba(251, 146, 60, 0.22);
-    box-shadow: 0 28px 54px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
 .hero-spotlight {
@@ -1817,7 +1812,7 @@ const lineOpts = computed(() => ({
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, #fb923c, #fdba74);
-    box-shadow: 0 0 20px rgba(251, 146, 60, 0.3);
+    box-shadow: none;
     transition: width 220ms ease;
 }
 
@@ -1996,11 +1991,10 @@ const lineOpts = computed(() => ({
     border-radius: 22px;
     background: rgba(255, 255, 255, 0.04);
     padding: 1rem 1.1rem;
-    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    transition: border-color 160ms ease, background 160ms ease;
 }
 
 .quick-link:hover {
-    transform: translateY(-2px);
     border-color: rgba(251, 146, 60, 0.22);
     background: rgba(255, 255, 255, 0.07);
 }
@@ -2022,11 +2016,10 @@ const lineOpts = computed(() => ({
     border-radius: 22px;
     background: rgba(0, 0, 0, 0.2);
     padding: 1rem;
-    transition: transform 200ms ease, border-color 200ms ease, background 200ms ease;
+    transition: border-color 160ms ease, background 160ms ease;
 }
 
 .leaderboard-row:hover {
-    transform: translateY(-2px);
     border-color: rgba(251, 146, 60, 0.18);
     background: rgba(255, 255, 255, 0.05);
 }
@@ -2109,7 +2102,7 @@ const lineOpts = computed(() => ({
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 248, 245, 0.97)),
         linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0));
-    box-shadow: 0 34px 90px rgba(24, 24, 27, 0.08);
+    box-shadow: 0 8px 24px rgba(24, 24, 27, 0.06);
 }
 
 :global(.theme-shell[data-theme='light']) .dashboard-shell .dash-hero::before {
@@ -2135,7 +2128,7 @@ const lineOpts = computed(() => ({
     border-color: rgba(68, 64, 60, 0.12);
     background: rgba(255, 255, 255, 0.9);
     color: #18181b;
-    box-shadow: 0 12px 28px rgba(24, 24, 27, 0.04);
+    box-shadow: 0 4px 12px rgba(24, 24, 27, 0.03);
 }
 
 :global(.theme-shell[data-theme='light']) .dashboard-shell .dash-chip__dot,
@@ -2163,7 +2156,7 @@ const lineOpts = computed(() => ({
 :global(.theme-shell[data-theme='light']) .dashboard-shell .day-row {
     border-color: rgba(68, 64, 60, 0.12);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 247, 243, 0.96));
-    box-shadow: 0 20px 48px rgba(24, 24, 27, 0.06);
+    box-shadow: 0 6px 18px rgba(24, 24, 27, 0.05);
 }
 
 :global(.theme-shell[data-theme='light']) .dashboard-shell .surface-card::after {
@@ -2177,7 +2170,7 @@ const lineOpts = computed(() => ({
 :global(.theme-shell[data-theme='light']) .dashboard-shell .quick-link:hover,
 :global(.theme-shell[data-theme='light']) .dashboard-shell .leaderboard-row:hover {
     border-color: rgba(234, 88, 12, 0.18);
-    box-shadow: 0 24px 54px rgba(24, 24, 27, 0.08);
+    box-shadow: 0 6px 18px rgba(24, 24, 27, 0.05);
 }
 
 :global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief {

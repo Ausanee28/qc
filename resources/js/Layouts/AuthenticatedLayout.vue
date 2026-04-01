@@ -19,7 +19,6 @@ const navGroupsConfig = [
     {
         label: 'Documents',
         items: [
-            { name: 'Certificates', route: 'certificates.index', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
             { name: 'Report', route: 'report.index', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
         ],
     },
@@ -95,7 +94,7 @@ const darkBrandBadgeClass = 'bg-[linear-gradient(135deg,#fb923c,#ea580c)] text-[
 const navCacheFor = (routeName) => (
     routeName === 'receive-job.create' || routeName === 'execute-test.create'
         ? ['2m', '20m']
-        : routeName === 'dashboard' || routeName === 'report.index' || routeName === 'certificates.index' || routeName === 'performance.index'
+        : routeName === 'dashboard' || routeName === 'report.index' || routeName === 'performance.index'
             ? ['1m', '15m']
             : ['45s', '8m']
 );
@@ -108,9 +107,7 @@ const navCacheTags = (routeName) => (
                 ? ['workflow', 'execute-test', 'performance']
                 : routeName === 'report.index'
                     ? ['report']
-                    : routeName === 'certificates.index'
-                        ? ['certificates']
-                        : routeName === 'performance.index'
+                    : routeName === 'performance.index'
                             ? ['performance']
                             : routeName === 'master-data.departments.index'
                                 ? ['master-data', 'master-data:departments']
@@ -139,7 +136,6 @@ const secondaryNavRoutes = computed(() => {
     const priority = [
         'dashboard',
         'report.index',
-        'certificates.index',
         'performance.index',
     ];
 

@@ -1,24 +1,10 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
-const props = defineProps({ jobs: Object, filters: Object });
-const dateFrom = ref(props.filters.date_from);
-const dateTo = ref(props.filters.date_to);
-const perPage = ref(String(props.filters.per_page ?? 12));
+const props = defineProps({ jobs: Object });
 const certificateReloadOnly = ['jobs', 'filters', 'flash'];
-
-const search = () => router.get(route('certificates.index'), {
-    date_from: dateFrom.value,
-    date_to: dateTo.value,
-    per_page: perPage.value,
-}, {
-    only: certificateReloadOnly,
-    preserveState: true,
-    preserveScroll: true,
-    replace: true,
-});
 
 const visitPage = (url) => {
     if (!url) return;
@@ -39,23 +25,6 @@ const jobRows = computed(() => props.jobs?.data ?? []);
     <Head title="Certificates" />
     <AuthenticatedLayout>
         <template #title>Certificates</template>
-
-        <div class="pg-header">
-            <div>
-                <h1 class="pg-title">Certificates</h1>
-                <p class="pg-sub">Generate and download QC test certificates as PDF without loading the whole period at once.</p>
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <input v-model="dateFrom" type="date" class="form-inp" style="padding:6px 10px">
-                <input v-model="dateTo" type="date" class="form-inp" style="padding:6px 10px">
-                <select v-model="perPage" class="form-inp" style="padding:6px 10px">
-                    <option value="12">12 / page</option>
-                    <option value="24">24 / page</option>
-                    <option value="48">48 / page</option>
-                </select>
-                <button @click="search" class="btn" style="padding:6px 14px">Filter</button>
-            </div>
-        </div>
 
         <div class="cert-grid">
             <div v-for="j in jobRows" :key="j.transaction_id" class="cert-card">
