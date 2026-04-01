@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Bar, Doughnut, Line } from '@/lib/dashboard-charts';
 
 const dashboardReloadOnly = ['currentPeriod', 'metrics', 'weeklyData', 'dailyData', 'monthlyData', 'inspectorData', 'flash'];
@@ -38,8 +38,20 @@ const periodLabels = {
 
 const selectedPeriod = ref(props.currentPeriod);
 const isChangingPeriod = ref(false);
+const currentTheme = ref('dark');
+let themeObserver = null;
 const currentPeriodLabel = computed(() => periodLabels[props.currentPeriod] || 'This Month');
 const dashboardInvalidateTags = ['dashboard', 'workflow', 'performance', 'report', 'certificates'];
+
+const syncTheme = () => {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    currentTheme.value = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+};
+
+const isLightTheme = computed(() => currentTheme.value === 'light');
 
 watch(() => props.currentPeriod, (v) => { selectedPeriod.value = v; });
 watch(selectedPeriod, (v, prev) => {
@@ -53,8 +65,57 @@ watch(selectedPeriod, (v, prev) => {
     });
 });
 
+onMounted(() => {
+    syncTheme();
+
+    if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+        themeObserver = new MutationObserver(syncTheme);
+        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    }
+});
+
+onUnmounted(() => {
+    themeObserver?.disconnect();
+    themeObserver = null;
+});
+
 const fmt = (v) => Number(v || 0).toLocaleString();
 const pct = (v) => `${Number(v || 0).toFixed(1)}%`;
+const chartTheme = computed(() => (
+    isLightTheme.value
+        ? {
+            axis: '#344054',
+            legend: '#1f2937',
+            strong: '#101828',
+            grid: 'rgba(15,23,42,0.12)',
+            tooltipBg: 'rgba(255,255,255,1)',
+            tooltipTitle: '#101828',
+            tooltipBody: '#1f2937',
+            tooltipBorder: 'rgba(15,23,42,0.14)',
+            ok: '#d97706',
+            okFill: 'rgba(217,119,6,0.16)',
+            ng: '#e11d48',
+            ngFill: 'rgba(225,29,72,0.12)',
+            bar: 'rgba(217,119,6,0.3)',
+            axisRight: '#7c2d12',
+        }
+        : {
+            axis: '#a8a29e',
+            legend: '#e7e5e4',
+            strong: '#fafaf9',
+            grid: 'rgba(255,255,255,0.06)',
+            tooltipBg: 'rgba(10,10,10,0.95)',
+            tooltipTitle: '#fafaf9',
+            tooltipBody: '#f5f5f4',
+            tooltipBorder: 'rgba(251,146,60,0.2)',
+            ok: '#f59e0b',
+            okFill: 'rgba(245,158,11,0.15)',
+            ng: '#ef4444',
+            ngFill: 'rgba(239,68,68,0.10)',
+            bar: 'rgba(245,158,11,0.3)',
+            axisRight: '#fb923c',
+        }
+));
 
 /* ── KPI cards ── */
 const kpiCards = computed(() => ([
@@ -71,18 +132,21 @@ const qualityChartData = computed(() => ({
     labels: ['OK', 'NG'],
     datasets: [{
         data: [Number(props.metrics.okCount || 0), Number(props.metrics.ngCount || 0)],
-        backgroundColor: ['#f59e0b', '#ef4444'],
+        backgroundColor: [chartTheme.value.ok, chartTheme.value.ng],
         borderWidth: 0, hoverOffset: 6,
     }],
 }));
 
-const doughnutOpts = {
+const doughnutOpts = computed(() => ({
     responsive: true, maintainAspectRatio: false, cutout: '72%',
     plugins: {
         legend: { display: false },
         tooltip: {
-            backgroundColor: 'rgba(10,10,10,0.95)', titleColor: '#fafaf9', bodyColor: '#f5f5f4',
-            borderColor: 'rgba(251,146,60,0.2)', borderWidth: 1,
+            backgroundColor: chartTheme.value.tooltipBg,
+            titleColor: chartTheme.value.tooltipTitle,
+            bodyColor: chartTheme.value.tooltipBody,
+            borderColor: chartTheme.value.tooltipBorder,
+            borderWidth: 1,
             callbacks: {
                 label: (ctx) => {
                     const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
@@ -92,35 +156,36 @@ const doughnutOpts = {
             },
         },
     },
-};
+}));
 
 /* ── Shared chart config ── */
-const axisColor = '#a8a29e';
-const gridColor = 'rgba(255,255,255,0.06)';
-const tooltipStyle = {
-    backgroundColor: 'rgba(10,10,10,0.95)', titleColor: '#fafaf9', bodyColor: '#f5f5f4',
-    borderColor: 'rgba(251,146,60,0.2)', borderWidth: 1,
-};
+const tooltipStyle = computed(() => ({
+    backgroundColor: chartTheme.value.tooltipBg,
+    titleColor: chartTheme.value.tooltipTitle,
+    bodyColor: chartTheme.value.tooltipBody,
+    borderColor: chartTheme.value.tooltipBorder,
+    borderWidth: 1,
+}));
 
-const lineOpts = {
+const lineOpts = computed(() => ({
     responsive: true, maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-        legend: { labels: { color: '#e7e5e4', usePointStyle: true, padding: 14 } },
-        tooltip: tooltipStyle,
+        legend: { labels: { color: chartTheme.value.legend, usePointStyle: true, padding: 14 } },
+        tooltip: tooltipStyle.value,
     },
     scales: {
-        x: { ticks: { color: axisColor }, grid: { display: false }, border: { display: false } },
-        y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor }, border: { display: false } },
+        x: { ticks: { color: chartTheme.value.axis }, grid: { display: false }, border: { display: false } },
+        y: { beginAtZero: true, ticks: { color: chartTheme.value.axis }, grid: { color: chartTheme.value.grid }, border: { display: false } },
     },
     elements: { line: { tension: 0.35, borderWidth: 2.5 }, point: { radius: 2, hoverRadius: 5 } },
-};
+}));
 
-const barOpts = {
-    ...lineOpts,
+const barOpts = computed(() => ({
+    ...lineOpts.value,
     elements: undefined,
-    plugins: { ...lineOpts.plugins, legend: { display: false } },
-};
+    plugins: { ...lineOpts.value.plugins, legend: { display: false } },
+}));
 
 /* ── Daily trend ── */
 const dailyRows = computed(() => {
@@ -131,8 +196,8 @@ const dailyRows = computed(() => {
 const dailyTrendData = computed(() => ({
     labels: dailyRows.value.map((d) => d.label),
     datasets: [
-        { label: 'OK', data: dailyRows.value.map((d) => d.ok), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.15)', fill: true, tension: 0.35, pointRadius: 2, pointHoverRadius: 5 },
-        { label: 'NG', data: dailyRows.value.map((d) => d.ng), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.10)', fill: true, tension: 0.35, pointRadius: 2, pointHoverRadius: 5 },
+        { label: 'OK', data: dailyRows.value.map((d) => d.ok), borderColor: chartTheme.value.ok, backgroundColor: chartTheme.value.okFill, fill: true, tension: 0.35, pointRadius: 2, pointHoverRadius: 5 },
+        { label: 'NG', data: dailyRows.value.map((d) => d.ng), borderColor: chartTheme.value.ng, backgroundColor: chartTheme.value.ngFill, fill: true, tension: 0.35, pointRadius: 2, pointHoverRadius: 5 },
     ],
 }));
 
@@ -149,19 +214,19 @@ const monthlySeries = computed(() => {
 const monthlyTrendData = computed(() => ({
     labels: monthlySeries.value.map((m) => m.label),
     datasets: [
-        { type: 'bar', label: 'Total Tests', data: monthlySeries.value.map((m) => m.total), backgroundColor: 'rgba(245,158,11,0.3)', borderRadius: 8, yAxisID: 'y' },
-        { type: 'line', label: 'OK %', data: monthlySeries.value.map((m) => m.yield), borderColor: '#fb923c', backgroundColor: '#fb923c', tension: 0.3, pointRadius: 4, pointHoverRadius: 6, yAxisID: 'y1' },
-        { type: 'line', label: 'NG %', data: monthlySeries.value.map((m) => m.ngRate), borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.3, pointRadius: 4, pointHoverRadius: 6, yAxisID: 'y1' },
+        { type: 'bar', label: 'Total Tests', data: monthlySeries.value.map((m) => m.total), backgroundColor: chartTheme.value.bar, borderRadius: 8, yAxisID: 'y' },
+        { type: 'line', label: 'OK %', data: monthlySeries.value.map((m) => m.yield), borderColor: chartTheme.value.ok, backgroundColor: chartTheme.value.ok, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, yAxisID: 'y1' },
+        { type: 'line', label: 'NG %', data: monthlySeries.value.map((m) => m.ngRate), borderColor: chartTheme.value.ng, backgroundColor: chartTheme.value.ng, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, yAxisID: 'y1' },
     ],
 }));
 
-const monthlyMixedOpts = {
+const monthlyMixedOpts = computed(() => ({
     responsive: true, maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-        legend: { labels: { color: '#e7e5e4', usePointStyle: true, padding: 14 } },
+        legend: { labels: { color: chartTheme.value.legend, usePointStyle: true, padding: 14 } },
         tooltip: {
-            ...tooltipStyle,
+            ...tooltipStyle.value,
             callbacks: {
                 label: (ctx) => {
                     const value = Number(ctx.parsed.y || 0);
@@ -173,29 +238,29 @@ const monthlyMixedOpts = {
         },
     },
     scales: {
-        x: { ticks: { color: axisColor }, grid: { display: false }, border: { display: false } },
-        y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor }, border: { display: false } },
-        y1: { beginAtZero: true, position: 'right', min: 0, max: 100, ticks: { color: '#fb923c', callback: (v) => `${v}%` }, grid: { display: false }, border: { display: false } },
+        x: { ticks: { color: chartTheme.value.axis }, grid: { display: false }, border: { display: false } },
+        y: { beginAtZero: true, ticks: { color: chartTheme.value.axis }, grid: { color: chartTheme.value.grid }, border: { display: false } },
+        y1: { beginAtZero: true, position: 'right', min: 0, max: 100, ticks: { color: chartTheme.value.axisRight, callback: (v) => `${v}%` }, grid: { display: false }, border: { display: false } },
     },
-};
+}));
 
 /* ── Weekly bar ── */
 const weeklyBarData = computed(() => ({
     labels: (props.weeklyData || []).map((d) => d.label),
     datasets: [
-        { label: 'OK', data: (props.weeklyData || []).map((d) => Number(d.ok || 0)), backgroundColor: '#f59e0b', borderRadius: 6 },
-        { label: 'NG', data: (props.weeklyData || []).map((d) => Number(d.ng || 0)), backgroundColor: '#ef4444', borderRadius: 6 },
+        { label: 'OK', data: (props.weeklyData || []).map((d) => Number(d.ok || 0)), backgroundColor: chartTheme.value.ok, borderRadius: 6 },
+        { label: 'NG', data: (props.weeklyData || []).map((d) => Number(d.ng || 0)), backgroundColor: chartTheme.value.ng, borderRadius: 6 },
     ],
 }));
 
-const weeklyBarOpts = {
+const weeklyBarOpts = computed(() => ({
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: '#e7e5e4', usePointStyle: true, pointStyle: 'circle', padding: 12 } }, tooltip: tooltipStyle },
+    plugins: { legend: { labels: { color: chartTheme.value.legend, usePointStyle: true, pointStyle: 'circle', padding: 12 } }, tooltip: tooltipStyle.value },
     scales: {
-        x: { stacked: true, ticks: { color: axisColor }, grid: { display: false }, border: { display: false } },
-        y: { stacked: true, beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor }, border: { display: false } },
+        x: { stacked: true, ticks: { color: chartTheme.value.axis }, grid: { display: false }, border: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { color: chartTheme.value.axis }, grid: { color: chartTheme.value.grid }, border: { display: false } },
     },
-};
+}));
 
 /* ── Forecast ── */
 const regressionForecast = (series, clamp = null) => {
@@ -784,12 +849,12 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 :global(.theme-shell[data-theme='light']) .monthly-insight__value,
 :global(.theme-shell[data-theme='light']) .fc__value,
 :global(.theme-shell[data-theme='light']) .lb-name {
-    color: #1c1917;
+    color: #0f172a;
 }
 
 :global(.theme-shell[data-theme='light']) .db-badge {
-    background: rgba(251, 146, 60, 0.12);
-    color: #9a3412;
+    background: rgba(79, 110, 247, 0.12);
+    color: #2440d8;
 }
 
 :global(.theme-shell[data-theme='light']) .db-period select,
@@ -800,54 +865,66 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 :global(.theme-shell[data-theme='light']) .monthly-insight,
 :global(.theme-shell[data-theme='light']) .fc,
 :global(.theme-shell[data-theme='light']) .lb-row {
-    background: linear-gradient(180deg, rgba(255, 253, 250, 0.98), rgba(247, 240, 232, 0.96)) !important;
-    border-color: rgba(120, 53, 15, 0.12) !important;
-    box-shadow: 0 14px 30px rgba(120, 53, 15, 0.08) !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(245, 247, 251, 0.98)) !important;
+    border-color: rgba(15, 23, 42, 0.12) !important;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06) !important;
 }
 
 :global(.theme-shell[data-theme='light']) .kpi:hover,
 :global(.theme-shell[data-theme='light']) .card:hover,
 :global(.theme-shell[data-theme='light']) .lb-row:hover {
-    border-color: rgba(234, 88, 12, 0.16) !important;
-    background: linear-gradient(180deg, rgba(255, 249, 241, 0.98), rgba(245, 237, 228, 0.98)) !important;
+    border-color: rgba(79, 110, 247, 0.2) !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(240, 244, 255, 0.98)) !important;
 }
 
 :global(.theme-shell[data-theme='light']) .db-period select {
-    color: #1c1917;
+    color: #0f172a;
+    border-color: rgba(15, 23, 42, 0.14) !important;
 }
 
 :global(.theme-shell[data-theme='light']) .kpi__label,
 :global(.theme-shell[data-theme='light']) .monthly-insight__label,
 :global(.theme-shell[data-theme='light']) .fc__label,
 :global(.theme-shell[data-theme='light']) .lb-yield__label {
-    color: #78716c;
+    color: #475467;
 }
 
 :global(.theme-shell[data-theme='light']) .monthly-insight__note,
 :global(.theme-shell[data-theme='light']) .fc__sub,
 :global(.theme-shell[data-theme='light']) .lb-meta,
 :global(.theme-shell[data-theme='light']) .lb-empty {
-    color: #57534e;
+    color: #344054;
 }
 
 :global(.theme-shell[data-theme='light']) .doughnut-legend {
-    border-top-color: rgba(120, 53, 15, 0.1);
+    border-top-color: rgba(15, 23, 42, 0.12);
 }
 
 :global(.theme-shell[data-theme='light']) .doughnut-legend__item,
 :global(.theme-shell[data-theme='light']) .doughnut-center__ok span,
 :global(.theme-shell[data-theme='light']) .doughnut-center__ng span {
-    color: #78716c;
+    color: #344054;
 }
 
 :global(.theme-shell[data-theme='light']) .doughnut-legend__item strong,
 :global(.theme-shell[data-theme='light']) .doughnut-center__ok strong,
 :global(.theme-shell[data-theme='light']) .doughnut-center__ng strong {
-    color: #1c1917;
+    color: #0f172a;
 }
 
 :global(.theme-shell[data-theme='light']) .lb-bar {
-    background: rgba(120, 53, 15, 0.08);
+    background: rgba(15, 23, 42, 0.12);
+}
+
+:global(.theme-shell[data-theme='light']) .kpi--accent .kpi__label,
+:global(.theme-shell[data-theme='light']) .fc--accent .fc__label {
+    color: #9a3412;
+}
+
+:global(.theme-shell[data-theme='light']) .kpi--danger .kpi__label,
+:global(.theme-shell[data-theme='light']) .kpi--danger .kpi__value,
+:global(.theme-shell[data-theme='light']) .doughnut-center__ng strong {
+    color: #be123c;
 }
 
 @media (max-width: 639px) {

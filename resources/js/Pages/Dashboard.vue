@@ -60,6 +60,18 @@ const props = defineProps({
 const selectedPeriod = ref(props.currentPeriod);
 const isLoading = ref(false);
 const motionReady = ref(false);
+const currentTheme = ref('dark');
+let themeObserver = null;
+
+const syncTheme = () => {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    currentTheme.value = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+};
+
+const isLightTheme = computed(() => currentTheme.value === 'light');
 
 const dashboardSummaryKeys = [
     'currentPeriod',
@@ -192,6 +204,13 @@ const scheduleRealtimeReload = () => {
 };
 
 onMounted(() => {
+    syncTheme();
+
+    if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+        themeObserver = new MutationObserver(syncTheme);
+        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    }
+
     secondaryPayloadReady.value = Boolean(
         props.dailyData.length
         || props.monthlyData.length
@@ -328,6 +347,9 @@ onBeforeUnmount(() => {
         trendArchiveObserver = null;
     }
 
+    themeObserver?.disconnect();
+    themeObserver = null;
+
     if (dashboardEcho) {
         dashboardEcho.leave('dashboard.global');
         dashboardEcho = null;
@@ -436,8 +458,22 @@ const weeklySummary = computed(() => {
         chartData: {
             labels,
             datasets: [
-                { label: 'OK', data: okSeries, backgroundColor: '#f59e0b', borderRadius: 10, borderSkipped: false, maxBarThickness: 24 },
-                { label: 'NG', data: ngSeries, backgroundColor: '#9a3412', borderRadius: 10, borderSkipped: false, maxBarThickness: 24 },
+                {
+                    label: 'OK',
+                    data: okSeries,
+                    backgroundColor: chartPalette.value.ok,
+                    borderRadius: 10,
+                    borderSkipped: false,
+                    maxBarThickness: 24,
+                },
+                {
+                    label: 'NG',
+                    data: ngSeries,
+                    backgroundColor: '#9a3412',
+                    borderRadius: 10,
+                    borderSkipped: false,
+                    maxBarThickness: 24,
+                },
             ],
         },
     };
@@ -498,8 +534,26 @@ const monthlySummary = computed(() => {
         chartData: {
             labels,
             datasets: [
-                { label: 'OK', data: okSeries, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.16)', fill: true, pointBackgroundColor: '#f59e0b', pointBorderColor: '#ffffff', pointBorderWidth: 2 },
-                { label: 'NG', data: ngSeries, borderColor: '#fb923c', backgroundColor: 'transparent', fill: false, pointBackgroundColor: '#fb923c', pointBorderColor: '#ffffff', pointBorderWidth: 2 },
+                {
+                    label: 'OK',
+                    data: okSeries,
+                    borderColor: chartPalette.value.ok,
+                    backgroundColor: chartPalette.value.okFill,
+                    fill: true,
+                    pointBackgroundColor: chartPalette.value.ok,
+                    pointBorderColor: chartPalette.value.pointBorder,
+                    pointBorderWidth: 2,
+                },
+                {
+                    label: 'NG',
+                    data: ngSeries,
+                    borderColor: chartPalette.value.ng,
+                    backgroundColor: isLightTheme.value ? 'rgba(194,65,12,0.02)' : 'transparent',
+                    fill: false,
+                    pointBackgroundColor: chartPalette.value.ng,
+                    pointBorderColor: chartPalette.value.pointBorder,
+                    pointBorderWidth: 2,
+                },
             ],
         },
     };
@@ -788,12 +842,77 @@ const attentionItems = computed(() => {
 });
 
 const monthlyHighlights = computed(() => monthlySummary.value.highlights);
+const chartPalette = computed(() => (
+    isLightTheme.value
+        ? {
+            axis: '#344054',
+            axisStrong: '#101828',
+            legend: '#1f2937',
+            grid: 'rgba(15,23,42,0.12)',
+            tooltipBg: 'rgba(255,255,255,1)',
+            tooltipBorder: 'rgba(15,23,42,0.14)',
+            tooltipTitle: '#101828',
+            tooltipBody: '#1f2937',
+            pointBorder: '#ffffff',
+            ok: '#d97706',
+            okFill: 'rgba(217,119,6,0.18)',
+            ng: '#c2410c',
+            ngFill: 'rgba(194,65,12,0.12)',
+            warmA: '#ea580c',
+            warmB: '#f59e0b',
+            barScale: ['#d97706', '#ea580c', '#f59e0b', '#b45309', '#78716c'],
+            doughnutScale: ['#ea580c', '#d97706', '#fb923c', '#9a3412', '#78716c'],
+            inspectorScale: ['#d97706', '#ea580c', '#f59e0b', '#a16207', '#78716c'],
+        }
+        : {
+            axis: '#a8a29e',
+            axisStrong: '#e7e5e4',
+            legend: '#d6d3d1',
+            grid: 'rgba(245,158,11,0.12)',
+            tooltipBg: '#120c08',
+            tooltipBorder: 'rgba(251,146,60,0.22)',
+            tooltipTitle: '#fafaf9',
+            tooltipBody: '#d6d3d1',
+            pointBorder: '#ffffff',
+            ok: '#f59e0b',
+            okFill: 'rgba(245,158,11,0.16)',
+            ng: '#fb923c',
+            ngFill: 'rgba(251,146,60,0.06)',
+            warmA: '#f59e0b',
+            warmB: '#fb923c',
+            barScale: ['#f59e0b', '#fb923c', '#fbbf24', '#78350f', '#292524'],
+            doughnutScale: ['#f97316', '#f59e0b', '#fb923c', '#c2410c', '#292524'],
+            inspectorScale: ['#f59e0b', '#fb923c', '#fbbf24', '#a16207', '#292524'],
+        }
+));
 
 const dailyLineData = computed(() => ({
     labels: props.dailyData.map((day) => day.label),
     datasets: [
-        { label: 'OK', data: props.dailyData.map((day) => day.ok), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.16)', fill: true, pointBackgroundColor: '#f59e0b', pointBorderColor: '#ffffff', pointBorderWidth: 2, pointRadius: 0, pointHoverRadius: 4 },
-        { label: 'NG', data: props.dailyData.map((day) => day.ng), borderColor: '#fb923c', backgroundColor: 'rgba(251,146,60,0.06)', fill: false, pointBackgroundColor: '#fb923c', pointBorderColor: '#ffffff', pointBorderWidth: 2, pointRadius: 0, pointHoverRadius: 4 },
+        {
+            label: 'OK',
+            data: props.dailyData.map((day) => day.ok),
+            borderColor: chartPalette.value.ok,
+            backgroundColor: chartPalette.value.okFill,
+            fill: true,
+            pointBackgroundColor: chartPalette.value.ok,
+            pointBorderColor: chartPalette.value.pointBorder,
+            pointBorderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+        },
+        {
+            label: 'NG',
+            data: props.dailyData.map((day) => day.ng),
+            borderColor: chartPalette.value.ng,
+            backgroundColor: chartPalette.value.ngFill,
+            fill: false,
+            pointBackgroundColor: chartPalette.value.ng,
+            pointBorderColor: chartPalette.value.pointBorder,
+            pointBorderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+        },
     ],
 }));
 
@@ -801,41 +920,125 @@ const weeklyChartData = computed(() => weeklySummary.value.chartData);
 
 const equipUsageData = computed(() => ({
     labels: props.equipRank?.length ? props.equipRank.map((item) => item.name) : ['No data'],
-    datasets: [{ label: 'Tests', data: props.equipRank?.length ? props.equipRank.map((item) => item.count) : [0], backgroundColor: ['#f59e0b', '#fb923c', '#fbbf24', '#78350f', '#292524'], borderRadius: 10, borderSkipped: false }],
+    datasets: [{
+        label: 'Tests',
+        data: props.equipRank?.length ? props.equipRank.map((item) => item.count) : [0],
+        backgroundColor: chartPalette.value.barScale,
+        borderRadius: 10,
+        borderSkipped: false,
+    }],
 }));
 
 const failDoughnutData = computed(() => ({
     labels: props.failByEquip?.length ? props.failByEquip.map((item) => item.name) : ['No data'],
-    datasets: [{ data: props.failByEquip?.length ? props.failByEquip.map((item) => item.count) : [1], backgroundColor: ['#f97316', '#f59e0b', '#fb923c', '#c2410c', '#292524'], borderWidth: 0, hoverOffset: 6 }],
+    datasets: [{
+        data: props.failByEquip?.length ? props.failByEquip.map((item) => item.count) : [1],
+        backgroundColor: chartPalette.value.doughnutScale,
+        borderWidth: 0,
+        hoverOffset: 6,
+    }],
 }));
 
 const inspectorEffData = computed(() => ({
     labels: props.inspectorEff?.length ? props.inspectorEff.map((item) => item.name) : ['No data'],
-    datasets: [{ label: 'Avg (min)', data: props.inspectorEff?.length ? props.inspectorEff.map((item) => item.avgMinutes) : [0], backgroundColor: ['#f59e0b', '#fb923c', '#fbbf24', '#a16207', '#292524'], borderRadius: 10, borderSkipped: false }],
+    datasets: [{
+        label: 'Avg (min)',
+        data: props.inspectorEff?.length ? props.inspectorEff.map((item) => item.avgMinutes) : [0],
+        backgroundColor: chartPalette.value.inspectorScale,
+        borderRadius: 10,
+        borderSkipped: false,
+    }],
 }));
 
 const monthlyLineData = computed(() => monthlySummary.value.chartData);
 
-const sharedCartesianScale = {
-    x: { ticks: { color: '#a8a29e', font: { size: 11, family: chartFontFamily } }, grid: { display: false }, border: { display: false } },
-    y: { beginAtZero: true, ticks: { color: '#78716c', font: { size: 10, family: chartFontFamily } }, grid: { color: 'rgba(245,158,11,0.12)' }, border: { display: false } },
-};
+const sharedCartesianScale = computed(() => ({
+    x: {
+        ticks: { color: chartPalette.value.axis, font: { size: 11, family: chartFontFamily } },
+        grid: { display: false },
+        border: { display: false },
+    },
+    y: {
+        beginAtZero: true,
+        ticks: { color: chartPalette.value.axis, font: { size: 10, family: chartFontFamily } },
+        grid: { color: chartPalette.value.grid },
+        border: { display: false },
+    },
+}));
 
-const tooltipOpts = { backgroundColor: '#120c08', padding: 12, titleFont: { family: chartFontFamily, size: 12, weight: '700' }, bodyFont: { family: chartFontFamily, size: 11 } };
-const chartEnterAnimation = computed(() => (
-    prefersReducedMotion.value || !motionReady.value || isLoading.value
-        ? false
-        : {
-            duration: 260,
-            easing: 'easeOutCubic',
-            delay: 0,
-        }
-));
+const tooltipOpts = computed(() => ({
+    backgroundColor: chartPalette.value.tooltipBg,
+    borderColor: chartPalette.value.tooltipBorder,
+    borderWidth: 1,
+    titleColor: chartPalette.value.tooltipTitle,
+    bodyColor: chartPalette.value.tooltipBody,
+    padding: 12,
+    titleFont: { family: chartFontFamily, size: 12, weight: '700' },
+    bodyFont: { family: chartFontFamily, size: 11 },
+}));
+const chartEnterAnimation = computed(() => false);
 
-const barOpts = computed(() => ({ responsive: true, maintainAspectRatio: false, animation: chartEnterAnimation.value, plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', color: '#d6d3d1', font: { family: chartFontFamily, size: 11, weight: '600' }, padding: 18 } }, tooltip: tooltipOpts }, scales: sharedCartesianScale }));
-const horizontalBarOpts = computed(() => ({ indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: chartEnterAnimation.value, plugins: { legend: { display: false }, tooltip: tooltipOpts }, scales: { x: sharedCartesianScale.y, y: { ticks: { color: '#e7e5e4', font: { size: 11, family: chartFontFamily, weight: '600' } }, grid: { display: false }, border: { display: false } } } }));
-const doughnutOpts = computed(() => ({ responsive: true, maintainAspectRatio: false, cutout: '68%', animation: chartEnterAnimation.value, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', color: '#d6d3d1', font: { family: chartFontFamily, size: 10, weight: '600' }, padding: 16 } }, tooltip: tooltipOpts } }));
-const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false, animation: chartEnterAnimation.value, plugins: { legend: { display: false }, tooltip: tooltipOpts }, scales: sharedCartesianScale, elements: { line: { tension: 0.36, borderWidth: 2.5 }, point: { radius: 0, hoverRadius: 5 } }, interaction: { mode: 'index', intersect: false } }));
+const barOpts = computed(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: chartEnterAnimation.value,
+    plugins: {
+        legend: {
+            labels: {
+                usePointStyle: true,
+                pointStyle: 'circle',
+                color: chartPalette.value.legend,
+                font: { family: chartFontFamily, size: 11, weight: '600' },
+                padding: 18,
+            },
+        },
+        tooltip: tooltipOpts.value,
+    },
+    scales: sharedCartesianScale.value,
+}));
+const horizontalBarOpts = computed(() => ({
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: chartEnterAnimation.value,
+    plugins: { legend: { display: false }, tooltip: tooltipOpts.value },
+    scales: {
+        x: sharedCartesianScale.value.y,
+        y: {
+            ticks: { color: chartPalette.value.axisStrong, font: { size: 11, family: chartFontFamily, weight: '600' } },
+            grid: { display: false },
+            border: { display: false },
+        },
+    },
+}));
+const doughnutOpts = computed(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '68%',
+    animation: chartEnterAnimation.value,
+    plugins: {
+        legend: {
+            position: 'bottom',
+            labels: {
+                usePointStyle: true,
+                pointStyle: 'circle',
+                color: chartPalette.value.legend,
+                font: { family: chartFontFamily, size: 10, weight: '600' },
+                padding: 16,
+            },
+        },
+        tooltip: tooltipOpts.value,
+    },
+}));
+const lineOpts = computed(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: chartEnterAnimation.value,
+    plugins: { legend: { display: false }, tooltip: tooltipOpts.value },
+    scales: sharedCartesianScale.value,
+    elements: { line: { tension: 0.36, borderWidth: 2.5 }, point: { radius: 0, hoverRadius: 5 } },
+    interaction: { mode: 'index', intersect: false },
+}));
 </script>
 
 <template>
@@ -1867,6 +2070,214 @@ const lineOpts = computed(() => ({ responsive: true, maintainAspectRatio: false,
     background: linear-gradient(90deg, rgba(41, 37, 36, 0.9), rgba(68, 64, 60, 0.95), rgba(41, 37, 36, 0.9));
     background-size: 200% 100%;
     animation: dash-shimmer 1.6s linear infinite;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell::before {
+    background:
+        radial-gradient(circle at 12% 10%, rgba(251, 146, 60, 0.09), transparent 22%),
+        radial-gradient(circle at 86% 0%, rgba(120, 53, 15, 0.06), transparent 20%);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell::after {
+    background: linear-gradient(100deg, transparent 18%, rgba(255, 255, 255, 0.64) 50%, transparent 82%);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-white/55'],
+:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-white/50'] {
+    color: #475467 !important;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-white/65'],
+:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-white/72'],
+:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-white/78'],
+:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-stone-300/80'],
+:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-orange-100/70'],
+:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-orange-200/70'] {
+    color: #344054 !important;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-kicker {
+    color: #2440d8;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-heading {
+    color: #0f172a;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-hero {
+    border-color: rgba(68, 64, 60, 0.12);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 248, 245, 0.97)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0));
+    box-shadow: 0 34px 90px rgba(24, 24, 27, 0.08);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-hero::before {
+    background:
+        linear-gradient(115deg, rgba(255, 255, 255, 0.68), transparent 26%),
+        repeating-linear-gradient(90deg, rgba(68, 64, 60, 0.04) 0 1px, transparent 1px 110px);
+    opacity: 0.82;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-hero__glow--one {
+    background: rgba(251, 146, 60, 0.12);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-hero__glow--two {
+    background: rgba(194, 65, 12, 0.08);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-chip,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-status,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-aside,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .metric-glass,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .mini-badge {
+    border-color: rgba(68, 64, 60, 0.12);
+    background: rgba(255, 255, 255, 0.9);
+    color: #18181b;
+    box-shadow: 0 12px 28px rgba(24, 24, 27, 0.04);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-chip__dot,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-status__dot {
+    background: #ea580c;
+    box-shadow: 0 0 0 6px rgba(234, 88, 12, 0.12);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-select,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-select option {
+    color: #18181b;
+    background: transparent;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-card,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-card--deep,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-spotlight,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-inset,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-support-card,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .spotlight-note,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .pulse-card,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .metric-chip,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .quick-link,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .leaderboard-row,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .day-row {
+    border-color: rgba(68, 64, 60, 0.12);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 247, 243, 0.96));
+    box-shadow: 0 20px 48px rgba(24, 24, 27, 0.06);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-card::after {
+    background: radial-gradient(circle at top right, rgba(251, 146, 60, 0.08), transparent 36%);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-card:hover,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-inset:hover,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-support-card:hover,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .spotlight-note:hover,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .quick-link:hover,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .leaderboard-row:hover {
+    border-color: rgba(234, 88, 12, 0.18);
+    box-shadow: 0 24px 54px rgba(24, 24, 27, 0.08);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief {
+    border-color: rgba(68, 64, 60, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief::before {
+    background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.48), transparent 40%);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief[data-tone='ink'] {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(245, 244, 240, 0.96));
+    color: #18181b;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief[data-tone='orange'] {
+    background: linear-gradient(160deg, rgba(255, 244, 237, 0.98), rgba(255, 237, 213, 0.96));
+    color: #7c2d12;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief[data-tone='amber'] {
+    background: linear-gradient(160deg, rgba(255, 248, 235, 0.98), rgba(254, 243, 199, 0.95));
+    color: #92400e;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief[data-tone='ember'] {
+    background: linear-gradient(160deg, rgba(255, 241, 242, 0.98), rgba(255, 228, 230, 0.95));
+    color: #9f1239;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-aside__label,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-status,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .mini-badge {
+    color: #344054;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-aside__value {
+    color: #0f172a;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .spotlight-track,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .quality-bar {
+    background: rgba(68, 64, 60, 0.08);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .attention-card {
+    border-color: rgba(68, 64, 60, 0.12);
+    color: #1f2937;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .attention-card[data-tone='orange'] {
+    background: linear-gradient(180deg, rgba(255, 244, 237, 0.98), rgba(255, 237, 213, 0.96));
+    color: #9a3412;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .attention-card[data-tone='amber'] {
+    background: linear-gradient(180deg, rgba(255, 248, 235, 0.98), rgba(254, 243, 199, 0.96));
+    color: #92400e;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .attention-card[data-tone='ember'] {
+    background: linear-gradient(180deg, rgba(255, 241, 242, 0.98), rgba(255, 228, 230, 0.96));
+    color: #9f1239;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .attention-card[data-tone='ink'] {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 244, 240, 0.96));
+    color: #44403c;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .metric-chip--accent,
+:global(.theme-shell[data-theme='light']) .dashboard-shell .mini-badge--accent {
+    border-color: rgba(234, 88, 12, 0.18);
+    background: rgba(251, 146, 60, 0.1);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .metric-chip--dark {
+    background: linear-gradient(180deg, rgba(252, 252, 250, 0.98), rgba(243, 242, 238, 0.96));
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .quick-link:hover > span {
+    color: #2440d8;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .leaderboard-row__rank {
+    background: rgba(251, 146, 60, 0.12);
+    color: #9a3412;
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-table__row {
+    border-bottom-color: rgba(68, 64, 60, 0.08);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-table__row:hover {
+    background: rgba(24, 24, 27, 0.03);
+}
+
+:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-skeleton {
+    background: linear-gradient(90deg, rgba(231, 229, 228, 0.9), rgba(245, 244, 240, 0.98), rgba(231, 229, 228, 0.9));
 }
 
 @keyframes dash-rise {

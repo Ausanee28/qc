@@ -436,33 +436,51 @@ onUnmounted(() => {
 }
 
 :global(.theme-shell[data-theme='light']) .performance-page {
-    --perf-card-bg: linear-gradient(180deg, rgba(255, 253, 250, 0.98), rgba(246, 239, 231, 0.96));
-    --perf-card-border: rgba(234, 88, 12, 0.12);
-    --perf-card-shadow: 0 22px 40px rgba(120, 53, 15, 0.08);
-    --perf-subtle-bg: rgba(255, 255, 255, 0.78);
-    --perf-subtle-border: rgba(120, 53, 15, 0.10);
-    --perf-soft-text: #6b5f56;
-    --perf-strong-text: #1c1917;
-    --perf-avatar-bg: linear-gradient(135deg, rgba(251, 146, 60, 0.18), rgba(255, 247, 237, 0.98));
-    --perf-average-bg: linear-gradient(180deg, rgba(255, 230, 202, 0.95), rgba(255, 245, 233, 0.98));
-    --perf-fastest-bg: linear-gradient(180deg, rgba(255, 241, 227, 0.98), rgba(255, 249, 241, 0.98));
-    --perf-slowest-bg: linear-gradient(180deg, rgba(239, 230, 220, 0.96), rgba(228, 214, 201, 0.98));
-    --perf-progress-track: rgba(120, 53, 15, 0.08);
+    --perf-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 247, 243, 0.96));
+    --perf-card-border: rgba(68, 64, 60, 0.12);
+    --perf-card-shadow: 0 22px 40px rgba(24, 24, 27, 0.06);
+    --perf-subtle-bg: rgba(255, 255, 255, 0.96);
+    --perf-subtle-border: rgba(68, 64, 60, 0.12);
+    --perf-soft-text: #57534e;
+    --perf-strong-text: #18181b;
+    --perf-avatar-bg: linear-gradient(135deg, rgba(251, 146, 60, 0.18), rgba(255, 237, 213, 0.98));
+    --perf-average-bg: linear-gradient(180deg, rgba(41, 37, 36, 0.96), rgba(28, 25, 23, 0.98));
+    --perf-fastest-bg: linear-gradient(180deg, rgba(120, 53, 15, 0.78), rgba(87, 39, 11, 0.86));
+    --perf-slowest-bg: linear-gradient(180deg, rgba(161, 161, 170, 0.92), rgba(113, 113, 122, 0.96));
+    --perf-progress-track: rgba(68, 64, 60, 0.12);
     --perf-ok-text: #c2410c;
-    --perf-ng-text: #6b5f56;
+    --perf-ng-text: #78716c;
 }
 
 :global(.theme-shell[data-theme='light']) .performance-empty {
-    color: #1c1917;
-    background: linear-gradient(180deg, rgba(255, 253, 250, 0.98), rgba(246, 239, 231, 0.96));
-    border-color: rgba(234, 88, 12, 0.12);
-    box-shadow: 0 18px 40px rgba(120, 53, 15, 0.08);
+    color: #18181b;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 247, 243, 0.96));
+    border-color: rgba(68, 64, 60, 0.12);
+    box-shadow: 0 18px 40px rgba(24, 24, 27, 0.06);
 }
 
 :global(.theme-shell[data-theme='light']) .performance-stat__value,
 :global(.theme-shell[data-theme='light']) .performance-history__id,
 :global(.theme-shell[data-theme='light']) .performance-history__duration {
     color: #ea580c;
+}
+
+:global(.theme-shell[data-theme='light']) .performance-card__meta,
+:global(.theme-shell[data-theme='light']) .performance-history__hint,
+:global(.theme-shell[data-theme='light']) .performance-stat .lbl {
+    color: #57534e;
+}
+
+:global(.theme-shell[data-theme='light']) .performance-stat--average .performance-stat__value,
+:global(.theme-shell[data-theme='light']) .performance-stat--fastest .performance-stat__value {
+    color: #fb923c;
+}
+
+:global(.theme-shell[data-theme='light']) .performance-stat--slowest .performance-stat__value,
+:global(.theme-shell[data-theme='light']) .performance-stat--average .lbl,
+:global(.theme-shell[data-theme='light']) .performance-stat--fastest .lbl,
+:global(.theme-shell[data-theme='light']) .performance-stat--slowest .lbl {
+    color: #fff7ed;
 }
 
 :global(.theme-shell[data-theme='light']) .performance-panel__title--fastest {

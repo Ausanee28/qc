@@ -2,8 +2,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 
-const THEME_STORAGE_KEY = 'qc-theme-preference';
-
 const navGroupsConfig = [
     {
         label: 'Analytics',
@@ -52,7 +50,6 @@ const dateFormatter = new Intl.DateTimeFormat('en-GB', {
 
 const showMobileMenu = ref(false);
 const page = usePage();
-const theme = ref('dark');
 
 const globalSearch = ref('');
 const handleGlobalSearch = () => {
@@ -62,26 +59,13 @@ const handleGlobalSearch = () => {
     }
 };
 
-const applyTheme = (value) => {
+const applyTheme = () => {
     if (typeof document === 'undefined') {
         return;
     }
 
-    document.documentElement.dataset.theme = value;
-    document.documentElement.style.colorScheme = value;
-};
-
-const setTheme = (value) => {
-    theme.value = value;
-    applyTheme(value);
-
-    if (typeof window !== 'undefined') {
-        window.localStorage.setItem(THEME_STORAGE_KEY, value);
-    }
-};
-
-const toggleTheme = () => {
-    setTheme(theme.value === 'light' ? 'dark' : 'light');
+    document.documentElement.dataset.theme = 'dark';
+    document.documentElement.style.colorScheme = 'dark';
 };
 
 const groupedNav = computed(() => {
@@ -96,26 +80,18 @@ const groupedNav = computed(() => {
 
 const user = computed(() => page.props.auth?.user ?? { name: '', role: '' });
 const currentDate = dateFormatter.format(new Date());
-const isLightTheme = computed(() => theme.value === 'light');
 const isActiveRoute = (routeName) => route().current(routeName);
 const desktopNavClass = (routeName) => (
     isActiveRoute(routeName)
-        ? (isLightTheme.value
-            ? 'border border-orange-300/70 bg-orange-100 text-orange-900 shadow-[0_14px_30px_rgba(251,146,60,0.16)]'
-            : 'border border-orange-500/20 bg-[linear-gradient(135deg,rgba(251,146,60,0.2),rgba(249,115,22,0.1))] text-orange-100 shadow-[0_14px_28px_rgba(0,0,0,0.2)]')
-        : (isLightTheme.value
-            ? 'text-stone-700 hover:bg-orange-50 hover:text-orange-900'
-            : 'text-stone-300 hover:bg-white/5 hover:text-orange-100')
+        ? 'border border-orange-500/20 bg-[linear-gradient(135deg,rgba(251,146,60,0.2),rgba(249,115,22,0.1))] text-orange-100 shadow-[0_14px_28px_rgba(0,0,0,0.2)]'
+        : 'text-stone-300 hover:bg-white/5 hover:text-orange-100'
 );
 const mobileNavClass = (routeName) => (
     isActiveRoute(routeName)
-        ? (isLightTheme.value
-            ? 'bg-orange-100 text-orange-900 font-semibold border border-orange-300/70'
-            : 'bg-orange-500/15 text-orange-100 font-semibold border border-orange-500/20')
-        : (isLightTheme.value
-            ? 'text-stone-700 hover:bg-orange-50'
-            : 'text-stone-300 hover:bg-white/5')
+        ? 'bg-orange-500/15 text-orange-100 font-semibold border border-orange-500/20'
+        : 'text-stone-300 hover:bg-white/5'
 );
+const darkBrandBadgeClass = 'bg-[linear-gradient(135deg,#fb923c,#ea580c)] text-[#140d08] shadow-[0_10px_24px_rgba(249,115,22,0.25)]';
 const navCacheFor = (routeName) => (
     routeName === 'receive-job.create' || routeName === 'execute-test.create'
         ? ['2m', '20m']
@@ -238,14 +214,10 @@ const warmNavRoute = (routeName) => {
 
 onMounted(() => {
     if (typeof window !== 'undefined') {
-        const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-
-        if (storedTheme === 'light' || storedTheme === 'dark') {
-            theme.value = storedTheme;
-        }
+        window.localStorage.removeItem('qc-theme-preference');
     }
 
-    applyTheme(theme.value);
+    applyTheme();
     prefetchNavRoutes(workflowNavRoutes.value, 80);
     scheduleIdlePrefetch(() => prefetchNavRoutes(secondaryNavRoutes.value), 180);
     scheduleIdlePrefetch(() => prefetchNavRoutes(allNavRoutes.value, 110), 420);
@@ -257,22 +229,22 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div :data-theme="theme" class="theme-shell shell-frame flex h-screen w-full overflow-hidden bg-[#090909] text-stone-100">
+    <div data-theme="dark" class="theme-shell shell-frame flex h-screen w-full overflow-hidden bg-[#090909] text-stone-100">
         <!-- SIDEBAR -->
-        <aside class="shell-sidebar hidden w-[280px] flex-col shrink-0 h-screen border-r border-white/10 bg-[linear-gradient(180deg,#0a0a0a,#18110d_58%,#0b0b0b)] lg:flex">
-            <div class="border-b border-white/10 p-5 flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-[linear-gradient(135deg,#fb923c,#ea580c)] text-[#140d08] font-black text-sm shadow-[0_10px_24px_rgba(249,115,22,0.25)]">Q</div>
+        <aside class="shell-sidebar hidden w-[264px] flex-col shrink-0 h-screen border-r border-white/10 bg-[linear-gradient(180deg,#0a0a0a,#18110d_58%,#0b0b0b)] lg:flex">
+            <div class="h-16 shrink-0 border-b border-white/10 px-4 flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm" :class="darkBrandBadgeClass">Q</div>
                 <div>
-                    <div class="text-base font-bold text-white leading-tight">QC Lab</div>
-                    <div class="text-[11px] text-orange-200/70 font-medium uppercase tracking-[0.18em]">Quality Control</div>
+                    <div class="text-[19px] font-bold leading-tight text-white">QC Lab</div>
+                    <div class="text-[10px] font-medium uppercase tracking-[0.16em] text-orange-200/70">Quality Control</div>
                 </div>
             </div>
             
-            <div class="flex-1 overflow-y-auto" scroll-region>
+            <div class="flex-1 overflow-y-hidden px-1.5" scroll-region>
                 <template v-for="(group, gIdx) in groupedNav" :key="group.label">
-                    <div class="px-4" :class="[gIdx === 0 ? 'mt-2 mb-5' : 'mt-6 mb-5']">
-                        <div class="px-3 text-[11px] font-semibold text-stone-500 uppercase tracking-[0.18em] mb-2">{{ group.label }}</div>
-                        <div class="space-y-1">
+                    <div class="px-3.5" :class="[gIdx === 0 ? 'mt-2.5 mb-3.5' : 'mt-3.5 mb-3.5']">
+                        <div class="px-2.5 text-[10px] font-semibold text-stone-500 uppercase tracking-[0.16em] mb-1.5">{{ group.label }}</div>
+                        <div class="space-y-0">
                             <Link
                                 v-for="item in group.items"
                                 :key="item.route"
@@ -284,10 +256,10 @@ onUnmounted(() => {
                                 @mousedown="warmNavRoute(item.route)"
                                 @focus="warmNavRoute(item.route)"
                                 @mouseenter="warmNavRoute(item.route)"
-                                class="flex w-full items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors duration-150 decoration-none text-left"
+                                class="flex w-full items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-[13px] font-medium cursor-pointer transition-colors duration-150 decoration-none text-left"
                                 :class="desktopNavClass(item.route)"
                             >
-                                <svg class="w-5 h-5 shrink-0 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
                                 </svg>
                                 {{ item.name }}
@@ -309,19 +281,19 @@ onUnmounted(() => {
 
         <!-- MAIN -->
         <main class="flex-1 flex flex-col min-w-0 bg-transparent">
-            <header class="shell-header h-16 bg-[#0c0c0c]/92 border-b border-white/10 px-4 sm:px-6 lg:px-8 flex items-center justify-between z-10 antialiased backdrop-blur">
+            <header class="shell-header h-16 bg-[#0c0c0c]/92 px-4 sm:px-6 lg:px-8 flex items-center justify-between z-10 antialiased">
                 
                 <!-- LEFT: Mobile Menu Toggle & Title Area -->
                 <div class="flex items-center gap-3">
-                    <button @click="showMobileMenu = true" class="lg:hidden text-stone-400 hover:text-orange-200 focus:outline-none p-1.5 rounded-md hover:bg-white/5 transition-colors">
+                    <button @click="showMobileMenu = true" class="lg:hidden focus:outline-none p-1.5 rounded-md hover:bg-white/5 transition-colors text-stone-400 hover:text-orange-200">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
                     <div class="hidden sm:flex items-center text-[13px] font-medium tracking-tight">
-                        <span class="text-stone-500 hover:text-orange-200 transition-colors cursor-pointer">QC Lab</span>
+                        <span class="transition-colors cursor-pointer text-stone-500 hover:text-orange-200">QC Lab</span>
                         <svg class="w-4 h-4 text-stone-700 mx-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-                        <span class="text-stone-100 font-semibold"><slot name="title">Workspace</slot></span>
+                        <span class="font-semibold text-stone-100"><slot name="title">Workspace</slot></span>
                     </div>
                 </div>
 
@@ -331,7 +303,7 @@ onUnmounted(() => {
                     <!-- Search Input (Linear style) -->
                     <div class="relative group hidden md:block">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-4 w-4 text-stone-500 group-focus-within:text-orange-200 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg class="h-4 w-4 transition-colors text-stone-500 group-focus-within:text-orange-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
@@ -347,48 +319,32 @@ onUnmounted(() => {
 
                     <!-- User Actions Row -->
                     <div class="flex items-center gap-3 sm:gap-4">
-                        <button
-                            type="button"
-                            class="shell-theme-toggle inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-300 transition-colors"
-                            :aria-pressed="isLightTheme"
-                            :title="isLightTheme ? 'Switch to dark mode' : 'Switch to light mode'"
-                            @click="toggleTheme"
-                        >
-                            <svg v-if="isLightTheme" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a8.96 8.96 0 008.354-5.646z" />
-                            </svg>
-                            <svg v-else class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2.25M12 18.75V21M4.22 4.22l1.59 1.59M18.19 18.19l1.59 1.59M3 12h2.25M18.75 12H21M4.22 19.78l1.59-1.59M18.19 5.81l1.59-1.59M12 16.5a4.5 4.5 0 100-9 4.5 4.5 0 000 9z" />
-                            </svg>
-                            <span class="hidden xl:inline">{{ isLightTheme ? 'Light' : 'Dark' }}</span>
-                        </button>
-
-                        <div class="hidden lg:block h-5 w-px bg-white/10"></div>
-
-                        <span class="shell-date-chip text-[12px] text-stone-400 font-medium hidden xl:block tracking-wide bg-white/5 px-2 py-1 rounded-md border border-white/10">{{ currentDate }}</span>
+                        <span class="shell-date-chip text-[12px] font-medium hidden xl:block tracking-wide bg-white/5 px-2 py-1 rounded-md border border-white/10 text-stone-400">{{ currentDate }}</span>
                         
                         <!-- User Identity -->
                         <div class="flex items-center gap-3">
                             <div class="flex-col items-end hidden sm:flex leading-tight">
-                                <span class="text-[13px] font-bold text-stone-100 tracking-tight">{{ user.name }}</span>
-                                <span class="text-[10px] font-bold text-orange-200/70 uppercase tracking-widest mt-0.5">{{ userRoleLabel }}</span>
+                                <span class="text-[13px] font-bold tracking-tight text-stone-100">{{ user.name }}</span>
+                                <span class="text-[10px] font-bold uppercase tracking-widest mt-0.5 text-orange-200/70">{{ userRoleLabel }}</span>
                             </div>
-                            <div class="w-9 h-9 rounded-full bg-[linear-gradient(135deg,#fb923c,#c2410c)] text-[#120d08] flex items-center justify-center text-[11px] font-bold shadow-[0_8px_20px_rgba(249,115,22,0.28)] cursor-pointer hover:opacity-90 transition-opacity">
+                            <div class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold cursor-pointer hover:opacity-90 transition-opacity bg-[linear-gradient(135deg,#fb923c,#c2410c)] text-[#120d08] shadow-[0_8px_20px_rgba(249,115,22,0.28)]">
                                 {{ userInitial }}
                             </div>
                         </div>
 
                         <!-- Logout Icon Button -->
-                        <Link :href="route('logout')" method="post" as="button" class="text-stone-500 hover:text-orange-200 p-1.5 rounded-lg hover:bg-white/5 transition-colors ml-1" title="Log out">
+                        <Link :href="route('logout')" method="post" as="button" class="p-1.5 rounded-lg hover:bg-white/5 transition-colors ml-1 text-stone-500 hover:text-orange-200" title="Log out">
                             <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                         </Link>
                     </div>
                 </div>
             </header>
 
-            <div class="flex-1 overflow-y-auto w-full p-6 lg:p-8">
+            <div class="shell-scroll-region flex-1 overflow-y-auto w-full px-6 pb-6 pt-4 lg:px-8 lg:pb-8 lg:pt-5">
                 <div class="max-w-7xl mx-auto">
-                    <slot />
+                    <div class="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(10,10,10,0.96),rgba(7,7,7,0.98))] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.32)] lg:p-5">
+                        <slot />
+                    </div>
                 </div>
             </div>
         </main>
@@ -398,7 +354,7 @@ onUnmounted(() => {
             <div class="shell-mobile-panel w-[260px] h-full bg-[linear-gradient(180deg,#0b0b0b,#18110d)] border-r border-white/10 flex flex-col pt-4" @click.stop>
                 <div class="flex items-center justify-between px-6 mb-6">
                      <div class="flex items-center gap-3">
-                         <div class="w-8 h-8 bg-[linear-gradient(135deg,#fb923c,#ea580c)] rounded-lg flex items-center justify-center text-[#140d08] font-bold text-base shadow-sm">Q</div>
+                         <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-base shadow-sm bg-[linear-gradient(135deg,#fb923c,#ea580c)] text-[#140d08]">Q</div>
                          <h2 class="font-bold text-white" style="font-size:16px;font-weight:700">QC Lab</h2>
                      </div>
                      <button @click="showMobileMenu = false" class="text-stone-500 hover:text-orange-200">

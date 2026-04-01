@@ -616,6 +616,34 @@ const doExport = async () => {
     border-color: transparent;
 }
 
+:global(.theme-shell[data-theme='light']) .report-pagination__summary {
+    color: #57534e;
+}
+
+:global(.theme-shell[data-theme='light']) .pager-btn {
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(68, 64, 60, 0.14);
+    color: #57534e;
+    box-shadow: 0 8px 20px rgba(24, 24, 27, 0.04);
+}
+
+:global(.theme-shell[data-theme='light']) .pager-btn:hover:not(:disabled) {
+    background: rgba(24, 24, 27, 0.04);
+    border-color: rgba(68, 64, 60, 0.18);
+    color: #18181b;
+}
+
+:global(.theme-shell[data-theme='light']) .pager-btn:disabled {
+    opacity: 0.62;
+    color: #a8a29e;
+    background: rgba(255, 255, 255, 0.84);
+}
+
+:global(.theme-shell[data-theme='light']) .pager-btn-active {
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(234, 88, 12, 0.22);
+}
+
 .row-check {
     width: 16px;
     height: 16px;

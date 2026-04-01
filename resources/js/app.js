@@ -5,7 +5,6 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
-const themeStorageKey = 'qc-theme-preference';
 const pages = import.meta.glob('./Pages/**/*.vue');
 const eagerPages = import.meta.glob([
     './Pages/DashboardSimple.vue',
@@ -21,12 +20,9 @@ let navBusyTimer = null;
 const navBusyDelay = 260;
 
 if (typeof window !== 'undefined') {
-    const storedTheme = window.localStorage.getItem(themeStorageKey);
-
-    if (storedTheme === 'light' || storedTheme === 'dark') {
-        document.documentElement.dataset.theme = storedTheme;
-        document.documentElement.style.colorScheme = storedTheme;
-    }
+    window.localStorage.removeItem('qc-theme-preference');
+    document.documentElement.dataset.theme = 'dark';
+    document.documentElement.style.colorScheme = 'dark';
 }
 
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta.env.PROD) {

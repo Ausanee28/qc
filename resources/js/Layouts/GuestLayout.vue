@@ -26,6 +26,32 @@
     animation: guest-rise 720ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
+:global(html[data-theme='light']) .theme-guest {
+    background:
+        radial-gradient(circle at top left, rgba(251, 146, 60, 0.08), transparent 18%),
+        radial-gradient(circle at 82% 12%, rgba(120, 53, 15, 0.05), transparent 16%),
+        linear-gradient(180deg, #fcfcfa 0%, #f6f5f1 52%, #f1efea 100%) !important;
+}
+
+:global(html[data-theme='light']) .theme-guest .guest-glow--one {
+    background: rgba(251, 146, 60, 0.12) !important;
+}
+
+:global(html[data-theme='light']) .theme-guest .guest-glow--two {
+    background: rgba(194, 65, 12, 0.08) !important;
+}
+
+:global(html[data-theme='light']) .theme-guest .guest-glow--three {
+    background: rgba(217, 119, 6, 0.05) !important;
+}
+
+:global(html[data-theme='light']) .theme-guest .guest-grid {
+    opacity: 0.05 !important;
+    background-image:
+        linear-gradient(rgba(68, 64, 60, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(68, 64, 60, 0.08) 1px, transparent 1px) !important;
+}
+
 .guest-frame {
     position: relative;
     overflow: hidden;
