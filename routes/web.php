@@ -39,6 +39,12 @@ Route::middleware(['auth'])->group(function () {
     // Report
     Route::get('/report', [ReportController::class , 'index'])->name('report.index');
     Route::get('/report/export', [ReportController::class , 'export'])->name('report.export');
+    Route::middleware('admin')->prefix('report/templates')->name('report.templates.')->group(function () {
+        Route::get('/', [ReportController::class, 'templates'])->name('index');
+        Route::post('/', [ReportController::class, 'storeTemplate'])->name('store');
+        Route::put('/{templateId}', [ReportController::class, 'updateTemplate'])->name('update');
+        Route::delete('/{templateId}', [ReportController::class, 'destroyTemplate'])->name('destroy');
+    });
 
     // Certificates
     Route::get('/certificates', [CertificateController::class , 'index'])->name('certificates.index');
