@@ -240,27 +240,66 @@ tr:hover td {
 .radio-card {
     flex: 1;
     border: 1px solid #D1D5DB;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 14px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 10px;
-    transition: .2s
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease, transform .2s ease
 }
 
 .radio-card:hover {
-    background: #F9FAFB
+    background: #F9FAFB;
+    transform: translateY(-1px)
 }
 
 .radio-card.ok {
-    border-color: #10B981;
-    background: #ECFDF5
+    border-color: #34D399;
+    background: linear-gradient(135deg, #ECFDF5, #DCFCE7);
+    box-shadow: 0 8px 22px rgba(16, 185, 129, 0.14)
 }
 
 .radio-card.ng {
-    border-color: #EF4444;
-    background: #FEF2F2
+    border-color: #FB7185;
+    background: linear-gradient(135deg, #FEF2F2, #FFE4E6);
+    box-shadow: 0 8px 22px rgba(239, 68, 68, 0.14)
+}
+
+.radio-card-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.radio-card-label {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.radio-card-option--ok .radio-card-badge {
+    background: linear-gradient(145deg, #6EE7B7, #10B981);
+    color: #052E16;
+}
+
+.radio-card-option--ok .radio-card-label {
+    color: #166534;
+}
+
+.radio-card-option--ng .radio-card-badge {
+    background: linear-gradient(145deg, #FDA4AF, #EF4444);
+    color: #450A0A;
+}
+
+.radio-card-option--ng .radio-card-label {
+    color: #B91C1C;
 }
 
 .cert-grid {
@@ -492,17 +531,37 @@ tr:hover td {
 }
 
 .radio-card:hover {
-    background: rgba(251, 146, 60, 0.08);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .radio-card.ok {
-    border-color: rgba(251, 146, 60, 0.32);
-    background: rgba(251, 146, 60, 0.1);
+    border-color: rgba(52, 211, 153, 0.52);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.14));
+    box-shadow: 0 10px 24px rgba(6, 95, 70, 0.32);
 }
 
 .radio-card.ng {
-    border-color: rgba(239, 68, 68, 0.25);
-    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(248, 113, 113, 0.5);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(190, 24, 93, 0.14));
+    box-shadow: 0 10px 24px rgba(159, 18, 57, 0.3);
+}
+
+.radio-card-option--ok .radio-card-badge {
+    background: linear-gradient(145deg, #6EE7B7, #10B981);
+    color: #052E16;
+}
+
+.radio-card-option--ok .radio-card-label {
+    color: #86EFAC;
+}
+
+.radio-card-option--ng .radio-card-badge {
+    background: linear-gradient(145deg, #FDA4AF, #EF4444);
+    color: #450A0A;
+}
+
+.radio-card-option--ng .radio-card-label {
+    color: #FDA4AF;
 }
 
 .pill {

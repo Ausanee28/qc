@@ -437,15 +437,15 @@ onBeforeUnmount(() => {
                         <div>
                             <label class="form-lbl">Judgement *</label>
                             <div class="radio-grp">
-                                <label :class="['radio-card', form.judgement === 'OK' ? 'ok' : '']" style="cursor:pointer">
+                                <label :class="['radio-card', 'radio-card-option--ok', form.judgement === 'OK' ? 'ok' : '']">
                                     <input type="radio" v-model="form.judgement" value="OK" class="sr-only" required style="display:none" />
-                                    <div style="width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#ea580c);color:#140d08;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">OK</div>
-                                    <span style="font-size:13px;font-weight:600">OK</span>
+                                    <div class="radio-card-badge">OK</div>
+                                    <span class="radio-card-label">OK</span>
                                 </label>
-                                <label :class="['radio-card', form.judgement === 'NG' ? 'ng' : '']" style="cursor:pointer">
+                                <label :class="['radio-card', 'radio-card-option--ng', form.judgement === 'NG' ? 'ng' : '']">
                                     <input type="radio" v-model="form.judgement" value="NG" class="sr-only" style="display:none" />
-                                    <div style="width:20px;height:20px;border-radius:50%;background:#44403c;color:#f5f5f4;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">NG</div>
-                                    <span style="font-size:13px;font-weight:600;color:#f5f5f4">NG</span>
+                                    <div class="radio-card-badge">NG</div>
+                                    <span class="radio-card-label">NG</span>
                                 </label>
                             </div>
                             <div v-if="form.errors.judgement" class="mt-1 text-xs text-red-600">{{ form.errors.judgement }}</div>
