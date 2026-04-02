@@ -9,7 +9,9 @@ use App\Models\TestMethod;
 use App\Models\User;
 use App\Support\PendingJobsVersion;
 use App\Support\DashboardCache;
+use App\Support\AuditLogger;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -125,9 +127,10 @@ class ExecuteTestController extends Controller
     {
         $validated = $this->validatePayload($request);
         [$startDt, $endDt, $durationSec] = $this->normalizeTimes($validated);
+        $detail = null;
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $startDt, $endDt, $durationSec) {
-            TransactionDetail::create([
+        DB::transaction(function () use ($validated, $startDt, $endDt, $durationSec, &$detail) {
+            $detail = TransactionDetail::create([
                 'transaction_id' => $validated['transaction_id'],
                 'method_id' => $validated['method_id'],
                 'internal_id' => $validated['internal_id'],
@@ -138,6 +141,18 @@ class ExecuteTestController extends Controller
                 'remark' => $validated['remark'] ?? null,
             ]);
         });
+
+        if ($detail !== null) {
+            AuditLogger::log(
+                'execute_test',
+                'create',
+                'Transaction_Detail',
+                $detail->detail_id,
+                null,
+                $this->detailAuditPayload($detail)
+            );
+        }
+
         $this->forgetPerformanceCaches();
         DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
@@ -149,6 +164,7 @@ class ExecuteTestController extends Controller
     public function update(Request $request, int $id)
     {
         $detail = TransactionDetail::findOrFail($id);
+        $beforeData = $this->detailAuditPayload($detail);
         $validated = $this->validatePayload($request);
         [$startDt, $endDt, $durationSec] = $this->normalizeTimes($validated);
 
@@ -162,6 +178,15 @@ class ExecuteTestController extends Controller
             'judgement' => $validated['judgement'],
             'remark' => $validated['remark'] ?? null,
         ]);
+        $detail->refresh();
+        AuditLogger::log(
+            'execute_test',
+            'update',
+            'Transaction_Detail',
+            $detail->detail_id,
+            $beforeData,
+            $this->detailAuditPayload($detail)
+        );
         $this->forgetPerformanceCaches();
         DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
@@ -177,7 +202,23 @@ class ExecuteTestController extends Controller
         }
 
         $detail = TransactionDetail::findOrFail($id);
+        $beforeData = $this->detailAuditPayload($detail);
         $detail->delete();
+
+        $afterData = null;
+        if (TransactionDetail::supportsSoftDeletes()) {
+            $deletedDetail = TransactionDetail::withTrashed()->find($id);
+            $afterData = $deletedDetail ? $this->detailAuditPayload($deletedDetail) : null;
+        }
+
+        AuditLogger::log(
+            'execute_test',
+            'delete',
+            'Transaction_Detail',
+            $id,
+            $beforeData,
+            $afterData
+        );
         $this->forgetPerformanceCaches();
         DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
@@ -198,7 +239,18 @@ class ExecuteTestController extends Controller
         }
 
         $detail = TransactionDetail::onlyTrashed()->findOrFail($id);
+        $beforeData = $this->detailAuditPayload($detail);
         $detail->restore();
+
+        $restoredDetail = TransactionDetail::withTrashed()->find($id);
+        AuditLogger::log(
+            'execute_test',
+            'restore',
+            'Transaction_Detail',
+            $id,
+            $beforeData,
+            $restoredDetail ? $this->detailAuditPayload($restoredDetail) : null
+        );
         $this->forgetPerformanceCaches();
         DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
@@ -261,5 +313,23 @@ class ExecuteTestController extends Controller
         Cache::forget('execute_test.pending_jobs_count.active');
         Cache::forget('performance.inspectors.30d');
         Cache::forget('performance.details.30d.recent50');
+    }
+
+    private function detailAuditPayload(TransactionDetail $detail): array
+    {
+        return [
+            'detail_id' => (int) $detail->detail_id,
+            'transaction_id' => (int) $detail->transaction_id,
+            'method_id' => (int) $detail->method_id,
+            'internal_id' => (int) $detail->internal_id,
+            'start_time' => optional($detail->start_time)->format('Y-m-d H:i:s'),
+            'end_time' => optional($detail->end_time)->format('Y-m-d H:i:s'),
+            'duration_sec' => $detail->duration_sec === null ? null : (int) $detail->duration_sec,
+            'judgement' => $detail->judgement,
+            'remark' => $detail->remark,
+            'deleted_at' => TransactionDetail::supportsSoftDeletes()
+                ? optional($detail->deleted_at)->format('Y-m-d H:i:s')
+                : null,
+        ];
     }
 }

@@ -8,6 +8,7 @@ use App\Models\ExternalUser;
 use App\Models\TransactionDetail;
 use App\Support\PendingJobsVersion;
 use App\Support\DashboardCache;
+use App\Support\AuditLogger;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -94,6 +95,14 @@ class ReceiveJobController extends Controller
             'receive_date' => now(),
             'return_date' => null,
         ]);
+        AuditLogger::log(
+            'receive_job',
+            'create',
+            'Transaction_Header',
+            $job->transaction_id,
+            null,
+            $this->headerAuditPayload($job)
+        );
         $this->forgetReceiveJobHistoryCaches();
         $this->forgetExecuteTestPendingJobsCaches();
         PendingJobsVersion::bump();
@@ -107,6 +116,7 @@ class ReceiveJobController extends Controller
     public function update(Request $request, int $id)
     {
         $job = TransactionHeader::withCount('details')->findOrFail($id);
+        $beforeData = $this->headerAuditPayload($job);
 
         if ($job->details_count > 0 && $job->return_date === null) {
             return redirect()->back()->with('error', 'Cannot edit a job after test results have been recorded.');
@@ -114,6 +124,15 @@ class ReceiveJobController extends Controller
 
         $validated = $this->validatePayload($request);
         $job->update($validated);
+        $job->refresh();
+        AuditLogger::log(
+            'receive_job',
+            'update',
+            'Transaction_Header',
+            $job->transaction_id,
+            $beforeData,
+            $this->headerAuditPayload($job)
+        );
         $this->forgetReceiveJobHistoryCaches();
         $this->forgetExecuteTestPendingJobsCaches();
         PendingJobsVersion::bump();
@@ -131,6 +150,7 @@ class ReceiveJobController extends Controller
         }
 
         $job = TransactionHeader::withCount('details')->findOrFail($id);
+        $beforeData = $this->headerAuditPayload($job);
 
         if ($job->details_count > 0 && $job->return_date === null) {
             return redirect()->back()->with('error', 'Cannot delete a job that already has test results.');
@@ -143,6 +163,20 @@ class ReceiveJobController extends Controller
 
             $job->delete();
         });
+        $afterData = null;
+        if (TransactionHeader::supportsSoftDeletes()) {
+            $deletedJob = TransactionHeader::withTrashed()->find($job->transaction_id);
+            $afterData = $deletedJob ? $this->headerAuditPayload($deletedJob) : null;
+        }
+
+        AuditLogger::log(
+            'receive_job',
+            'delete',
+            'Transaction_Header',
+            $id,
+            $beforeData,
+            $afterData
+        );
         $this->forgetReceiveJobHistoryCaches();
         $this->forgetExecuteTestPendingJobsCaches();
         PendingJobsVersion::bump();
@@ -165,6 +199,7 @@ class ReceiveJobController extends Controller
         }
 
         $job = TransactionHeader::onlyTrashed()->findOrFail($id);
+        $beforeData = $this->headerAuditPayload($job);
 
         DB::transaction(function () use ($job) {
             $job->restore();
@@ -174,6 +209,16 @@ class ReceiveJobController extends Controller
                     ->restore();
             }
         });
+
+        $restoredJob = TransactionHeader::withTrashed()->find($job->transaction_id);
+        AuditLogger::log(
+            'receive_job',
+            'restore',
+            'Transaction_Header',
+            $job->transaction_id,
+            $beforeData,
+            $restoredJob ? $this->headerAuditPayload($restoredJob) : null
+        );
         $this->forgetReceiveJobHistoryCaches();
         $this->forgetExecuteTestPendingJobsCaches();
         PendingJobsVersion::bump();
@@ -318,5 +363,23 @@ class ReceiveJobController extends Controller
                 'is_closed' => $job->return_date !== null,
                 'is_deleted' => $supportsHeaderSoftDeletes && $job->trashed(),
             ]);
+    }
+
+    private function headerAuditPayload(TransactionHeader $job): array
+    {
+        return [
+            'transaction_id' => (int) $job->transaction_id,
+            'external_id' => (int) $job->external_id,
+            'internal_id' => (int) $job->internal_id,
+            'detail' => $job->detail,
+            'dmc' => $job->dmc,
+            'line' => $job->line,
+            'receive_date' => optional($job->receive_date)->format('Y-m-d H:i:s'),
+            'return_date' => optional($job->return_date)->format('Y-m-d H:i:s'),
+            'deleted_at' => TransactionHeader::supportsSoftDeletes()
+                ? optional($job->deleted_at)->format('Y-m-d H:i:s')
+                : null,
+            'details_count' => isset($job->details_count) ? (int) $job->details_count : null,
+        ];
     }
 }
