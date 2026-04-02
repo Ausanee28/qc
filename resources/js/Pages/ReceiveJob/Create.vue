@@ -52,10 +52,10 @@ const statusLabel = (job) => {
 
 const statusClass = (job) => {
     if (job.is_deleted) {
-        return 'bg-stone-800 text-stone-100 border border-white/10';
+        return 'bg-gray-100 text-gray-700 border border-gray-200';
     }
 
-    return 'bg-orange-100 text-orange-700 border border-orange-200';
+    return 'bg-blue-100 text-blue-700 border border-blue-200';
 };
 
 const canEditJob = (job) => !job.is_deleted && !(job.details_count > 0 && !job.is_closed);

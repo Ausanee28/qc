@@ -47,22 +47,22 @@ const perfOpts = computed(() => {
                 beginAtZero: true,
                 grid: { color: isLight ? 'rgba(15,23,42,0.10)' : 'rgba(255,255,255,0.08)' },
                 border: { color: isLight ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.1)' },
-                ticks: { color: isLight ? '#1c1917' : '#a8a29e', font: { size: 10 }, callback: (v) => `${v}m` },
+                ticks: { color: isLight ? '#0f172a' : '#a8a29e', font: { size: 10 }, callback: (v) => `${v}m` },
             },
             y: {
                 grid: { display: false },
                 border: { display: false },
-                ticks: { color: isLight ? '#1c1917' : '#e7e5e4', font: { size: 12, weight: '600' } },
+                ticks: { color: isLight ? '#0f172a' : '#e7e5e4', font: { size: 12, weight: '600' } },
             },
         },
         plugins: {
             legend: { display: false },
             tooltip: {
-                backgroundColor: isLight ? 'rgba(255,250,245,0.98)' : 'rgba(15,15,15,0.96)',
+                backgroundColor: isLight ? 'rgba(255,255,255,0.98)' : 'rgba(15,15,15,0.96)',
                 borderColor: isLight ? 'rgba(29,78,216,0.18)' : 'rgba(251,146,60,0.22)',
                 borderWidth: 1,
-                titleColor: isLight ? '#1c1917' : '#fafaf9',
-                bodyColor: isLight ? '#1c1917' : '#d6d3d1',
+                titleColor: isLight ? '#0f172a' : '#fafaf9',
+                bodyColor: isLight ? '#1f2937' : '#d6d3d1',
                 displayColors: false,
             },
         },
@@ -436,27 +436,27 @@ onUnmounted(() => {
 }
 
 :global(.theme-shell[data-theme='light'] .performance-page) {
-    --perf-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 247, 243, 0.96));
-    --perf-card-border: rgba(68, 64, 60, 0.12);
-    --perf-card-shadow: 0 22px 40px rgba(24, 24, 27, 0.06);
+    --perf-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.995), rgba(240, 246, 255, 0.98));
+    --perf-card-border: rgba(15, 23, 42, 0.2);
+    --perf-card-shadow: 0 22px 40px rgba(15, 23, 42, 0.09);
     --perf-subtle-bg: rgba(255, 255, 255, 0.96);
-    --perf-subtle-border: rgba(68, 64, 60, 0.12);
-    --perf-soft-text: #57534e;
-    --perf-strong-text: #18181b;
+    --perf-subtle-border: rgba(15, 23, 42, 0.14);
+    --perf-soft-text: #475569;
+    --perf-strong-text: #0f172a;
     --perf-avatar-bg: linear-gradient(135deg, rgba(219, 234, 254, 0.98), rgba(191, 219, 254, 0.92));
-    --perf-average-bg: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.98));
-    --perf-fastest-bg: linear-gradient(180deg, rgba(37, 99, 235, 0.78), rgba(30, 64, 175, 0.86));
-    --perf-slowest-bg: linear-gradient(180deg, rgba(148, 163, 184, 0.92), rgba(100, 116, 139, 0.96));
-    --perf-progress-track: rgba(68, 64, 60, 0.12);
+    --perf-average-bg: linear-gradient(180deg, rgba(219, 234, 254, 0.95), rgba(191, 219, 254, 0.88));
+    --perf-fastest-bg: linear-gradient(180deg, rgba(191, 219, 254, 0.96), rgba(147, 197, 253, 0.88));
+    --perf-slowest-bg: linear-gradient(180deg, rgba(226, 232, 240, 0.98), rgba(203, 213, 225, 0.9));
+    --perf-progress-track: rgba(148, 163, 184, 0.32);
     --perf-ok-text: #1d4ed8;
-    --perf-ng-text: #78716c;
+    --perf-ng-text: #475569;
 }
 
 :global(.theme-shell[data-theme='light'] .performance-empty) {
-    color: #18181b;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 247, 243, 0.96));
-    border-color: rgba(68, 64, 60, 0.12);
-    box-shadow: 0 18px 40px rgba(24, 24, 27, 0.06);
+    color: #0f172a;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.995), rgba(240, 246, 255, 0.98));
+    border-color: rgba(15, 23, 42, 0.2);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
 }
 
 :global(.theme-shell[data-theme='light'] .performance-stat__value),
@@ -465,30 +465,42 @@ onUnmounted(() => {
     color: #1d4ed8;
 }
 
+:global(.theme-shell[data-theme='light'] .performance-card__avatar) {
+    color: #1d4ed8;
+}
+
+:global(.theme-shell[data-theme='light'] .performance-card__progress-fill) {
+    background: linear-gradient(90deg, #1d4ed8, #3b82f6);
+}
+
 :global(.theme-shell[data-theme='light'] .performance-card__meta),
 :global(.theme-shell[data-theme='light'] .performance-history__hint),
 :global(.theme-shell[data-theme='light'] .performance-stat .lbl) {
-    color: #57534e;
+    color: #475569;
 }
 
 :global(.theme-shell[data-theme='light'] .performance-stat--average .performance-stat__value),
 :global(.theme-shell[data-theme='light'] .performance-stat--fastest .performance-stat__value) {
-    color: #dbeafe;
+    color: #1e3a8a;
 }
 
 :global(.theme-shell[data-theme='light'] .performance-stat--slowest .performance-stat__value),
 :global(.theme-shell[data-theme='light'] .performance-stat--average .lbl),
 :global(.theme-shell[data-theme='light'] .performance-stat--fastest .lbl),
 :global(.theme-shell[data-theme='light'] .performance-stat--slowest .lbl) {
-    color: #fff7ed;
+    color: #334155;
 }
 
-:global(.theme-shell[data-theme='light'] .performance-panel__title--fastest) {
+:global(.theme-shell[data-theme='light'] .performance-panel__title--average) {
     color: #1d4ed8;
 }
 
+:global(.theme-shell[data-theme='light'] .performance-panel__title--fastest) {
+    color: #1e40af;
+}
+
 :global(.theme-shell[data-theme='light'] .performance-panel__title--slowest) {
-    color: #1e3a8a;
+    color: #334155;
 }
 
 @media (max-width: 1023px) {

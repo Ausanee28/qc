@@ -374,12 +374,12 @@ onBeforeUnmount(() => {
 
             <div v-if="openJobCount" class="info-bar" style="margin-bottom:0">
                 <div style="display:flex;align-items:center;gap:10px">
-                    <div style="width:8px;height:8px;border-radius:50%;background:#F59E0B;animation:pulse 2s infinite"></div>
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--color-accent-main);animation:pulse 2s infinite"></div>
                     <div class="text-[13px] font-bold text-orange-100">
                         {{ openJobCount }} open job{{ openJobCount > 1 ? 's' : '' }} available for testing
                     </div>
                 </div>
-                <span class="pill pill-y">Open</span>
+                <span class="pill pill-a">Open</span>
             </div>
 
             <transition enter-active-class="transition-all duration-300" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition-all duration-300" leave-from-class="opacity-100" leave-to-class="opacity-0">

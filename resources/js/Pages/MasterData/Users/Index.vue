@@ -22,9 +22,9 @@ const filterForm = reactive({
 
 const roleLabels = { admin: 'Admin', engineer: 'Engineer', inspector: 'Inspector' };
 const roleBadge = {
-    admin: 'bg-orange-100 text-orange-700 border-orange-200',
-    engineer: 'bg-amber-100 text-amber-700 border-amber-200',
-    inspector: 'bg-stone-800 text-stone-100 border-white/10',
+    admin: 'bg-blue-100 text-blue-700 border-blue-200',
+    engineer: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+    inspector: 'bg-slate-100 text-slate-700 border-slate-200',
 };
 const userRows = computed(() => props.users?.data ?? []);
 const userLinks = computed(() => props.users?.links ?? []);
@@ -227,7 +227,7 @@ const submitReset = () => {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">#{{ user.user_id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center gap-3">
-                                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#fb923c,#c2410c)] text-xs font-bold text-[#140d08]">
+                                        <div class="avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                                             {{ (user.name || user.user_name).charAt(0).toUpperCase() }}
                                         </div>
                                         <div>
@@ -246,7 +246,7 @@ const submitReset = () => {
                                 <td class="px-6 py-4 whitespace-nowrap text-right pr-6 text-sm font-medium">
                                     <div class="flex justify-end gap-4">
                                         <button @click="openEditModal(user)" class="text-gray-900 hover:text-black underline decoration-gray-300 underline-offset-4">Edit</button>
-                                        <button @click="openResetModal(user)" class="text-amber-700 hover:text-amber-900 underline decoration-amber-300 underline-offset-4">Reset Password</button>
+                                        <button @click="openResetModal(user)" class="text-blue-700 hover:text-blue-900 underline decoration-blue-300 underline-offset-4">Reset Password</button>
                                         <button @click="deleteUser(user.user_id)" class="text-red-600 hover:text-red-900">Delete</button>
                                     </div>
                                 </td>
@@ -322,7 +322,7 @@ const submitReset = () => {
             </form>
             <template #actions>
                 <button type="button" @click="closeModal" class="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-stone-300 hover:bg-white/5">Cancel</button>
-                <button type="button" @click="submit" :disabled="form.processing" class="rounded-lg bg-[linear-gradient(135deg,#fb923c,#ea580c)] px-4 py-2 text-sm font-medium text-[#140d08] disabled:opacity-50">
+                <button type="button" @click="submit" :disabled="form.processing" class="btn px-4 py-2 text-sm disabled:opacity-50">
                     {{ form.processing ? 'Saving...' : 'Save User' }}
                 </button>
             </template>
@@ -364,7 +364,7 @@ const submitReset = () => {
             </form>
             <template #actions>
                 <button type="button" @click="closeResetModal" class="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-stone-300 hover:bg-white/5">Cancel</button>
-                <button type="button" @click="submitReset" :disabled="resetForm.processing || !resetTarget?.employee_id" class="rounded-lg bg-[linear-gradient(135deg,#fb923c,#ea580c)] px-4 py-2 text-sm font-medium text-[#140d08] disabled:opacity-50">
+                <button type="button" @click="submitReset" :disabled="resetForm.processing || !resetTarget?.employee_id" class="btn px-4 py-2 text-sm disabled:opacity-50">
                     {{ resetForm.processing ? 'Resetting...' : 'Reset Password' }}
                 </button>
             </template>
