@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
@@ -325,15 +325,15 @@ const doExport = async () => {
                             <td style="text-align:center">
                                 <input type="checkbox" :checked="isSelected(r.transaction_id)" @change="toggleRow(r.transaction_id)" class="row-check" />
                             </td>
-                            <td>{{ r.line || '—' }}</td>
+                            <td>{{ r.line || 'โ€”' }}</td>
                             <td style="font-size:11px">{{ formatDate(r.receive_date) }}</td>
                             <td>{{ r.sender }}</td>
-                            <td style="font-weight:700">{{ r.dmc || '—' }}</td>
+                            <td style="font-weight:700">{{ r.dmc || 'โ€”' }}</td>
                             <td>{{ r.detail }}</td>
                             <td>{{ r.method_name }}</td>
                             <td>{{ r.inspector }}</td>
-                            <td style="font-size:11px">{{ r.start_time ? new Date(r.start_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '—' }}</td>
-                            <td style="font-size:11px">{{ r.end_time ? new Date(r.end_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '—' }}</td>
+                            <td style="font-size:11px">{{ r.start_time ? new Date(r.start_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : 'โ€”' }}</td>
+                            <td style="font-size:11px">{{ r.end_time ? new Date(r.end_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : 'โ€”' }}</td>
                             <td>
                                 <span v-if="r.judgement === 'OK'" class="pill pill-g">OK</span>
                                 <span v-else-if="r.judgement === 'NG'" class="pill pill-r">NG</span>
@@ -377,7 +377,7 @@ const doExport = async () => {
                 <div class="modal-card">
                     <div class="modal-header">
                         <h3 class="modal-title">Export to Excel</h3>
-                        <button class="modal-close" @click="showExportModal = false">×</button>
+                        <button class="modal-close" @click="showExportModal = false">ร—</button>
                     </div>
                     <div class="modal-body">
                         <label class="modal-label">File name</label>
@@ -533,15 +533,15 @@ const doExport = async () => {
 }
 
 .report-summary-pill-ok {
-    background: rgba(251, 146, 60, 0.12);
-    border-color: rgba(251, 146, 60, 0.2);
-    color: #fdba74;
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.2);
+    color: #86efac;
 }
 
 .report-summary-pill-ng {
-    background: rgba(41, 37, 36, 0.88);
-    border-color: rgba(255, 255, 255, 0.08);
-    color: #e7e5e4;
+    background: rgba(244, 63, 94, 0.12);
+    border-color: rgba(244, 63, 94, 0.18);
+    color: #fecdd3;
 }
 
 .report-summary-pill-selected {
@@ -695,32 +695,33 @@ const doExport = async () => {
     border-color: transparent;
 }
 
-:global(.theme-shell[data-theme='light']) .report-pagination__summary {
+:global(.theme-shell[data-theme='light'] .report-pagination__summary) {
     color: #57534e;
 }
 
-:global(.theme-shell[data-theme='light']) .pager-btn {
+:global(.theme-shell[data-theme='light'] .pager-btn) {
     background: rgba(255, 255, 255, 0.94);
     border-color: rgba(68, 64, 60, 0.14);
     color: #57534e;
     box-shadow: 0 8px 20px rgba(24, 24, 27, 0.04);
 }
 
-:global(.theme-shell[data-theme='light']) .pager-btn:hover:not(:disabled) {
+:global(.theme-shell[data-theme='light'] .pager-btn:hover:not(:disabled)) {
     background: rgba(24, 24, 27, 0.04);
     border-color: rgba(68, 64, 60, 0.18);
     color: #18181b;
 }
 
-:global(.theme-shell[data-theme='light']) .pager-btn:disabled {
+:global(.theme-shell[data-theme='light'] .pager-btn:disabled) {
     opacity: 0.62;
     color: #a8a29e;
     background: rgba(255, 255, 255, 0.84);
 }
 
-:global(.theme-shell[data-theme='light']) .pager-btn-active {
+:global(.theme-shell[data-theme='light'] .pager-btn-active) {
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(234, 88, 12, 0.22);
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    box-shadow: 0 12px 24px rgba(29, 78, 216, 0.22);
 }
 
 .row-check {
@@ -833,6 +834,119 @@ const doExport = async () => {
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes shell-shimmer { to { transform: translateX(100%); } }
+
+:global(.theme-shell[data-theme='light'] .report-toolbar) {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 252, 0.97));
+}
+
+:global(.theme-shell[data-theme='light'] .report-filter-input) {
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+}
+
+:global(.theme-shell[data-theme='light'] .report-filter-input:focus) {
+    border-color: rgba(29, 78, 216, 0.28);
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+}
+
+:global(.theme-shell[data-theme='light'] .report-toolbar__tag),
+:global(.theme-shell[data-theme='light'] .report-summary-pill-selected) {
+    background: rgba(219, 234, 254, 0.9);
+    border-color: rgba(29, 78, 216, 0.18);
+    color: #1d4ed8;
+}
+
+:global(.theme-shell[data-theme='light'] .report-meta__stats),
+:global(.theme-shell[data-theme='light'] .report-empty-state),
+:global(.theme-shell[data-theme='light'] .report-toolbar__hint),
+:global(.theme-shell[data-theme='light'] .modal-hint),
+:global(.theme-shell[data-theme='light'] .modal-label),
+:global(.theme-shell[data-theme='light'] .modal-close) {
+    color: #475569;
+}
+
+:global(.theme-shell[data-theme='light'] .report-meta__stats strong),
+:global(.theme-shell[data-theme='light'] .modal-title) {
+    color: #0f172a;
+}
+
+:global(.theme-shell[data-theme='light'] .report-empty-state) {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 252, 0.96));
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+:global(.theme-shell[data-theme='light'] .export-btn-primary) {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    color: #ffffff;
+    box-shadow: 0 14px 26px rgba(29, 78, 216, 0.18);
+}
+
+:global(.theme-shell[data-theme='light'] .export-btn-primary:hover) {
+    box-shadow: 0 18px 30px rgba(29, 78, 216, 0.22);
+}
+
+:global(.theme-shell[data-theme='light'] .export-btn-outline) {
+    background: rgba(255, 255, 255, 0.94);
+    color: #0f172a;
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+:global(.theme-shell[data-theme='light'] .export-btn-outline:hover) {
+    background: rgba(239, 246, 255, 0.96);
+    border-color: rgba(29, 78, 216, 0.16);
+}
+
+:global(.theme-shell[data-theme='light'] .report-summary-pill-ok) {
+    background: rgba(22, 163, 74, 0.1);
+    border-color: rgba(22, 163, 74, 0.18);
+    color: #15803d;
+}
+
+:global(.theme-shell[data-theme='light'] .report-summary-pill-ng) {
+    background: rgba(225, 29, 72, 0.08);
+    border-color: rgba(225, 29, 72, 0.14);
+    color: #be123c;
+}
+
+:global(.theme-shell[data-theme='light'] .row-check) {
+    accent-color: #1d4ed8;
+}
+
+:global(.theme-shell[data-theme='light'] .modal-overlay) {
+    background: rgba(15, 23, 42, 0.16);
+}
+
+:global(.theme-shell[data-theme='light'] .modal-card) {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 252, 0.97));
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.14);
+}
+
+:global(.theme-shell[data-theme='light'] .modal-close:hover) {
+    background: rgba(219, 234, 254, 0.92);
+    color: #1d4ed8;
+}
+
+:global(.theme-shell[data-theme='light'] .modal-input),
+:global(.theme-shell[data-theme='light'] .modal-select) {
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+}
+
+:global(.theme-shell[data-theme='light'] .modal-input:focus),
+:global(.theme-shell[data-theme='light'] .modal-select:focus) {
+    border-color: rgba(29, 78, 216, 0.28);
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+    background: rgba(255, 255, 255, 0.99);
+}
+
+:global(.theme-shell[data-theme='light'] .modal-ext) {
+    background: rgba(241, 245, 249, 0.96);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: #475569;
+}
 
 @media (max-width: 900px) {
     .report-toolbar {

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -854,15 +854,15 @@ const chartPalette = computed(() => (
             tooltipTitle: '#101828',
             tooltipBody: '#1f2937',
             pointBorder: '#ffffff',
-            ok: '#d97706',
-            okFill: 'rgba(217,119,6,0.18)',
-            ng: '#c2410c',
-            ngFill: 'rgba(194,65,12,0.12)',
-            warmA: '#ea580c',
-            warmB: '#f59e0b',
-            barScale: ['#d97706', '#ea580c', '#f59e0b', '#b45309', '#78716c'],
-            doughnutScale: ['#ea580c', '#d97706', '#fb923c', '#9a3412', '#78716c'],
-            inspectorScale: ['#d97706', '#ea580c', '#f59e0b', '#a16207', '#78716c'],
+            ok: '#16a34a',
+            okFill: 'rgba(22,163,74,0.14)',
+            ng: '#e11d48',
+            ngFill: 'rgba(225,29,72,0.12)',
+            warmA: '#1d4ed8',
+            warmB: '#3b82f6',
+            barScale: ['#1d4ed8', '#2563eb', '#3b82f6', '#60a5fa', '#94a3b8'],
+            doughnutScale: ['#1d4ed8', '#2563eb', '#3b82f6', '#0f766e', '#64748b'],
+            inspectorScale: ['#1d4ed8', '#2563eb', '#3b82f6', '#38bdf8', '#94a3b8'],
         }
         : {
             axis: '#a8a29e',
@@ -874,10 +874,10 @@ const chartPalette = computed(() => (
             tooltipTitle: '#fafaf9',
             tooltipBody: '#d6d3d1',
             pointBorder: '#ffffff',
-            ok: '#f59e0b',
-            okFill: 'rgba(245,158,11,0.16)',
-            ng: '#fb923c',
-            ngFill: 'rgba(251,146,60,0.06)',
+            ok: '#22c55e',
+            okFill: 'rgba(34,197,94,0.16)',
+            ng: '#fb7185',
+            ngFill: 'rgba(251,113,133,0.08)',
             warmA: '#f59e0b',
             warmB: '#fb923c',
             barScale: ['#f59e0b', '#fb923c', '#fbbf24', '#78350f', '#292524'],
@@ -1363,7 +1363,7 @@ const lineOpts = computed(() => ({
                                         </td>
                                         <td class="px-3 py-4 text-sm text-stone-300">{{ activity.detail || '-' }}</td>
                                         <td class="px-3 py-4 text-sm">
-                                            <div class="inline-flex rounded-full px-3 py-1 text-xs font-semibold" :class="activity.result === 'OK' ? 'bg-orange-500/15 text-orange-200' : 'bg-stone-100/10 text-stone-200'">{{ activity.result }}</div>
+                                            <div class="inline-flex rounded-full px-3 py-1 text-xs font-semibold" :class="activity.result === 'OK' ? 'result-pill result-pill--ok' : 'result-pill result-pill--ng'">{{ activity.result }}</div>
                                             <div class="mt-2 text-xs text-stone-400">{{ formatNumber(activity.ok) }} OK / {{ formatNumber(activity.ng) }} NG</div>
                                         </td>
                                         <td class="px-3 py-4 text-sm text-stone-400">{{ activity.date }}</td>
@@ -1392,7 +1392,7 @@ const lineOpts = computed(() => ({
                             </article>
                             <div class="grid gap-6">
                                 <article class="surface-card p-5 sm:p-6"><div class="text-xl font-semibold tracking-tight text-stone-50">Daily trend</div><p class="mt-2 text-sm leading-7 text-stone-300/80">Day-by-day inspection movement this month.</p><div class="mt-6 h-[220px]"><LineChart :data="dailyLineData" :options="lineOpts" /></div></article>
-                                <article class="surface-card p-5 sm:p-6"><div class="text-xl font-semibold tracking-tight text-stone-50">Six-month totals</div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="metric-chip metric-chip--accent"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-200/80">Total OK</div><div class="mt-2 text-2xl font-semibold tracking-tight text-orange-100">{{ formatNumber(monthlySummary.totalOK) }}</div><div class="mt-2 text-sm text-orange-100/70">Across reported months</div></div><div class="metric-chip metric-chip--dark"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">Total NG</div><div class="mt-2 text-2xl font-semibold tracking-tight text-stone-100">{{ formatNumber(monthlySummary.totalNG) }}</div><div class="mt-2 text-sm text-stone-400">Across reported months</div></div></div></article>
+                                <article class="surface-card p-5 sm:p-6"><div class="text-xl font-semibold tracking-tight text-stone-50">Six-month totals</div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="metric-chip metric-chip--ok"><div class="metric-chip__label">Total OK</div><div class="metric-chip__value metric-chip__value--ok">{{ formatNumber(monthlySummary.totalOK) }}</div><div class="metric-chip__note metric-chip__note--ok">Across reported months</div></div><div class="metric-chip metric-chip--ng"><div class="metric-chip__label">Total NG</div><div class="mt-2 text-2xl font-semibold tracking-tight metric-chip__value metric-chip__value--ng">{{ formatNumber(monthlySummary.totalNG) }}</div><div class="metric-chip__note metric-chip__note--ng">Across reported months</div></div></div></article>
                             </div>
                         </div>
                     </section>
@@ -1928,6 +1928,46 @@ const lineOpts = computed(() => ({
     background: rgba(251, 146, 60, 0.1);
 }
 
+.metric-chip--ok {
+    border-color: rgba(34, 197, 94, 0.2);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.metric-chip--ng {
+    border-color: rgba(251, 113, 133, 0.2);
+    background: rgba(127, 29, 29, 0.18);
+}
+
+.metric-chip__label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(245, 245, 244, 0.7);
+}
+
+.metric-chip__value {
+    margin-top: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+}
+
+.metric-chip__value--ok,
+.metric-chip__note--ok {
+    color: #86efac;
+}
+
+.metric-chip__value--ng,
+.metric-chip__note--ng {
+    color: #fda4af;
+}
+
+.metric-chip__note {
+    margin-top: 0.5rem;
+    font-size: 0.92rem;
+}
+
 .mini-badge {
     display: inline-flex;
     align-items: center;
@@ -1951,6 +1991,16 @@ const lineOpts = computed(() => ({
     background: rgba(251, 146, 60, 0.12);
 }
 
+.result-pill--ok {
+    background: rgba(34, 197, 94, 0.12);
+    color: #bbf7d0;
+}
+
+.result-pill--ng {
+    background: rgba(244, 63, 94, 0.12);
+    color: #fecdd3;
+}
+
 .quality-bar {
     display: flex;
     height: 0.75rem;
@@ -1964,11 +2014,11 @@ const lineOpts = computed(() => ({
 }
 
 .quality-bar__ok {
-    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    background: linear-gradient(90deg, #22c55e, #86efac);
 }
 
 .quality-bar__ng {
-    background: linear-gradient(90deg, #7c2d12, #ea580c);
+    background: linear-gradient(90deg, #be123c, #fb7185);
 }
 
 .day-row {
@@ -2065,211 +2115,245 @@ const lineOpts = computed(() => ({
     animation: dash-shimmer 1.6s linear infinite;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell::before {
+:global(.theme-shell[data-theme='light'] .dashboard-shell::before) {
     background:
-        radial-gradient(circle at 12% 10%, rgba(251, 146, 60, 0.09), transparent 22%),
-        radial-gradient(circle at 86% 0%, rgba(120, 53, 15, 0.06), transparent 20%);
+        radial-gradient(circle at 12% 10%, rgba(59, 130, 246, 0.1), transparent 22%),
+        radial-gradient(circle at 86% 0%, rgba(29, 78, 216, 0.08), transparent 20%);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell::after {
+:global(.theme-shell[data-theme='light'] .dashboard-shell::after) {
     background: linear-gradient(100deg, transparent 18%, rgba(255, 255, 255, 0.64) 50%, transparent 82%);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-white/55'],
-:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-white/50'] {
+:global(.theme-shell[data-theme='light'] .dashboard-shell [class*='text-white/55']),
+:global(.theme-shell[data-theme='light'] .dashboard-shell [class*='text-white/50']) {
     color: #475467 !important;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-white/65'],
-:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-white/72'],
-:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-white/78'],
-:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-stone-300/80'],
-:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-orange-100/70'],
-:global(.theme-shell[data-theme='light']) .dashboard-shell [class*='text-orange-200/70'] {
+:global(.theme-shell[data-theme='light'] .dashboard-shell [class*='text-white/65']),
+:global(.theme-shell[data-theme='light'] .dashboard-shell [class*='text-white/72']),
+:global(.theme-shell[data-theme='light'] .dashboard-shell [class*='text-white/78']),
+:global(.theme-shell[data-theme='light'] .dashboard-shell [class*='text-stone-300/80']),
+:global(.theme-shell[data-theme='light'] .dashboard-shell [class*='text-orange-100/70']),
+:global(.theme-shell[data-theme='light'] .dashboard-shell [class*='text-orange-200/70']) {
     color: #344054 !important;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-kicker {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-kicker) {
     color: #2440d8;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-heading {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-heading) {
     color: #0f172a;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-hero {
-    border-color: rgba(68, 64, 60, 0.12);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-hero) {
+    border-color: rgba(15, 23, 42, 0.08);
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 248, 245, 0.97)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 252, 0.98)),
         linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0));
-    box-shadow: 0 8px 24px rgba(24, 24, 27, 0.06);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-hero::before {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-hero::before) {
     background:
         linear-gradient(115deg, rgba(255, 255, 255, 0.68), transparent 26%),
-        repeating-linear-gradient(90deg, rgba(68, 64, 60, 0.04) 0 1px, transparent 1px 110px);
+        repeating-linear-gradient(90deg, rgba(148, 163, 184, 0.08) 0 1px, transparent 1px 110px);
     opacity: 0.82;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-hero__glow--one {
-    background: rgba(251, 146, 60, 0.12);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-hero__glow--one) {
+    background: rgba(59, 130, 246, 0.14);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-hero__glow--two {
-    background: rgba(194, 65, 12, 0.08);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-hero__glow--two) {
+    background: rgba(29, 78, 216, 0.08);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-chip,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-status,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-aside,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .metric-glass,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .mini-badge {
-    border-color: rgba(68, 64, 60, 0.12);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-chip),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-summary-status),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-summary-aside),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .metric-glass),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .mini-badge) {
+    border-color: rgba(15, 23, 42, 0.08);
     background: rgba(255, 255, 255, 0.9);
-    color: #18181b;
-    box-shadow: 0 4px 12px rgba(24, 24, 27, 0.03);
+    color: #0f172a;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-chip__dot,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-status__dot {
-    background: #ea580c;
-    box-shadow: 0 0 0 6px rgba(234, 88, 12, 0.12);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-chip__dot),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-summary-status__dot) {
+    background: #1d4ed8;
+    box-shadow: 0 0 0 6px rgba(29, 78, 216, 0.12);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-select,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-select option {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-select),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-select option) {
     color: #18181b;
     background: transparent;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-card,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-card--deep,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-spotlight,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-inset,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-support-card,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .spotlight-note,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .pulse-card,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .metric-chip,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .quick-link,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .leaderboard-row,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .day-row {
-    border-color: rgba(68, 64, 60, 0.12);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 247, 243, 0.96));
-    box-shadow: 0 6px 18px rgba(24, 24, 27, 0.05);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .surface-card),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .surface-card--deep),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-spotlight),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .surface-inset),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-support-card),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .spotlight-note),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .pulse-card),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .metric-chip),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .quick-link),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .leaderboard-row),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .day-row) {
+    border-color: rgba(15, 23, 42, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 252, 0.97));
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-card::after {
-    background: radial-gradient(circle at top right, rgba(251, 146, 60, 0.08), transparent 36%);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .surface-card::after) {
+    background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 36%);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-card:hover,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .surface-inset:hover,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-support-card:hover,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .spotlight-note:hover,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .quick-link:hover,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .leaderboard-row:hover {
-    border-color: rgba(234, 88, 12, 0.18);
-    box-shadow: 0 6px 18px rgba(24, 24, 27, 0.05);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .surface-card:hover),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .surface-inset:hover),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-support-card:hover),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .spotlight-note:hover),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .quick-link:hover),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .leaderboard-row:hover) {
+    border-color: rgba(29, 78, 216, 0.18);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief {
-    border-color: rgba(68, 64, 60, 0.12);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-brief) {
+    border-color: rgba(15, 23, 42, 0.08);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief::before {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-brief::before) {
     background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.48), transparent 40%);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief[data-tone='ink'] {
-    background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(245, 244, 240, 0.96));
-    color: #18181b;
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-brief[data-tone='ink']) {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
+    color: #0f172a;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief[data-tone='orange'] {
-    background: linear-gradient(160deg, rgba(255, 244, 237, 0.98), rgba(255, 237, 213, 0.96));
-    color: #7c2d12;
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-brief[data-tone='orange']) {
+    background: linear-gradient(160deg, rgba(239, 246, 255, 0.98), rgba(219, 234, 254, 0.96));
+    color: #1e3a8a;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief[data-tone='amber'] {
-    background: linear-gradient(160deg, rgba(255, 248, 235, 0.98), rgba(254, 243, 199, 0.95));
-    color: #92400e;
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-brief[data-tone='amber']) {
+    background: linear-gradient(160deg, rgba(239, 246, 255, 0.96), rgba(224, 242, 254, 0.95));
+    color: #0f766e;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-brief[data-tone='ember'] {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-brief[data-tone='ember']) {
     background: linear-gradient(160deg, rgba(255, 241, 242, 0.98), rgba(255, 228, 230, 0.95));
     color: #9f1239;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-aside__label,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-status,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .mini-badge {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-summary-aside__label),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-summary-status),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .mini-badge) {
     color: #344054;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .hero-summary-aside__value {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .hero-summary-aside__value) {
     color: #0f172a;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .spotlight-track,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .quality-bar {
-    background: rgba(68, 64, 60, 0.08);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .spotlight-track),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .quality-bar) {
+    background: rgba(148, 163, 184, 0.18);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .attention-card {
-    border-color: rgba(68, 64, 60, 0.12);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .attention-card) {
+    border-color: rgba(15, 23, 42, 0.08);
     color: #1f2937;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .attention-card[data-tone='orange'] {
-    background: linear-gradient(180deg, rgba(255, 244, 237, 0.98), rgba(255, 237, 213, 0.96));
-    color: #9a3412;
+:global(.theme-shell[data-theme='light'] .dashboard-shell .attention-card[data-tone='orange']) {
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(219, 234, 254, 0.96));
+    color: #1e3a8a;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .attention-card[data-tone='amber'] {
-    background: linear-gradient(180deg, rgba(255, 248, 235, 0.98), rgba(254, 243, 199, 0.96));
-    color: #92400e;
+:global(.theme-shell[data-theme='light'] .dashboard-shell .attention-card[data-tone='amber']) {
+    background: linear-gradient(180deg, rgba(236, 253, 245, 0.98), rgba(209, 250, 229, 0.96));
+    color: #047857;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .attention-card[data-tone='ember'] {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .attention-card[data-tone='ember']) {
     background: linear-gradient(180deg, rgba(255, 241, 242, 0.98), rgba(255, 228, 230, 0.96));
     color: #9f1239;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .attention-card[data-tone='ink'] {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 244, 240, 0.96));
-    color: #44403c;
+:global(.theme-shell[data-theme='light'] .dashboard-shell .attention-card[data-tone='ink']) {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
+    color: #334155;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .metric-chip--accent,
-:global(.theme-shell[data-theme='light']) .dashboard-shell .mini-badge--accent {
-    border-color: rgba(234, 88, 12, 0.18);
-    background: rgba(251, 146, 60, 0.1);
+:global(.theme-shell[data-theme='light'] .dashboard-shell .metric-chip--accent),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .mini-badge--accent) {
+    border-color: rgba(29, 78, 216, 0.18);
+    background: rgba(219, 234, 254, 0.9);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .metric-chip--dark {
-    background: linear-gradient(180deg, rgba(252, 252, 250, 0.98), rgba(243, 242, 238, 0.96));
+:global(.theme-shell[data-theme='light'] .dashboard-shell .metric-chip--dark) {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .quick-link:hover > span {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .quick-link:hover > span) {
     color: #2440d8;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .leaderboard-row__rank {
-    background: rgba(251, 146, 60, 0.12);
-    color: #9a3412;
+:global(.theme-shell[data-theme='light'] .dashboard-shell .leaderboard-row__rank) {
+    background: rgba(219, 234, 254, 0.92);
+    color: #1d4ed8;
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-table__row {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-table__row) {
     border-bottom-color: rgba(68, 64, 60, 0.08);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-table__row:hover {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-table__row:hover) {
     background: rgba(24, 24, 27, 0.03);
 }
 
-:global(.theme-shell[data-theme='light']) .dashboard-shell .dash-skeleton {
+:global(.theme-shell[data-theme='light'] .dashboard-shell .metric-chip--ok) {
+    border-color: rgba(22, 163, 74, 0.18);
+    background: rgba(240, 253, 244, 0.98);
+}
+
+:global(.theme-shell[data-theme='light'] .dashboard-shell .metric-chip--ng) {
+    border-color: rgba(225, 29, 72, 0.16);
+    background: rgba(255, 241, 242, 0.98);
+}
+
+:global(.theme-shell[data-theme='light'] .dashboard-shell .metric-chip__label) {
+    color: #475569;
+}
+
+:global(.theme-shell[data-theme='light'] .dashboard-shell .metric-chip__value--ok),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .metric-chip__note--ok) {
+    color: #15803d;
+}
+
+:global(.theme-shell[data-theme='light'] .dashboard-shell .metric-chip__value--ng),
+:global(.theme-shell[data-theme='light'] .dashboard-shell .metric-chip__note--ng) {
+    color: #be123c;
+}
+
+:global(.theme-shell[data-theme='light'] .dashboard-shell .result-pill--ok) {
+    background: rgba(22, 163, 74, 0.12);
+    color: #15803d;
+}
+
+:global(.theme-shell[data-theme='light'] .dashboard-shell .result-pill--ng) {
+    background: rgba(225, 29, 72, 0.1);
+    color: #be123c;
+}
+
+:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-skeleton) {
     background: linear-gradient(90deg, rgba(231, 229, 228, 0.9), rgba(245, 244, 240, 0.98), rgba(231, 229, 228, 0.9));
 }
 

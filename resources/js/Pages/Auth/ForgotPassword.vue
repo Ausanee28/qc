@@ -81,4 +81,49 @@ defineProps({
 .ent-secondary-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; border-radius: 14px; border: 1px solid rgba(251,146,60,0.18); background: linear-gradient(135deg,#fb923c,#f97316 72%,#c2410c); color: #140d08; font-size: 14px; font-weight: 700; text-decoration: none; box-shadow: 0 12px 24px rgba(249,115,22,0.24); transition: transform 0.15s ease, filter 0.2s ease; }
 .ent-secondary-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
 .ent-inline-note { text-align: center; font-size: 13px; line-height: 1.6; color: #a8a29e; }
+:global(html[data-theme='light']) .ent-kicker,
+:global(html[data-theme='light']) .ent-status {
+    border-color: rgba(29, 78, 216, 0.18);
+    background: rgba(219, 234, 254, 0.9);
+    color: #1d4ed8;
+}
+
+:global(html[data-theme='light']) .ent-title,
+:global(html[data-theme='light']) .help-card__value,
+:global(html[data-theme='light']) .ent-step__title {
+    color: #0f172a;
+}
+
+:global(html[data-theme='light']) .ent-subtitle,
+:global(html[data-theme='light']) .help-card__text,
+:global(html[data-theme='light']) .ent-step__text,
+:global(html[data-theme='light']) .ent-inline-note {
+    color: #475569;
+}
+
+:global(html[data-theme='light']) .help-card {
+    border-color: rgba(29, 78, 216, 0.16);
+    background: linear-gradient(160deg, rgba(239, 246, 255, 0.98), rgba(219, 234, 254, 0.92));
+}
+
+:global(html[data-theme='light']) .help-card__title {
+    color: #1d4ed8;
+}
+
+:global(html[data-theme='light']) .ent-step {
+    border-color: rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.94);
+}
+
+:global(html[data-theme='light']) .ent-step__index {
+    background: rgba(219, 234, 254, 0.92);
+    color: #1d4ed8;
+}
+
+:global(html[data-theme='light']) .ent-secondary-btn {
+    border-color: rgba(29, 78, 216, 0.14);
+    background: linear-gradient(135deg, #1d4ed8, #1e40af 72%, #1e3a8a);
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(29, 78, 216, 0.18);
+}
 </style>

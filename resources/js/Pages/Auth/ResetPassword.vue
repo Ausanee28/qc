@@ -111,4 +111,48 @@ const submit = () => {
 .ent-loading { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .ent-spinner { width: 16px; height: 16px; animation: entSpin 0.7s linear infinite; }
 @keyframes entSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+:global(html[data-theme='light']) .ent-title {
+    color: #0f172a;
+}
+
+:global(html[data-theme='light']) .ent-subtitle,
+:global(html[data-theme='light']) .ent-label {
+    color: #475569;
+}
+
+:global(html[data-theme='light']) .ent-input {
+    color: #0f172a;
+    background-color: rgba(255, 255, 255, 0.96);
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+:global(html[data-theme='light']) .ent-input::placeholder {
+    color: #94a3b8;
+}
+
+:global(html[data-theme='light']) .ent-input:hover {
+    border-color: rgba(29, 78, 216, 0.16);
+}
+
+:global(html[data-theme='light']) .ent-input:focus {
+    background-color: rgba(255, 255, 255, 0.99);
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+}
+
+:global(html[data-theme='light']) .ent-eye-btn:hover {
+    color: #1d4ed8;
+    background-color: rgba(219, 234, 254, 0.92);
+}
+
+:global(html[data-theme='light']) .ent-submit-btn {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af 72%, #1e3a8a);
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(29, 78, 216, 0.18);
+}
+
+:global(html[data-theme='light']) .ent-submit-btn:disabled {
+    background: rgba(226, 232, 240, 0.9);
+    color: #94a3b8;
+}
 </style>

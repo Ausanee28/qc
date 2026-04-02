@@ -71,6 +71,12 @@ onUnmounted(() => {
         hideTimer = null;
     }
 
+    // Safety close: avoid leaving a stale <dialog> in top-layer after route change/unmount.
+    if (dialog.value?.open) {
+        dialog.value.close();
+    }
+
+    showSlot.value = false;
     document.removeEventListener('keydown', closeOnEscape);
     document.body.style.overflow = '';
 });

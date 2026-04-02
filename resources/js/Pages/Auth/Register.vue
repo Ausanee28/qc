@@ -208,6 +208,74 @@ const submit = () => {
 .ent-footer-link { text-align: center; font-size: 13px; color: #a8a29e; margin-top: 4px; }
 .ent-link { color: #fdba74; font-weight: 600; text-decoration: none; }
 .ent-link:hover { text-decoration: underline; }
+:global(html[data-theme='light']) .ent-kicker {
+    color: #1d4ed8;
+    background: rgba(219, 234, 254, 0.9);
+    border-color: rgba(29, 78, 216, 0.18);
+}
+
+:global(html[data-theme='light']) .ent-title {
+    color: #0f172a;
+}
+
+:global(html[data-theme='light']) .ent-subtitle,
+:global(html[data-theme='light']) .ent-footer-link,
+:global(html[data-theme='light']) .ent-label {
+    color: #475569;
+}
+
+:global(html[data-theme='light']) .ent-info-card {
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(219, 234, 254, 0.92));
+    border-color: rgba(29, 78, 216, 0.16);
+}
+
+:global(html[data-theme='light']) .ent-info-label {
+    color: #1d4ed8;
+}
+
+:global(html[data-theme='light']) .ent-info-text {
+    color: #334155;
+}
+
+:global(html[data-theme='light']) .ent-input {
+    color: #0f172a;
+    background-color: rgba(255, 255, 255, 0.96);
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+:global(html[data-theme='light']) .ent-input::placeholder {
+    color: #94a3b8;
+}
+
+:global(html[data-theme='light']) .ent-input:hover {
+    border-color: rgba(29, 78, 216, 0.16);
+}
+
+:global(html[data-theme='light']) .ent-input:focus {
+    background-color: rgba(255, 255, 255, 0.99);
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+}
+
+:global(html[data-theme='light']) .ent-eye-btn:hover {
+    color: #1d4ed8;
+    background-color: rgba(219, 234, 254, 0.92);
+}
+
+:global(html[data-theme='light']) .ent-submit-btn {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af 72%, #1e3a8a);
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(29, 78, 216, 0.18);
+}
+
+:global(html[data-theme='light']) .ent-submit-btn:disabled {
+    background: rgba(226, 232, 240, 0.9);
+    color: #94a3b8;
+}
+
+:global(html[data-theme='light']) .ent-link {
+    color: #1e40af;
+}
 @media (max-width: 480px) {
     .ent-grid { grid-template-columns: 1fr; }
 }

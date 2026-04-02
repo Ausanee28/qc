@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
+import { useTheme, initializeThemePreference } from '@/composables/useTheme';
 
 const navGroupsConfig = [
     {
@@ -49,6 +50,7 @@ const dateFormatter = new Intl.DateTimeFormat('en-GB', {
 
 const showMobileMenu = ref(false);
 const page = usePage();
+const { currentTheme, isLightTheme, toggleTheme } = useTheme();
 
 const globalSearch = ref('');
 const handleGlobalSearch = () => {
@@ -56,15 +58,6 @@ const handleGlobalSearch = () => {
         router.get(route('report.index'), { dmc: globalSearch.value.trim() });
         globalSearch.value = ''; // clear after search
     }
-};
-
-const applyTheme = () => {
-    if (typeof document === 'undefined') {
-        return;
-    }
-
-    document.documentElement.dataset.theme = 'dark';
-    document.documentElement.style.colorScheme = 'dark';
 };
 
 const groupedNav = computed(() => {
@@ -82,15 +75,95 @@ const currentDate = dateFormatter.format(new Date());
 const isActiveRoute = (routeName) => route().current(routeName);
 const desktopNavClass = (routeName) => (
     isActiveRoute(routeName)
-        ? 'border border-orange-500/20 bg-[linear-gradient(135deg,rgba(251,146,60,0.2),rgba(249,115,22,0.1))] text-orange-100 shadow-[0_14px_28px_rgba(0,0,0,0.2)]'
-        : 'text-stone-300 hover:bg-white/5 hover:text-orange-100'
+        ? (isLightTheme.value
+            ? 'border border-[rgba(29,78,216,0.34)] bg-[linear-gradient(135deg,#1D4ED8,#1E40AF)] text-white shadow-[0_18px_34px_rgba(29,78,216,0.24)]'
+            : 'border border-orange-500/20 bg-[linear-gradient(135deg,rgba(251,146,60,0.2),rgba(249,115,22,0.1))] text-orange-100 shadow-[0_14px_28px_rgba(0,0,0,0.2)]')
+        : (isLightTheme.value
+            ? 'text-slate-700 hover:bg-[rgba(219,234,254,0.85)] hover:text-[#1E3A8A]'
+            : 'text-stone-300 hover:bg-white/5 hover:text-orange-100')
 );
 const mobileNavClass = (routeName) => (
     isActiveRoute(routeName)
-        ? 'bg-orange-500/15 text-orange-100 font-semibold border border-orange-500/20'
-        : 'text-stone-300 hover:bg-white/5'
+        ? (isLightTheme.value
+            ? 'bg-[linear-gradient(135deg,#1D4ED8,#1E40AF)] text-white font-semibold border border-[rgba(29,78,216,0.34)] shadow-[0_12px_28px_rgba(29,78,216,0.22)]'
+            : 'bg-orange-500/15 text-orange-100 font-semibold border border-orange-500/20')
+        : (isLightTheme.value
+            ? 'text-slate-700 hover:bg-[rgba(219,234,254,0.96)]'
+            : 'text-stone-300 hover:bg-white/5')
 );
-const darkBrandBadgeClass = 'bg-[linear-gradient(135deg,#fb923c,#ea580c)] text-[#140d08] shadow-[0_10px_24px_rgba(249,115,22,0.25)]';
+const brandBadgeClass = computed(() => (
+    isLightTheme.value
+        ? 'bg-[linear-gradient(135deg,#1D4ED8,#1E3A8A)] text-white shadow-[0_12px_24px_rgba(29,78,216,0.22)]'
+        : 'bg-[linear-gradient(135deg,#fb923c,#ea580c)] text-[#140d08] shadow-[0_10px_24px_rgba(249,115,22,0.25)]'
+));
+const shellRootClass = computed(() => (
+    isLightTheme.value
+        ? 'theme-shell shell-frame flex h-screen w-full overflow-hidden bg-[linear-gradient(180deg,#eef4fb,#f8fbff_24%,#f3f7fc_100%)] text-slate-900'
+        : 'theme-shell shell-frame flex h-screen w-full overflow-hidden bg-[#090909] text-stone-100'
+));
+const sidebarClass = computed(() => (
+    isLightTheme.value
+        ? 'shell-sidebar hidden w-[264px] flex-col shrink-0 h-screen border-r border-[rgba(15,23,42,0.12)] bg-[linear-gradient(180deg,#fdfefe,#f4f8fe_58%,#eaf1f9)] lg:flex shadow-[inset_-1px_0_0_rgba(255,255,255,0.8)]'
+        : 'shell-sidebar hidden w-[264px] flex-col shrink-0 h-screen border-r border-white/10 bg-[linear-gradient(180deg,#0a0a0a,#18110d_58%,#0b0b0b)] lg:flex'
+));
+const shellHeaderClass = computed(() => (
+    isLightTheme.value
+        ? 'shell-header h-16 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(247,250,252,0.94))] px-4 sm:px-6 lg:px-8 flex items-center justify-between z-10 antialiased border-b border-[rgba(15,23,42,0.08)] shadow-[0_8px_24px_rgba(15,23,42,0.05)]'
+        : 'shell-header h-16 bg-[#0c0c0c]/92 px-4 sm:px-6 lg:px-8 flex items-center justify-between z-10 antialiased'
+));
+const workspaceFrameClass = computed(() => (
+    isLightTheme.value
+        ? 'rounded-2xl border border-[rgba(15,23,42,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(243,247,252,0.98))] p-4 shadow-[0_24px_48px_rgba(15,23,42,0.08)] lg:p-5'
+        : 'rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(10,10,10,0.96),rgba(7,7,7,0.98))] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.32)] lg:p-5'
+));
+const mobileOverlayClass = computed(() => (
+    isLightTheme.value
+        ? 'lg:hidden fixed inset-0 z-50 bg-[rgba(15,23,42,0.16)] backdrop-blur-sm'
+        : 'lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm'
+));
+const mobilePanelClass = computed(() => (
+    isLightTheme.value
+        ? 'shell-mobile-panel w-[260px] h-full bg-[linear-gradient(180deg,#ffffff,#f4f8fc)] border-r border-[rgba(15,23,42,0.08)] flex flex-col pt-4'
+        : 'shell-mobile-panel w-[260px] h-full bg-[linear-gradient(180deg,#0b0b0b,#18110d)] border-r border-white/10 flex flex-col pt-4'
+));
+const searchIconClass = computed(() => (
+    isLightTheme.value
+        ? 'h-4 w-4 transition-colors text-slate-500 group-focus-within:text-[#1D4ED8]'
+        : 'h-4 w-4 transition-colors text-stone-500 group-focus-within:text-orange-200'
+));
+const searchInputClass = computed(() => (
+    isLightTheme.value
+        ? 'shell-search-input block w-[240px] lg:w-[300px] pl-9 pr-3 py-2 border border-[rgba(15,23,42,0.12)] rounded-xl leading-5 bg-[rgba(255,255,255,0.98)] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#1D4ED8]/12 focus:border-[#1D4ED8]/36 sm:text-[13px] transition-all shadow-[0_6px_18px_rgba(15,23,42,0.04)]'
+        : 'shell-search-input block w-[240px] lg:w-[300px] pl-9 pr-3 py-2 border border-white/10 rounded-xl leading-5 bg-white/5 text-stone-100 placeholder-stone-500 focus:outline-none focus:bg-black/30 focus:ring-1 focus:ring-orange-400/30 focus:border-orange-400/30 sm:text-[13px] transition-all'
+));
+const dateChipClass = computed(() => (
+    isLightTheme.value
+        ? 'shell-date-chip text-[12px] font-medium hidden xl:block tracking-wide bg-[rgba(255,255,255,0.98)] px-2 py-1 rounded-md border border-[rgba(15,23,42,0.12)] text-slate-600 shadow-[0_6px_18px_rgba(15,23,42,0.04)]'
+        : 'shell-date-chip text-[12px] font-medium hidden xl:block tracking-wide bg-white/5 px-2 py-1 rounded-md border border-white/10 text-stone-400'
+));
+const crumbBrandClass = computed(() => (isLightTheme.value ? 'transition-colors cursor-pointer text-slate-600 hover:text-[#1D4ED8]' : 'transition-colors cursor-pointer text-stone-500 hover:text-orange-200'));
+const crumbDividerClass = computed(() => (isLightTheme.value ? 'w-4 h-4 text-slate-400 mx-1.5' : 'w-4 h-4 text-stone-700 mx-1.5'));
+const crumbTitleClass = computed(() => (isLightTheme.value ? 'font-semibold text-slate-900' : 'font-semibold text-stone-100'));
+const userNameClass = computed(() => (isLightTheme.value ? 'text-[13px] font-bold tracking-tight text-slate-900' : 'text-[13px] font-bold tracking-tight text-stone-100'));
+const userRoleClass = computed(() => (isLightTheme.value ? 'text-[10px] font-bold uppercase tracking-widest mt-0.5 text-[#1D4ED8]/75' : 'text-[10px] font-bold uppercase tracking-widest mt-0.5 text-orange-200/70'));
+const userAvatarClass = computed(() => (
+    isLightTheme.value
+        ? 'w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold cursor-pointer hover:opacity-90 transition-opacity bg-[linear-gradient(135deg,#1D4ED8,#1E3A8A)] text-white shadow-[0_10px_22px_rgba(29,78,216,0.18)]'
+        : 'w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold cursor-pointer hover:opacity-90 transition-opacity bg-[linear-gradient(135deg,#fb923c,#c2410c)] text-[#120d08] shadow-[0_8px_20px_rgba(249,115,22,0.28)]'
+));
+const iconButtonClass = computed(() => (
+    isLightTheme.value
+        ? 'p-1.5 rounded-lg hover:bg-[rgba(219,234,254,0.9)] transition-colors text-slate-500 hover:text-[#1D4ED8]'
+        : 'p-1.5 rounded-lg hover:bg-white/5 transition-colors text-stone-500 hover:text-orange-200'
+));
+const sidebarLabelClass = computed(() => (isLightTheme.value ? 'px-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-[0.16em] mb-1.5' : 'px-2.5 text-[10px] font-semibold text-stone-500 uppercase tracking-[0.16em] mb-1.5'));
+const brandTitleClass = computed(() => (isLightTheme.value ? 'text-[19px] font-bold leading-tight text-slate-900' : 'text-[19px] font-bold leading-tight text-white'));
+const brandSubtitleClass = computed(() => (isLightTheme.value ? 'text-[10px] font-medium uppercase tracking-[0.16em] text-[#1D4ED8]/70' : 'text-[10px] font-medium uppercase tracking-[0.16em] text-orange-200/70'));
+const themeToggleClass = computed(() => (
+    isLightTheme.value
+        ? 'shell-theme-toggle inline-flex h-9 items-center gap-2 rounded-xl border border-[rgba(15,23,42,0.12)] bg-[rgba(255,255,255,0.98)] px-3 text-[12px] font-semibold text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition hover:border-[rgba(29,78,216,0.22)] hover:bg-[rgba(219,234,254,0.82)] hover:text-[#1D4ED8]'
+        : 'shell-theme-toggle inline-flex h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-[12px] font-semibold text-stone-300 transition hover:border-orange-500/20 hover:bg-white/8 hover:text-orange-100'
+));
 const navCacheFor = (routeName) => (
     routeName === 'receive-job.create' || routeName === 'execute-test.create'
         ? ['2m', '20m']
@@ -209,11 +282,7 @@ const warmNavRoute = (routeName) => {
 };
 
 onMounted(() => {
-    if (typeof window !== 'undefined') {
-        window.localStorage.removeItem('qc-theme-preference');
-    }
-
-    applyTheme();
+    initializeThemePreference();
     prefetchNavRoutes(workflowNavRoutes.value, 80);
     scheduleIdlePrefetch(() => prefetchNavRoutes(secondaryNavRoutes.value), 180);
     scheduleIdlePrefetch(() => prefetchNavRoutes(allNavRoutes.value, 110), 420);
@@ -225,21 +294,21 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div data-theme="dark" class="theme-shell shell-frame flex h-screen w-full overflow-hidden bg-[#090909] text-stone-100">
+    <div :data-theme="currentTheme" :class="shellRootClass">
         <!-- SIDEBAR -->
-        <aside class="shell-sidebar hidden w-[264px] flex-col shrink-0 h-screen border-r border-white/10 bg-[linear-gradient(180deg,#0a0a0a,#18110d_58%,#0b0b0b)] lg:flex">
-            <div class="h-16 shrink-0 border-b border-white/10 px-4 flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm" :class="darkBrandBadgeClass">Q</div>
+        <aside :class="sidebarClass">
+            <div class="h-16 shrink-0 border-b px-4 flex items-center gap-2.5" :class="isLightTheme ? 'border-[rgba(15,23,42,0.08)]' : 'border-white/10'">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm" :class="brandBadgeClass">Q</div>
                 <div>
-                    <div class="text-[19px] font-bold leading-tight text-white">QC Lab</div>
-                    <div class="text-[10px] font-medium uppercase tracking-[0.16em] text-orange-200/70">Quality Control</div>
+                    <div :class="brandTitleClass">QC Lab</div>
+                    <div :class="brandSubtitleClass">Quality Control</div>
                 </div>
             </div>
             
             <div class="flex-1 overflow-y-hidden px-1.5" scroll-region>
                 <template v-for="(group, gIdx) in groupedNav" :key="group.label">
                     <div class="px-3.5" :class="[gIdx === 0 ? 'mt-2.5 mb-3.5' : 'mt-3.5 mb-3.5']">
-                        <div class="px-2.5 text-[10px] font-semibold text-stone-500 uppercase tracking-[0.16em] mb-1.5">{{ group.label }}</div>
+                        <div :class="sidebarLabelClass">{{ group.label }}</div>
                         <div class="space-y-0">
                             <Link
                                 v-for="item in group.items"
@@ -266,8 +335,8 @@ onUnmounted(() => {
             </div>
             
             <!-- Mobile Menu Toggle Button (visible on mobile only) -->
-            <div class="md:hidden p-4 border-t border-white/10 mt-auto">
-                <button @click="showMobileMenu = true" class="w-full flex justify-center py-2 text-stone-500 hover:text-orange-200">
+            <div class="md:hidden p-4 border-t mt-auto" :class="isLightTheme ? 'border-[rgba(15,23,42,0.08)]' : 'border-white/10'">
+                <button @click="showMobileMenu = true" class="w-full flex justify-center py-2" :class="isLightTheme ? 'text-slate-400 hover:text-[#1D4ED8]' : 'text-stone-500 hover:text-orange-200'">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
@@ -277,19 +346,19 @@ onUnmounted(() => {
 
         <!-- MAIN -->
         <main class="flex-1 flex flex-col min-w-0 bg-transparent">
-            <header class="shell-header h-16 bg-[#0c0c0c]/92 px-4 sm:px-6 lg:px-8 flex items-center justify-between z-10 antialiased">
+            <header :class="shellHeaderClass">
                 
                 <!-- LEFT: Mobile Menu Toggle & Title Area -->
                 <div class="flex items-center gap-3">
-                    <button @click="showMobileMenu = true" class="lg:hidden focus:outline-none p-1.5 rounded-md hover:bg-white/5 transition-colors text-stone-400 hover:text-orange-200">
+                    <button @click="showMobileMenu = true" class="lg:hidden focus:outline-none p-1.5 rounded-md transition-colors" :class="isLightTheme ? 'hover:bg-[rgba(219,234,254,0.7)] text-slate-400 hover:text-[#1D4ED8]' : 'hover:bg-white/5 text-stone-400 hover:text-orange-200'">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
                     <div class="hidden sm:flex items-center text-[13px] font-medium tracking-tight">
-                        <span class="transition-colors cursor-pointer text-stone-500 hover:text-orange-200">QC Lab</span>
-                        <svg class="w-4 h-4 text-stone-700 mx-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-                        <span class="font-semibold text-stone-100"><slot name="title">Workspace</slot></span>
+                        <span :class="crumbBrandClass">QC Lab</span>
+                        <svg :class="crumbDividerClass" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                        <span :class="crumbTitleClass"><slot name="title">Workspace</slot></span>
                     </div>
                 </div>
 
@@ -299,14 +368,14 @@ onUnmounted(() => {
                     <!-- Search Input (Linear style) -->
                     <div class="relative group hidden md:block">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-4 w-4 transition-colors text-stone-500 group-focus-within:text-orange-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg :class="searchIconClass" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
                         <input 
                             v-model="globalSearch" 
                             @keyup.enter="handleGlobalSearch" 
-                            class="shell-search-input block w-[240px] lg:w-[300px] pl-9 pr-3 py-2 border border-white/10 rounded-xl leading-5 bg-white/5 text-stone-100 placeholder-stone-500 focus:outline-none focus:bg-black/30 focus:ring-1 focus:ring-orange-400/30 focus:border-orange-400/30 sm:text-[13px] transition-all"
+                            :class="searchInputClass"
                             placeholder="Search DMC code..." 
                             type="text" 
                             autocomplete="off"
@@ -315,21 +384,28 @@ onUnmounted(() => {
 
                     <!-- User Actions Row -->
                     <div class="flex items-center gap-3 sm:gap-4">
-                        <span class="shell-date-chip text-[12px] font-medium hidden xl:block tracking-wide bg-white/5 px-2 py-1 rounded-md border border-white/10 text-stone-400">{{ currentDate }}</span>
+                        <button type="button" @click="toggleTheme" :class="themeToggleClass">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path v-if="isLightTheme" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
+                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2.5m0 13V21m9-9h-2.5M5.5 12H3m15.364 6.364l-1.768-1.768M7.404 7.404 5.636 5.636m12.728 0-1.768 1.768M7.404 16.596l-1.768 1.768M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>{{ isLightTheme ? 'Dark' : 'Light' }}</span>
+                        </button>
+                        <span :class="dateChipClass">{{ currentDate }}</span>
                         
                         <!-- User Identity -->
                         <div class="flex items-center gap-3">
                             <div class="flex-col items-end hidden sm:flex leading-tight">
-                                <span class="text-[13px] font-bold tracking-tight text-stone-100">{{ user.name }}</span>
-                                <span class="text-[10px] font-bold uppercase tracking-widest mt-0.5 text-orange-200/70">{{ userRoleLabel }}</span>
+                                <span :class="userNameClass">{{ user.name }}</span>
+                                <span :class="userRoleClass">{{ userRoleLabel }}</span>
                             </div>
-                            <div class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold cursor-pointer hover:opacity-90 transition-opacity bg-[linear-gradient(135deg,#fb923c,#c2410c)] text-[#120d08] shadow-[0_8px_20px_rgba(249,115,22,0.28)]">
+                            <div :class="userAvatarClass">
                                 {{ userInitial }}
                             </div>
                         </div>
 
                         <!-- Logout Icon Button -->
-                        <Link :href="route('logout')" method="post" as="button" class="p-1.5 rounded-lg hover:bg-white/5 transition-colors ml-1 text-stone-500 hover:text-orange-200" title="Log out">
+                        <Link :href="route('logout')" method="post" as="button" :class="[iconButtonClass, 'ml-1']" title="Log out">
                             <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                         </Link>
                     </div>
@@ -338,7 +414,7 @@ onUnmounted(() => {
 
             <div class="shell-scroll-region flex-1 overflow-y-auto w-full px-6 pb-6 pt-4 lg:px-8 lg:pb-8 lg:pt-5">
                 <div class="max-w-7xl mx-auto">
-                    <div class="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(10,10,10,0.96),rgba(7,7,7,0.98))] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.32)] lg:p-5">
+                    <div :class="workspaceFrameClass">
                         <slot />
                     </div>
                 </div>
@@ -346,14 +422,14 @@ onUnmounted(() => {
         </main>
 
         <!-- Mobile Menu Overlay -->
-        <div v-if="showMobileMenu" class="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" @click="showMobileMenu = false">
-            <div class="shell-mobile-panel w-[260px] h-full bg-[linear-gradient(180deg,#0b0b0b,#18110d)] border-r border-white/10 flex flex-col pt-4" @click.stop>
+        <div v-if="showMobileMenu" :class="mobileOverlayClass" @click="showMobileMenu = false">
+            <div :class="mobilePanelClass" @click.stop>
                 <div class="flex items-center justify-between px-6 mb-6">
                      <div class="flex items-center gap-3">
-                         <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-base shadow-sm bg-[linear-gradient(135deg,#fb923c,#ea580c)] text-[#140d08]">Q</div>
-                         <h2 class="font-bold text-white" style="font-size:16px;font-weight:700">QC Lab</h2>
+                         <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-base shadow-sm" :class="brandBadgeClass">Q</div>
+                         <h2 class="font-bold" :class="isLightTheme ? 'text-slate-900' : 'text-white'" style="font-size:16px;font-weight:700">QC Lab</h2>
                      </div>
-                     <button @click="showMobileMenu = false" class="text-stone-500 hover:text-orange-200">
+                     <button @click="showMobileMenu = false" :class="isLightTheme ? 'text-slate-400 hover:text-[#1D4ED8]' : 'text-stone-500 hover:text-orange-200'">
                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                      </button>
                 </div>
@@ -361,7 +437,7 @@ onUnmounted(() => {
                 <div class="flex-1 overflow-y-auto px-4">
                      <template v-for="group in groupedNav" :key="group.label">
                          <div class="mb-6">
-                             <div class="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 px-3">{{ group.label }}</div>
+                             <div class="text-[10px] font-bold uppercase tracking-wider mb-2 px-3" :class="isLightTheme ? 'text-slate-400' : 'text-stone-500'">{{ group.label }}</div>
                              <Link
                                  v-for="item in group.items"
                                  :key="item.route"

@@ -30,7 +30,7 @@ const submit = () => {
 
         <div class="login-root rounded-[24px] p-4 sm:p-5">
             <div class="login-block login-block--hero mb-8">
-                <div class="login-kicker inline-flex rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-100">
+                <div class="login-kicker inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
                     Factory QC
                 </div>
                 <h1 class="login-title mt-4 font-['Sora'] text-4xl font-semibold leading-[0.95] tracking-[-0.04em] text-stone-50 sm:text-5xl">
@@ -41,7 +41,7 @@ const submit = () => {
                 </p>
             </div>
 
-            <div v-if="status" class="login-block login-block--status mb-5 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-sm font-medium text-orange-100">
+            <div v-if="status" class="login-block login-block--status login-status mb-5 rounded-2xl px-4 py-3 text-sm font-medium">
                 {{ status }}
             </div>
 
@@ -73,7 +73,7 @@ const submit = () => {
                         />
                         <button
                             type="button"
-                            class="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-stone-500 transition hover:bg-orange-500/10 hover:text-orange-100"
+                            class="login-eye absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-stone-500 transition"
                             @click="showPassword = !showPassword"
                             aria-label="Toggle password visibility"
                         >
@@ -94,14 +94,14 @@ const submit = () => {
                         <input v-model="form.remember" type="checkbox" class="h-4 w-4 rounded border-white/10 bg-white/5 text-orange-500 focus:ring-orange-300/20" />
                         <span>Remember me</span>
                     </label>
-                    <Link v-if="canResetPassword" :href="route('password.request')" class="font-semibold text-stone-300 transition hover:text-orange-100">
+                    <Link v-if="canResetPassword" :href="route('password.request')" class="login-link font-semibold transition">
                         Need password help?
                     </Link>
                 </div>
 
                 <button
                     type="submit"
-                    class="login-submit flex h-12 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#fb923c,#f97316_72%,#c2410c)] px-4 text-sm font-semibold uppercase tracking-[0.18em] text-[#140d08] shadow-[0_16px_30px_rgba(249,115,22,0.24)] transition hover:translate-y-[-1px] hover:brightness-110 hover:shadow-[0_20px_34px_rgba(249,115,22,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
+                    class="login-submit flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold uppercase tracking-[0.18em] transition hover:translate-y-[-1px] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                     :disabled="form.processing"
                 >
                     <span v-if="!form.processing">Sign In</span>
@@ -116,7 +116,7 @@ const submit = () => {
 
                 <div class="login-block login-block--footer pt-1 text-center text-sm text-stone-400">
                     New here?
-                    <Link :href="route('register')" class="font-semibold text-orange-100 transition hover:text-orange-200">
+                    <Link :href="route('register')" class="login-link font-semibold transition">
                         Create account
                     </Link>
                 </div>
@@ -146,6 +146,9 @@ const submit = () => {
 .login-kicker {
     position: relative;
     overflow: hidden;
+    border: 1px solid rgba(251, 146, 60, 0.2);
+    background: rgba(251, 146, 60, 0.1);
+    color: #fdba74;
 }
 
 .login-kicker::after {
@@ -159,6 +162,25 @@ const submit = () => {
 
 .login-title {
     text-shadow: 0 10px 34px rgba(0, 0, 0, 0.32);
+}
+
+.login-status {
+    border: 1px solid rgba(251, 146, 60, 0.2);
+    background: rgba(251, 146, 60, 0.1);
+    color: #fdba74;
+}
+
+.login-eye:hover {
+    background: rgba(251, 146, 60, 0.1);
+    color: #fdba74;
+}
+
+.login-link {
+    color: #f5f5f4;
+}
+
+.login-link:hover {
+    color: #fdba74;
 }
 
 .password-input::-ms-reveal,
@@ -184,6 +206,9 @@ const submit = () => {
 .login-submit {
     position: relative;
     overflow: hidden;
+    background: linear-gradient(135deg, #fb923c, #f97316 72%, #c2410c);
+    color: #140d08;
+    box-shadow: 0 16px 30px rgba(249, 115, 22, 0.24);
 }
 
 .login-submit::after {
@@ -197,6 +222,41 @@ const submit = () => {
 
 .login-submit:hover::after {
     transform: translateX(140%);
+}
+
+:global(html[data-theme='light']) .login-kicker {
+    border-color: rgba(29, 78, 216, 0.18);
+    background: rgba(219, 234, 254, 0.9);
+    color: #1d4ed8;
+}
+
+:global(html[data-theme='light']) .login-title {
+    text-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+:global(html[data-theme='light']) .login-status {
+    border-color: rgba(29, 78, 216, 0.16);
+    background: rgba(239, 246, 255, 0.96);
+    color: #1d4ed8;
+}
+
+:global(html[data-theme='light']) .login-eye:hover {
+    background: rgba(219, 234, 254, 0.92);
+    color: #1d4ed8;
+}
+
+:global(html[data-theme='light']) .login-link {
+    color: #1e40af;
+}
+
+:global(html[data-theme='light']) .login-link:hover {
+    color: #1d4ed8;
+}
+
+:global(html[data-theme='light']) .login-submit {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    color: #ffffff;
+    box-shadow: 0 16px 30px rgba(29, 78, 216, 0.18);
 }
 
 @keyframes login-rise {

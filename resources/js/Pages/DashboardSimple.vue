@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
@@ -84,20 +84,20 @@ const pct = (v) => `${Number(v || 0).toFixed(1)}%`;
 const chartTheme = computed(() => (
     isLightTheme.value
         ? {
-            axis: '#344054',
-            legend: '#1f2937',
+            axis: '#1f2937',
+            legend: '#111827',
             strong: '#101828',
-            grid: 'rgba(15,23,42,0.12)',
+            grid: 'rgba(15,23,42,0.18)',
             tooltipBg: 'rgba(255,255,255,1)',
             tooltipTitle: '#101828',
             tooltipBody: '#1f2937',
-            tooltipBorder: 'rgba(15,23,42,0.14)',
-            ok: '#d97706',
-            okFill: 'rgba(217,119,6,0.16)',
+            tooltipBorder: 'rgba(15,23,42,0.2)',
+            ok: '#1d4ed8',
+            okFill: 'rgba(29,78,216,0.22)',
             ng: '#e11d48',
-            ngFill: 'rgba(225,29,72,0.12)',
-            bar: 'rgba(217,119,6,0.3)',
-            axisRight: '#7c2d12',
+            ngFill: 'rgba(225,29,72,0.16)',
+            bar: 'rgba(29,78,216,0.38)',
+            axisRight: '#1e40af',
         }
         : {
             axis: '#a8a29e',
@@ -117,7 +117,7 @@ const chartTheme = computed(() => (
         }
 ));
 
-/* ── KPI cards ── */
+/* โ”€โ”€ KPI cards โ”€โ”€ */
 const kpiCards = computed(() => ([
     { label: 'OK %', value: pct(props.metrics.yieldRate), accent: true },
     { label: 'NG %', value: pct(props.metrics.defectRate), accent: false, danger: true },
@@ -127,7 +127,7 @@ const kpiCards = computed(() => ([
     { label: 'Pending', value: fmt(props.metrics.pendingCount) },
 ]));
 
-/* ── Quality doughnut ── */
+/* โ”€โ”€ Quality doughnut โ”€โ”€ */
 const qualityChartData = computed(() => ({
     labels: ['OK', 'NG'],
     datasets: [{
@@ -158,7 +158,7 @@ const doughnutOpts = computed(() => ({
     },
 }));
 
-/* ── Shared chart config ── */
+/* โ”€โ”€ Shared chart config โ”€โ”€ */
 const tooltipStyle = computed(() => ({
     backgroundColor: chartTheme.value.tooltipBg,
     titleColor: chartTheme.value.tooltipTitle,
@@ -187,7 +187,7 @@ const barOpts = computed(() => ({
     plugins: { ...lineOpts.value.plugins, legend: { display: false } },
 }));
 
-/* ── Daily trend ── */
+/* โ”€โ”€ Daily trend โ”€โ”€ */
 const dailyRows = computed(() => {
     const src = props.dailyData?.length ? props.dailyData : props.weeklyData;
     return src.map((d) => ({ label: d.label, ok: Number(d.ok || 0), ng: Number(d.ng || 0) }));
@@ -201,7 +201,7 @@ const dailyTrendData = computed(() => ({
     ],
 }));
 
-/* ── Monthly trend ── */
+/* โ”€โ”€ Monthly trend โ”€โ”€ */
 const monthlySeries = computed(() => {
     return (props.monthlyData || []).map((m) => ({
         label: m.label, fullLabel: m.fullLabel || m.label,
@@ -244,7 +244,7 @@ const monthlyMixedOpts = computed(() => ({
     },
 }));
 
-/* ── Weekly bar ── */
+/* โ”€โ”€ Weekly bar โ”€โ”€ */
 const weeklyBarData = computed(() => ({
     labels: (props.weeklyData || []).map((d) => d.label),
     datasets: [
@@ -262,7 +262,7 @@ const weeklyBarOpts = computed(() => ({
     },
 }));
 
-/* ── Forecast ── */
+/* โ”€โ”€ Forecast โ”€โ”€ */
 const regressionForecast = (series, clamp = null) => {
     if (!series.length) return 0;
     if (series.length === 1) return series[0];
@@ -330,7 +330,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
         <template #title>Dashboard</template>
 
         <div class="db" :class="{ 'db--loading': isChangingPeriod }">
-            <!-- ═══ HEADER ═══ -->
+            <!-- โ•โ•โ• HEADER โ•โ•โ• -->
             <header class="db-header">
                 <div class="db-header__left">
                     <h1 class="db-header__title">QC Dashboard</h1>
@@ -346,7 +346,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                 </label>
             </header>
 
-            <!-- ═══ KPI STRIP ═══ -->
+            <!-- โ•โ•โ• KPI STRIP โ•โ•โ• -->
             <section class="kpi-strip">
                 <article v-for="card in kpiCards" :key="card.label" class="kpi" :class="{ 'kpi--accent': card.accent, 'kpi--danger': card.danger }">
                     <div class="kpi__label">{{ card.label }}</div>
@@ -354,7 +354,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                 </article>
             </section>
 
-            <!-- ═══ ROW: Quality Doughnut + Daily Trend ═══ -->
+            <!-- โ•โ•โ• ROW: Quality Doughnut + Daily Trend โ•โ•โ• -->
             <section class="chart-row">
                 <article class="card card--doughnut">
                     <div class="card__head">OK / NG Ratio</div>
@@ -390,7 +390,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                 </article>
             </section>
 
-            <!-- ═══ ROW: Monthly Trend + Forecast & Weekly ═══ -->
+            <!-- โ•โ•โ• ROW: Monthly Trend + Forecast & Weekly โ•โ•โ• -->
             <section class="chart-row chart-row--bottom">
                 <article class="card card--chart card--monthly">
                     <div class="card__head">Monthly Tests, OK % and NG %</div>
@@ -440,7 +440,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                 </div>
             </section>
 
-            <!-- ═══ ROW: Inspector Leaderboard ═══ -->
+            <!-- โ•โ•โ• ROW: Inspector Leaderboard โ•โ•โ• -->
             <section class="card card--leaderboard">
                 <div class="card__head">Inspector Leaderboard</div>
                 <div v-if="topInspectors.length" class="lb-list">
@@ -448,7 +448,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                             <div class="lb-rank">{{ idx + 1 }}</div>
                             <div class="lb-info">
                                 <div class="lb-name">{{ ins.name }}</div>
-                                <div class="lb-meta">{{ fmt(ins.total) }} tests · {{ fmt(ins.ok) }} OK · {{ fmt(ins.ng) }} NG</div>
+                                <div class="lb-meta">{{ fmt(ins.total) }} tests ยท {{ fmt(ins.ok) }} OK ยท {{ fmt(ins.ng) }} NG</div>
                             </div>
                             <div class="lb-yield">
                                 <div class="lb-yield__value">{{ pct(ins.yield) }}</div>
@@ -466,15 +466,15 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 </template>
 
 <style scoped>
-/* ── Base ── */
+/* โ”€โ”€ Base โ”€โ”€ */
 .db {
     display: grid;
     gap: 1.25rem;
     transition: opacity 160ms ease;
 }
-.db--loading { opacity: 0.6; pointer-events: none; }
+.db--loading { opacity: 0.96; pointer-events: auto; }
 
-/* ── Header ── */
+/* โ”€โ”€ Header โ”€โ”€ */
 .db-header {
     display: flex;
     align-items: center;
@@ -527,7 +527,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 .db-period select:hover { border-color: rgba(251,146,60,0.35); }
 .db-period select option { background: #1c1917; color: #fafaf9; }
 
-/* ── KPI Strip ── */
+/* โ”€โ”€ KPI Strip โ”€โ”€ */
 .kpi-strip {
     display: grid;
     gap: 0.75rem;
@@ -562,7 +562,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     line-height: 1.1;
 }
 
-/* ── Cards ── */
+/* โ”€โ”€ Cards โ”€โ”€ */
 .card {
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 20px;
@@ -579,7 +579,12 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     margin-bottom: 1rem;
 }
 
-/* ── Chart rows ── */
+.card,
+.kpi {
+    position: relative;
+}
+
+/* โ”€โ”€ Chart rows โ”€โ”€ */
 .chart-row {
     display: grid;
     gap: 1rem;
@@ -596,7 +601,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     align-content: start;
 }
 
-/* ── Doughnut ── */
+/* โ”€โ”€ Doughnut โ”€โ”€ */
 .card--doughnut { display: flex; flex-direction: column; }
 .doughnut-wrap {
     position: relative;
@@ -650,7 +655,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 .dot--ng { background: #ef4444; }
 .dot--today { background: #8b5cf6; }
 
-/* ── Chart areas ── */
+/* โ”€โ”€ Chart areas โ”€โ”€ */
 .chart-area { height: 280px; }
 .chart-area--tall { height: 320px; }
 .chart-area--short { height: 200px; }
@@ -698,7 +703,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     color: #a8a29e;
 }
 
-/* ── Forecast ── */
+/* โ”€โ”€ Forecast โ”€โ”€ */
 .card--forecast { padding: 1.1rem; }
 .forecast-grid {
     display: grid;
@@ -743,7 +748,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     color: #a8a29e;
 }
 
-/* ── Shimmer ── */
+/* โ”€โ”€ Shimmer โ”€โ”€ */
 .shimmer {
     height: 280px;
     border-radius: 16px;
@@ -759,7 +764,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     to { background-position: -200% 0; }
 }
 
-/* ── Leaderboard ── */
+/* โ”€โ”€ Leaderboard โ”€โ”€ */
 .card--leaderboard { padding: 1.25rem; }
 .lb-list { display: grid; gap: 0.5rem; }
 .lb-row {
@@ -835,7 +840,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     font-size: 0.9rem;
 }
 
-/* ── Responsive ── */
+/* โ”€โ”€ Responsive โ”€โ”€ */
 @media (max-width: 1023px) {
     .chart-row, .chart-row--bottom { grid-template-columns: 1fr; }
     .kpi-strip { grid-template-columns: repeat(3, 1fr); }
@@ -843,87 +848,177 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     .lb-bar { display: none; }
 }
 
-:global(.theme-shell[data-theme='light']) .db-header__title,
-:global(.theme-shell[data-theme='light']) .card__head,
-:global(.theme-shell[data-theme='light']) .kpi__value,
-:global(.theme-shell[data-theme='light']) .monthly-insight__value,
-:global(.theme-shell[data-theme='light']) .fc__value,
-:global(.theme-shell[data-theme='light']) .lb-name {
+:global(.theme-shell[data-theme='light'] .db-header__title),
+:global(.theme-shell[data-theme='light'] .card__head),
+:global(.theme-shell[data-theme='light'] .kpi__value),
+:global(.theme-shell[data-theme='light'] .monthly-insight__value),
+:global(.theme-shell[data-theme='light'] .fc__value),
+:global(.theme-shell[data-theme='light'] .lb-name) {
+    color: #0f172a;
+    text-shadow: none;
+}
+
+:global(.theme-shell[data-theme='light'] .db) {
+    gap: 1.1rem;
+}
+
+:global(.theme-shell[data-theme='light'] .db-header) {
+    padding: 0.15rem 0.1rem 0.35rem;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+:global(.theme-shell[data-theme='light'] .db-badge) {
+    background: rgba(219, 234, 254, 0.98);
+    border: 1px solid rgba(29, 78, 216, 0.18);
+    color: #1e40af;
+    box-shadow: 0 10px 22px rgba(29, 78, 216, 0.08);
+}
+
+:global(.theme-shell[data-theme='light'] .db-badge__dot) {
+    background: #1d4ed8;
+    box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.16);
+}
+
+:global(.theme-shell[data-theme='light'] .db-period select),
+:global(.theme-shell[data-theme='light'] .kpi),
+:global(.theme-shell[data-theme='light'] .kpi--accent),
+:global(.theme-shell[data-theme='light'] .kpi--danger),
+:global(.theme-shell[data-theme='light'] .card),
+:global(.theme-shell[data-theme='light'] .monthly-insight),
+:global(.theme-shell[data-theme='light'] .fc),
+:global(.theme-shell[data-theme='light'] .lb-row) {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.995), rgba(243, 248, 255, 0.98)) !important;
+    border-color: rgba(15, 23, 42, 0.24) !important;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1) !important;
+}
+
+:global(.theme-shell[data-theme='light'] .kpi::before),
+:global(.theme-shell[data-theme='light'] .card::before) {
+    content: none;
+}
+
+:global(.theme-shell[data-theme='light'] .kpi:hover),
+:global(.theme-shell[data-theme='light'] .card:hover),
+:global(.theme-shell[data-theme='light'] .lb-row:hover) {
+    border-color: rgba(29, 78, 216, 0.42) !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(231, 240, 252, 0.99)) !important;
+    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.12) !important;
+}
+
+:global(.theme-shell[data-theme='light'] .db-period select) {
+    color: #0f172a;
+    border-color: rgba(15, 23, 42, 0.2) !important;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    background: #ffffff !important;
+}
+
+:global(.theme-shell[data-theme='light'] .kpi__label),
+:global(.theme-shell[data-theme='light'] .monthly-insight__label),
+:global(.theme-shell[data-theme='light'] .fc__label),
+:global(.theme-shell[data-theme='light'] .lb-yield__label) {
+    color: #334155;
+}
+
+:global(.theme-shell[data-theme='light'] .monthly-insight__note),
+:global(.theme-shell[data-theme='light'] .fc__sub),
+:global(.theme-shell[data-theme='light'] .lb-meta),
+:global(.theme-shell[data-theme='light'] .lb-empty) {
+    color: #334155;
+}
+
+:global(.theme-shell[data-theme='light'] .doughnut-legend) {
+    border-top-color: rgba(15, 23, 42, 0.16);
+}
+
+:global(.theme-shell[data-theme='light'] .doughnut-legend__item),
+:global(.theme-shell[data-theme='light'] .doughnut-center__ok span),
+:global(.theme-shell[data-theme='light'] .doughnut-center__ng span) {
+    color: #334155;
+}
+
+:global(.theme-shell[data-theme='light'] .doughnut-legend__item strong),
+:global(.theme-shell[data-theme='light'] .doughnut-center__ok strong),
+:global(.theme-shell[data-theme='light'] .doughnut-center__ng strong) {
     color: #0f172a;
 }
 
-:global(.theme-shell[data-theme='light']) .db-badge {
-    background: rgba(79, 110, 247, 0.12);
-    color: #2440d8;
+:global(.theme-shell[data-theme='light'] .lb-bar) {
+    background: rgba(148, 163, 184, 0.28);
 }
 
-:global(.theme-shell[data-theme='light']) .db-period select,
-:global(.theme-shell[data-theme='light']) .kpi,
-:global(.theme-shell[data-theme='light']) .kpi--accent,
-:global(.theme-shell[data-theme='light']) .kpi--danger,
-:global(.theme-shell[data-theme='light']) .card,
-:global(.theme-shell[data-theme='light']) .monthly-insight,
-:global(.theme-shell[data-theme='light']) .fc,
-:global(.theme-shell[data-theme='light']) .lb-row {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(245, 247, 251, 0.98)) !important;
-    border-color: rgba(15, 23, 42, 0.12) !important;
-    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06) !important;
+:global(.theme-shell[data-theme='light'] .kpi--accent .kpi__label),
+:global(.theme-shell[data-theme='light'] .fc--accent .fc__label) {
+    color: #1e40af;
 }
 
-:global(.theme-shell[data-theme='light']) .kpi:hover,
-:global(.theme-shell[data-theme='light']) .card:hover,
-:global(.theme-shell[data-theme='light']) .lb-row:hover {
-    border-color: rgba(79, 110, 247, 0.2) !important;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(240, 244, 255, 0.98)) !important;
+:global(.theme-shell[data-theme='light'] .kpi--accent) {
+    border-color: rgba(29, 78, 216, 0.42) !important;
+    background: linear-gradient(135deg, rgba(219, 234, 254, 0.98), rgba(239, 246, 255, 0.98)) !important;
 }
 
-:global(.theme-shell[data-theme='light']) .db-period select {
-    color: #0f172a;
-    border-color: rgba(15, 23, 42, 0.14) !important;
+:global(.theme-shell[data-theme='light'] .kpi--danger) {
+    border-color: rgba(225, 29, 72, 0.4) !important;
+    background: linear-gradient(135deg, rgba(255, 241, 242, 0.98), rgba(255, 248, 250, 0.98)) !important;
 }
 
-:global(.theme-shell[data-theme='light']) .kpi__label,
-:global(.theme-shell[data-theme='light']) .monthly-insight__label,
-:global(.theme-shell[data-theme='light']) .fc__label,
-:global(.theme-shell[data-theme='light']) .lb-yield__label {
-    color: #475467;
+:global(.theme-shell[data-theme='light'] .fc--accent) {
+    border-color: rgba(29, 78, 216, 0.24) !important;
+    background: linear-gradient(180deg, rgba(219, 234, 254, 0.94), rgba(239, 246, 255, 0.98)) !important;
 }
 
-:global(.theme-shell[data-theme='light']) .monthly-insight__note,
-:global(.theme-shell[data-theme='light']) .fc__sub,
-:global(.theme-shell[data-theme='light']) .lb-meta,
-:global(.theme-shell[data-theme='light']) .lb-empty {
-    color: #344054;
+:global(.theme-shell[data-theme='light'] .lb-rank) {
+    background: rgba(219, 234, 254, 0.95);
+    color: #1d4ed8;
 }
 
-:global(.theme-shell[data-theme='light']) .doughnut-legend {
-    border-top-color: rgba(15, 23, 42, 0.12);
+:global(.theme-shell[data-theme='light'] .lb-row:nth-child(1) .lb-rank) {
+    background: rgba(191, 219, 254, 0.98);
+    color: #1e3a8a;
 }
 
-:global(.theme-shell[data-theme='light']) .doughnut-legend__item,
-:global(.theme-shell[data-theme='light']) .doughnut-center__ok span,
-:global(.theme-shell[data-theme='light']) .doughnut-center__ng span {
-    color: #344054;
+:global(.theme-shell[data-theme='light'] .lb-row:nth-child(2) .lb-rank) {
+    background: rgba(219, 234, 254, 0.98);
+    color: #1d4ed8;
 }
 
-:global(.theme-shell[data-theme='light']) .doughnut-legend__item strong,
-:global(.theme-shell[data-theme='light']) .doughnut-center__ok strong,
-:global(.theme-shell[data-theme='light']) .doughnut-center__ng strong {
-    color: #0f172a;
+:global(.theme-shell[data-theme='light'] .lb-yield__value) {
+    color: #1e40af;
 }
 
-:global(.theme-shell[data-theme='light']) .lb-bar {
-    background: rgba(15, 23, 42, 0.12);
+:global(.theme-shell[data-theme='light'] .lb-bar__fill) {
+    background: linear-gradient(90deg, #1d4ed8, #60a5fa);
 }
 
-:global(.theme-shell[data-theme='light']) .kpi--accent .kpi__label,
-:global(.theme-shell[data-theme='light']) .fc--accent .fc__label {
-    color: #9a3412;
+:global(.theme-shell[data-theme='light'] .card__head) {
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
 }
 
-:global(.theme-shell[data-theme='light']) .kpi--danger .kpi__label,
-:global(.theme-shell[data-theme='light']) .kpi--danger .kpi__value,
-:global(.theme-shell[data-theme='light']) .doughnut-center__ng strong {
+:global(.theme-shell[data-theme='light'] .kpi__value) {
+    font-size: 2rem;
+}
+
+:global(.theme-shell[data-theme='light'] .doughnut-wrap),
+:global(.theme-shell[data-theme='light'] .chart-area) {
+    border-radius: 16px;
+}
+
+:global(.theme-shell[data-theme='light'] .dot--ok) {
+    background: #16a34a;
+}
+
+:global(.theme-shell[data-theme='light'] .dot--ng) {
+    background: #e11d48;
+}
+
+:global(.theme-shell[data-theme='light'] .dot--today) {
+    background: #1d4ed8;
+}
+
+:global(.theme-shell[data-theme='light'] .kpi--danger .kpi__label),
+:global(.theme-shell[data-theme='light'] .kpi--danger .kpi__value),
+:global(.theme-shell[data-theme='light'] .doughnut-center__ng strong) {
     color: #be123c;
 }
 

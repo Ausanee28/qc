@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
@@ -45,8 +45,8 @@ const perfOpts = computed(() => {
         scales: {
             x: {
                 beginAtZero: true,
-                grid: { color: isLight ? 'rgba(120,53,15,0.10)' : 'rgba(255,255,255,0.08)' },
-                border: { color: isLight ? 'rgba(120,53,15,0.12)' : 'rgba(255,255,255,0.1)' },
+                grid: { color: isLight ? 'rgba(15,23,42,0.10)' : 'rgba(255,255,255,0.08)' },
+                border: { color: isLight ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.1)' },
                 ticks: { color: isLight ? '#1c1917' : '#a8a29e', font: { size: 10 }, callback: (v) => `${v}m` },
             },
             y: {
@@ -59,7 +59,7 @@ const perfOpts = computed(() => {
             legend: { display: false },
             tooltip: {
                 backgroundColor: isLight ? 'rgba(255,250,245,0.98)' : 'rgba(15,15,15,0.96)',
-                borderColor: isLight ? 'rgba(234,88,12,0.18)' : 'rgba(251,146,60,0.22)',
+                borderColor: isLight ? 'rgba(29,78,216,0.18)' : 'rgba(251,146,60,0.22)',
                 borderWidth: 1,
                 titleColor: isLight ? '#1c1917' : '#fafaf9',
                 bodyColor: isLight ? '#1c1917' : '#d6d3d1',
@@ -74,7 +74,7 @@ const avgChartData = computed(() => ({
     datasets: [{
         data: inspectorRows.value.map((inspector) => Math.round((inspector.avg_sec || 0) / 60)),
         backgroundColor: inspectorRows.value.map((_, index) => currentTheme.value === 'light'
-            ? `rgba(245,158,11,${0.86 - index * 0.12})`
+            ? `rgba(29,78,216,${0.86 - index * 0.12})`
             : `rgba(245,158,11,${0.7 - index * 0.15})`),
         borderRadius: 8,
         borderSkipped: false,
@@ -86,7 +86,7 @@ const fastChartData = computed(() => ({
     datasets: [{
         data: inspectorRows.value.map((inspector) => Math.round((inspector.min_sec || 0) / 60)),
         backgroundColor: inspectorRows.value.map((_, index) => currentTheme.value === 'light'
-            ? `rgba(251,146,60,${0.78 - index * 0.1})`
+            ? `rgba(59,130,246,${0.78 - index * 0.1})`
             : `rgba(251,146,60,${0.68 - index * 0.12})`),
         borderRadius: 8,
         borderSkipped: false,
@@ -98,7 +98,7 @@ const slowChartData = computed(() => ({
     datasets: [{
         data: inspectorRows.value.map((inspector) => Math.round((inspector.max_sec || 0) / 60)),
         backgroundColor: inspectorRows.value.map((_, index) => currentTheme.value === 'light'
-            ? `rgba(146,96,61,${0.88 - index * 0.08})`
+            ? `rgba(30,64,175,${0.88 - index * 0.08})`
             : `rgba(120,53,15,${0.76 - index * 0.12})`),
         borderRadius: 8,
         borderSkipped: false,
@@ -435,7 +435,7 @@ onUnmounted(() => {
     color: #fb923c;
 }
 
-:global(.theme-shell[data-theme='light']) .performance-page {
+:global(.theme-shell[data-theme='light'] .performance-page) {
     --perf-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 247, 243, 0.96));
     --perf-card-border: rgba(68, 64, 60, 0.12);
     --perf-card-shadow: 0 22px 40px rgba(24, 24, 27, 0.06);
@@ -443,52 +443,52 @@ onUnmounted(() => {
     --perf-subtle-border: rgba(68, 64, 60, 0.12);
     --perf-soft-text: #57534e;
     --perf-strong-text: #18181b;
-    --perf-avatar-bg: linear-gradient(135deg, rgba(251, 146, 60, 0.18), rgba(255, 237, 213, 0.98));
-    --perf-average-bg: linear-gradient(180deg, rgba(41, 37, 36, 0.96), rgba(28, 25, 23, 0.98));
-    --perf-fastest-bg: linear-gradient(180deg, rgba(120, 53, 15, 0.78), rgba(87, 39, 11, 0.86));
-    --perf-slowest-bg: linear-gradient(180deg, rgba(161, 161, 170, 0.92), rgba(113, 113, 122, 0.96));
+    --perf-avatar-bg: linear-gradient(135deg, rgba(219, 234, 254, 0.98), rgba(191, 219, 254, 0.92));
+    --perf-average-bg: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.98));
+    --perf-fastest-bg: linear-gradient(180deg, rgba(37, 99, 235, 0.78), rgba(30, 64, 175, 0.86));
+    --perf-slowest-bg: linear-gradient(180deg, rgba(148, 163, 184, 0.92), rgba(100, 116, 139, 0.96));
     --perf-progress-track: rgba(68, 64, 60, 0.12);
-    --perf-ok-text: #c2410c;
+    --perf-ok-text: #1d4ed8;
     --perf-ng-text: #78716c;
 }
 
-:global(.theme-shell[data-theme='light']) .performance-empty {
+:global(.theme-shell[data-theme='light'] .performance-empty) {
     color: #18181b;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 247, 243, 0.96));
     border-color: rgba(68, 64, 60, 0.12);
     box-shadow: 0 18px 40px rgba(24, 24, 27, 0.06);
 }
 
-:global(.theme-shell[data-theme='light']) .performance-stat__value,
-:global(.theme-shell[data-theme='light']) .performance-history__id,
-:global(.theme-shell[data-theme='light']) .performance-history__duration {
-    color: #ea580c;
+:global(.theme-shell[data-theme='light'] .performance-stat__value),
+:global(.theme-shell[data-theme='light'] .performance-history__id),
+:global(.theme-shell[data-theme='light'] .performance-history__duration) {
+    color: #1d4ed8;
 }
 
-:global(.theme-shell[data-theme='light']) .performance-card__meta,
-:global(.theme-shell[data-theme='light']) .performance-history__hint,
-:global(.theme-shell[data-theme='light']) .performance-stat .lbl {
+:global(.theme-shell[data-theme='light'] .performance-card__meta),
+:global(.theme-shell[data-theme='light'] .performance-history__hint),
+:global(.theme-shell[data-theme='light'] .performance-stat .lbl) {
     color: #57534e;
 }
 
-:global(.theme-shell[data-theme='light']) .performance-stat--average .performance-stat__value,
-:global(.theme-shell[data-theme='light']) .performance-stat--fastest .performance-stat__value {
-    color: #fb923c;
+:global(.theme-shell[data-theme='light'] .performance-stat--average .performance-stat__value),
+:global(.theme-shell[data-theme='light'] .performance-stat--fastest .performance-stat__value) {
+    color: #dbeafe;
 }
 
-:global(.theme-shell[data-theme='light']) .performance-stat--slowest .performance-stat__value,
-:global(.theme-shell[data-theme='light']) .performance-stat--average .lbl,
-:global(.theme-shell[data-theme='light']) .performance-stat--fastest .lbl,
-:global(.theme-shell[data-theme='light']) .performance-stat--slowest .lbl {
+:global(.theme-shell[data-theme='light'] .performance-stat--slowest .performance-stat__value),
+:global(.theme-shell[data-theme='light'] .performance-stat--average .lbl),
+:global(.theme-shell[data-theme='light'] .performance-stat--fastest .lbl),
+:global(.theme-shell[data-theme='light'] .performance-stat--slowest .lbl) {
     color: #fff7ed;
 }
 
-:global(.theme-shell[data-theme='light']) .performance-panel__title--fastest {
-    color: #c2410c;
+:global(.theme-shell[data-theme='light'] .performance-panel__title--fastest) {
+    color: #1d4ed8;
 }
 
-:global(.theme-shell[data-theme='light']) .performance-panel__title--slowest {
-    color: #7c4a2a;
+:global(.theme-shell[data-theme='light'] .performance-panel__title--slowest) {
+    color: #1e3a8a;
 }
 
 @media (max-width: 1023px) {

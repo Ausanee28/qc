@@ -3,6 +3,7 @@ import '../css/app.css';
 import { config, createInertiaApp, router } from '@inertiajs/vue3';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
+import { initializeThemePreference, readStoredTheme } from './composables/useTheme';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const pages = import.meta.glob('./Pages/**/*.vue');
@@ -20,17 +21,33 @@ let navBusyTimer = null;
 const navBusyDelay = 260;
 
 if (typeof window !== 'undefined') {
-    window.localStorage.removeItem('qc-theme-preference');
-    document.documentElement.dataset.theme = 'dark';
-    document.documentElement.style.colorScheme = 'dark';
+    initializeThemePreference();
+    // Safety cleanup: prevent stale native dialog overlays from blocking the app.
+    document.querySelectorAll('dialog[open]').forEach((node) => {
+        try {
+            node.close();
+        } catch {
+            // no-op
+        }
+    });
 }
 
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta.env.PROD) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {
-            // Keep the app usable even if the browser rejects SW registration.
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+    if (import.meta.env.PROD && !isLocalHost) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(() => {
+                // Keep the app usable even if the browser rejects SW registration.
+            });
         });
-    });
+    } else {
+        navigator.serviceWorker.getRegistrations()
+            .then((registrations) => registrations.forEach((registration) => registration.unregister()))
+            .catch(() => {
+                // Ignore local unregister failures.
+            });
+    }
 }
 
 config.set({
@@ -130,7 +147,7 @@ createInertiaApp({
     },
     progress: {
         delay: 220,
-        color: '#f97316',
+        color: readStoredTheme() === 'light' ? '#1d4ed8' : '#f97316',
         showSpinner: false,
     },
 });

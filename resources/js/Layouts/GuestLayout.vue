@@ -1,20 +1,55 @@
+<script setup>
+import { computed, onMounted } from 'vue';
+import { useTheme, initializeThemePreference } from '@/composables/useTheme';
+
+const { currentTheme, isLightTheme } = useTheme();
+
+const guestRootClass = computed(() => (
+    isLightTheme.value
+        ? 'theme-guest relative flex min-h-dvh w-full items-center justify-center overflow-hidden bg-[linear-gradient(180deg,#f7fafc,#ffffff)] px-4 py-6 sm:px-6'
+        : 'theme-guest relative flex min-h-dvh w-full items-center justify-center overflow-hidden bg-[#090909] px-4 py-6 sm:px-6'
+));
+
+const guestFrameClass = computed(() => (
+    isLightTheme.value
+        ? 'guest-frame rounded-[34px] border border-[rgba(15,23,42,0.08)] bg-[rgba(255,255,255,0.88)] p-2 shadow-[0_35px_80px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-3'
+        : 'guest-frame rounded-[34px] border border-orange-500/20 bg-black/45 p-2 shadow-[0_35px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl sm:p-3'
+));
+
+const guestPanelClass = computed(() => (
+    isLightTheme.value
+        ? 'guest-panel rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,250,252,0.96))] p-4 sm:p-6'
+        : 'guest-panel rounded-[28px] bg-[linear-gradient(180deg,rgba(20,16,13,0.98),rgba(12,10,9,0.96))] p-4 sm:p-6'
+));
+
+const guestFooterClass = computed(() => (
+    isLightTheme.value
+        ? 'guest-footer mt-4 text-center text-xs text-slate-500/80'
+        : 'guest-footer mt-4 text-center text-xs text-stone-300/70'
+));
+
+onMounted(() => {
+    initializeThemePreference();
+});
+</script>
+
 <template>
-    <div class="theme-guest relative flex min-h-dvh w-full items-center justify-center overflow-hidden bg-[#090909] px-4 py-6 sm:px-6">
+    <div :data-theme="currentTheme" :class="guestRootClass">
         <div class="pointer-events-none absolute inset-0">
-            <div class="absolute inset-0 bg-[linear-gradient(135deg,#090909_0%,#160f0b_48%,#090909_100%)]"></div>
-            <div class="guest-glow guest-glow--one absolute left-[-12%] top-[-9%] h-80 w-80 rounded-full bg-orange-400/12 blur-3xl"></div>
-            <div class="guest-glow guest-glow--two absolute right-[-10%] top-[18%] h-96 w-96 rounded-full bg-orange-700/12 blur-3xl"></div>
-            <div class="guest-glow guest-glow--three absolute bottom-[-18%] left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-amber-300/5 blur-3xl"></div>
-            <div class="guest-grid absolute inset-0 opacity-[0.08]" style="background-image: linear-gradient(rgba(251,146,60,0.16) 1px, transparent 1px), linear-gradient(90deg, rgba(251,146,60,0.16) 1px, transparent 1px); background-size: 34px 34px;"></div>
+            <div class="absolute inset-0" :class="isLightTheme ? 'bg-[linear-gradient(145deg,#f8fbff_0%,#f1f6fd_52%,#ffffff_100%)]' : 'bg-[linear-gradient(135deg,#090909_0%,#160f0b_48%,#090909_100%)]'"></div>
+            <div class="guest-glow guest-glow--one absolute left-[-12%] top-[-9%] h-80 w-80 rounded-full blur-3xl" :class="isLightTheme ? 'bg-blue-400/12' : 'bg-orange-400/12'"></div>
+            <div class="guest-glow guest-glow--two absolute right-[-10%] top-[18%] h-96 w-96 rounded-full blur-3xl" :class="isLightTheme ? 'bg-blue-800/10' : 'bg-orange-700/12'"></div>
+            <div class="guest-glow guest-glow--three absolute bottom-[-18%] left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full blur-3xl" :class="isLightTheme ? 'bg-sky-300/10' : 'bg-amber-300/5'"></div>
+            <div class="guest-grid absolute inset-0" :class="isLightTheme ? 'opacity-[0.06]' : 'opacity-[0.08]'" :style="isLightTheme ? 'background-image: linear-gradient(rgba(29,78,216,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(29,78,216,0.08) 1px, transparent 1px); background-size: 34px 34px;' : 'background-image: linear-gradient(rgba(251,146,60,0.16) 1px, transparent 1px), linear-gradient(90deg, rgba(251,146,60,0.16) 1px, transparent 1px); background-size: 34px 34px;'"></div>
         </div>
 
         <div class="guest-shell relative z-10 w-full max-w-xl">
-            <div class="guest-frame rounded-[34px] border border-orange-500/20 bg-black/45 p-2 shadow-[0_35px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl sm:p-3">
-                <div class="guest-panel rounded-[28px] bg-[linear-gradient(180deg,rgba(20,16,13,0.98),rgba(12,10,9,0.96))] p-4 sm:p-6">
+            <div :class="guestFrameClass">
+                <div :class="guestPanelClass">
                     <slot />
                 </div>
             </div>
-            <div class="guest-footer mt-4 text-center text-xs text-stone-300/70">
+            <div :class="guestFooterClass">
                 QC Lab Management System &copy; {{ new Date().getFullYear() }}
             </div>
         </div>
@@ -26,32 +61,6 @@
     animation: guest-rise 720ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-:global(html[data-theme='light']) .theme-guest {
-    background:
-        radial-gradient(circle at top left, rgba(251, 146, 60, 0.08), transparent 18%),
-        radial-gradient(circle at 82% 12%, rgba(120, 53, 15, 0.05), transparent 16%),
-        linear-gradient(180deg, #fcfcfa 0%, #f6f5f1 52%, #f1efea 100%) !important;
-}
-
-:global(html[data-theme='light']) .theme-guest .guest-glow--one {
-    background: rgba(251, 146, 60, 0.12) !important;
-}
-
-:global(html[data-theme='light']) .theme-guest .guest-glow--two {
-    background: rgba(194, 65, 12, 0.08) !important;
-}
-
-:global(html[data-theme='light']) .theme-guest .guest-glow--three {
-    background: rgba(217, 119, 6, 0.05) !important;
-}
-
-:global(html[data-theme='light']) .theme-guest .guest-grid {
-    opacity: 0.05 !important;
-    background-image:
-        linear-gradient(rgba(68, 64, 60, 0.08) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(68, 64, 60, 0.08) 1px, transparent 1px) !important;
-}
-
 .guest-frame {
     position: relative;
     overflow: hidden;
@@ -61,7 +70,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(115deg, rgba(255, 255, 255, 0.06), transparent 24%, transparent 76%, rgba(251, 146, 60, 0.08));
+    background: linear-gradient(115deg, rgba(255, 255, 255, 0.08), transparent 24%, transparent 76%, rgba(29, 78, 216, 0.08));
     opacity: 0.7;
     pointer-events: none;
 }
@@ -76,7 +85,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: radial-gradient(circle at top right, rgba(251, 146, 60, 0.08), transparent 34%);
+    background: radial-gradient(circle at top right, rgba(29, 78, 216, 0.08), transparent 34%);
 }
 
 .guest-footer {

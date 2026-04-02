@@ -25,14 +25,14 @@ const verificationLinkSent = computed(
     <GuestLayout>
         <Head title="Email Verification" />
 
-        <div class="mb-4 text-sm text-stone-400">
+        <div class="verify-copy mb-4 text-sm">
             Thanks for signing up! Before getting started, could you verify your
             email address by clicking on the link we just emailed to you? If you
             didn't receive the email, we will gladly send you another.
         </div>
 
         <div
-            class="mb-4 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-sm font-medium text-orange-100"
+            class="verify-status mb-4 rounded-2xl px-4 py-3 text-sm font-medium"
             v-if="verificationLinkSent"
         >
             A new verification link has been sent to the email address you
@@ -52,10 +52,56 @@ const verificationLinkSent = computed(
                     :href="route('logout')"
                     method="post"
                     as="button"
-                    class="rounded-md text-sm text-stone-300 underline hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-300/20 focus:ring-offset-2"
+                    class="verify-link rounded-md text-sm underline focus:outline-none focus:ring-2 focus:ring-offset-2"
                     >Log Out</Link
                 >
             </div>
         </form>
     </GuestLayout>
 </template>
+
+<style scoped>
+.verify-copy {
+    color: #a8a29e;
+}
+
+.verify-status {
+    border: 1px solid rgba(251, 146, 60, 0.2);
+    background: rgba(251, 146, 60, 0.1);
+    color: #fdba74;
+}
+
+.verify-link {
+    color: #d6d3d1;
+}
+
+.verify-link:hover {
+    color: #fdba74;
+}
+
+.verify-link:focus {
+    box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.14);
+}
+
+:global(html[data-theme='light']) .verify-copy {
+    color: #475569;
+}
+
+:global(html[data-theme='light']) .verify-status {
+    border-color: rgba(29, 78, 216, 0.18);
+    background: rgba(219, 234, 254, 0.9);
+    color: #1d4ed8;
+}
+
+:global(html[data-theme='light']) .verify-link {
+    color: #1e40af;
+}
+
+:global(html[data-theme='light']) .verify-link:hover {
+    color: #1d4ed8;
+}
+
+:global(html[data-theme='light']) .verify-link:focus {
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+}
+</style>
