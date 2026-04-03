@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('Transaction_Detail', function (Blueprint $table) {
+            $table->string('max_value', 255)->nullable()->after('duration_sec');
+            $table->string('min_value', 255)->nullable()->after('max_value');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('Transaction_Detail', function (Blueprint $table) {
+            $table->dropColumn(['max_value', 'min_value']);
+        });
+    }
+};

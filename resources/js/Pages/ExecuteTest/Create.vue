@@ -48,6 +48,8 @@ const form = useForm({
     start_time: '',
     end_date: '',
     end_time: '',
+    max_value: '',
+    min_value: '',
     judgement: '',
     remark: '',
 });
@@ -172,6 +174,8 @@ const editResult = (result) => {
     form.start_time = result.start_time || '';
     form.end_date = result.end_date || '';
     form.end_time = result.end_time || '';
+    form.max_value = result.max_value || '';
+    form.min_value = result.min_value || '';
     form.judgement = result.judgement || '';
     form.remark = result.remark || '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -483,6 +487,31 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
+                    <div class="form-grid" style="margin-bottom:24px">
+                        <div>
+                            <label class="form-lbl">MAX</label>
+                            <input
+                                v-model="form.max_value"
+                                type="text"
+                                class="form-inp"
+                                style="padding:10px 12px"
+                                placeholder="e.g. 10.0 mm / Upper limit / Spec max"
+                            >
+                            <div v-if="form.errors.max_value" class="mt-1 text-xs text-red-600">{{ form.errors.max_value }}</div>
+                        </div>
+                        <div>
+                            <label class="form-lbl">MIN</label>
+                            <input
+                                v-model="form.min_value"
+                                type="text"
+                                class="form-inp"
+                                style="padding:10px 12px"
+                                placeholder="e.g. 5.0 mm / Lower limit / Spec min"
+                            >
+                            <div v-if="form.errors.min_value" class="mt-1 text-xs text-red-600">{{ form.errors.min_value }}</div>
+                        </div>
+                    </div>
+
                     <div>
                         <label class="form-lbl">Remark</label>
                         <textarea v-model="form.remark" class="form-inp" style="padding:10px 12px;min-height:60px;resize:vertical" placeholder="Optional notes about this test..."></textarea>
@@ -567,6 +596,9 @@ onBeforeUnmount(() => {
                                         <span :class="judgementClass(result)" class="inline-flex rounded-full px-3 py-1 text-xs font-semibold">
                                             {{ result.judgement }}
                                         </span>
+                                        <div v-if="result.max_value || result.min_value" class="mt-2 text-xs text-gray-500">
+                                            MAX: {{ result.max_value || '-' }} | MIN: {{ result.min_value || '-' }}
+                                        </div>
                                         <div v-if="result.remark" class="mt-2 text-xs text-gray-500">{{ result.remark }}</div>
                                     </td>
                                     <td class="px-6 py-4 text-right text-sm">

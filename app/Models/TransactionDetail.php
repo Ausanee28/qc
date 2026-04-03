@@ -25,7 +25,7 @@ class TransactionDetail extends Model
     public $timestamps = false;
     protected $fillable = [
         'transaction_id', 'method_id', 'internal_id',
-        'start_time', 'end_time', 'duration_sec', 'judgement', 'remark'
+        'start_time', 'end_time', 'duration_sec', 'max_value', 'min_value', 'judgement', 'remark'
     ];
 
     protected $casts = [

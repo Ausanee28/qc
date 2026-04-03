@@ -79,6 +79,8 @@ class ExecuteTestController extends Controller
                         $subQuery->where('detail_id', 'like', "%{$search}%")
                             ->orWhere('transaction_id', 'like', "%{$search}%")
                             ->orWhere('remark', 'like', "%{$search}%")
+                            ->orWhere('max_value', 'like', "%{$search}%")
+                            ->orWhere('min_value', 'like', "%{$search}%")
                             ->orWhere('TM.method_name', 'like', "%{$search}%")
                             ->orWhere('IU.name', 'like', "%{$search}%")
                             ->orWhere('TH.detail', 'like', "%{$search}%")
@@ -101,6 +103,8 @@ class ExecuteTestController extends Controller
                     'method_id' => $detail->method_id,
                     'internal_id' => $detail->internal_id,
                     'judgement' => $detail->judgement,
+                    'max_value' => $detail->max_value,
+                    'min_value' => $detail->min_value,
                     'remark' => $detail->remark,
                     'start_date' => optional($detail->start_time)->format('Y-m-d'),
                     'start_time' => optional($detail->start_time)->format('H:i'),
@@ -137,6 +141,8 @@ class ExecuteTestController extends Controller
                 'start_time' => $startDt,
                 'end_time' => $endDt,
                 'duration_sec' => $durationSec,
+                'max_value' => $this->normalizeOptionalText($validated['max_value'] ?? null),
+                'min_value' => $this->normalizeOptionalText($validated['min_value'] ?? null),
                 'judgement' => $validated['judgement'],
                 'remark' => $validated['remark'] ?? null,
             ]);
@@ -175,6 +181,8 @@ class ExecuteTestController extends Controller
             'start_time' => $startDt,
             'end_time' => $endDt,
             'duration_sec' => $durationSec,
+            'max_value' => $this->normalizeOptionalText($validated['max_value'] ?? null),
+            'min_value' => $this->normalizeOptionalText($validated['min_value'] ?? null),
             'judgement' => $validated['judgement'],
             'remark' => $validated['remark'] ?? null,
         ]);
@@ -270,6 +278,8 @@ class ExecuteTestController extends Controller
             'start_time' => 'required',
             'end_date' => 'nullable|date',
             'end_time' => 'nullable',
+            'max_value' => 'nullable|string|max:255',
+            'min_value' => 'nullable|string|max:255',
             'remark' => 'nullable|string|max:255',
         ]);
 
@@ -302,6 +312,17 @@ class ExecuteTestController extends Controller
         return [$startDt, $endDt, $durationSec];
     }
 
+    private function normalizeOptionalText(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = trim($value);
+
+        return $normalized === '' ? null : $normalized;
+    }
+
     private function pendingJobsVersionToken(): string
     {
         return PendingJobsVersion::current();
@@ -325,6 +346,8 @@ class ExecuteTestController extends Controller
             'start_time' => optional($detail->start_time)->format('Y-m-d H:i:s'),
             'end_time' => optional($detail->end_time)->format('Y-m-d H:i:s'),
             'duration_sec' => $detail->duration_sec === null ? null : (int) $detail->duration_sec,
+            'max_value' => $detail->max_value,
+            'min_value' => $detail->min_value,
             'judgement' => $detail->judgement,
             'remark' => $detail->remark,
             'deleted_at' => TransactionDetail::supportsSoftDeletes()
