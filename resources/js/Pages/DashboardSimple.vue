@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Bar, Doughnut, Line } from '@/lib/dashboard-charts';
+import { getEcho } from '@/lib/realtime';
 
 const dashboardReloadOnly = ['currentPeriod', 'metrics', 'weeklyData', 'dailyData', 'monthlyData', 'inspectorData', 'flash'];
 
@@ -40,6 +41,14 @@ const selectedPeriod = ref(props.currentPeriod);
 const isChangingPeriod = ref(false);
 const currentTheme = ref('dark');
 let themeObserver = null;
+let dashboardEcho = null;
+let realtimeRefreshTimer = null;
+let realtimeBootTimer = null;
+let dashboardPollTimer = null;
+let usePollingFallback = true;
+const realtimeRefreshDelayMs = 250;
+const dashboardSyncIntervalActiveMs = 30000;
+const dashboardSyncIntervalHiddenMs = 90000;
 const currentPeriodLabel = computed(() => periodLabels[props.currentPeriod] || 'This Month');
 const dashboardInvalidateTags = ['dashboard', 'workflow', 'performance', 'report', 'certificates'];
 
@@ -65,6 +74,74 @@ watch(selectedPeriod, (v, prev) => {
     });
 });
 
+const reloadDashboardRealtime = () => {
+    if (isChangingPeriod.value) {
+        return;
+    }
+
+    isChangingPeriod.value = true;
+    router.reload({
+        only: dashboardReloadOnly,
+        cacheTags: dashboardInvalidateTags,
+        preserveState: true,
+        preserveScroll: true,
+        onFinish: () => {
+            isChangingPeriod.value = false;
+        },
+    });
+};
+
+const scheduleRealtimeReload = () => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return;
+    }
+
+    if (realtimeRefreshTimer !== null) {
+        return;
+    }
+
+    realtimeRefreshTimer = window.setTimeout(() => {
+        realtimeRefreshTimer = null;
+        reloadDashboardRealtime();
+    }, realtimeRefreshDelayMs);
+};
+
+const startDashboardPolling = (intervalMs) => {
+    if (dashboardPollTimer !== null) {
+        window.clearInterval(dashboardPollTimer);
+    }
+
+    dashboardPollTimer = window.setInterval(() => {
+        if (document.hidden) {
+            return;
+        }
+
+        reloadDashboardRealtime();
+    }, intervalMs);
+};
+
+const handlePageFocus = () => {
+    if (!usePollingFallback) {
+        return;
+    }
+
+    reloadDashboardRealtime();
+};
+
+const handleVisibilityChange = () => {
+    if (!usePollingFallback) {
+        return;
+    }
+
+    if (!document.hidden) {
+        startDashboardPolling(dashboardSyncIntervalActiveMs);
+        reloadDashboardRealtime();
+        return;
+    }
+
+    startDashboardPolling(dashboardSyncIntervalHiddenMs);
+};
+
 onMounted(() => {
     syncTheme();
 
@@ -72,9 +149,58 @@ onMounted(() => {
         themeObserver = new MutationObserver(syncTheme);
         themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     }
+
+    window.addEventListener('focus', handlePageFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const bootRealtime = async () => {
+        dashboardEcho = await getEcho();
+
+        if (!dashboardEcho) {
+            startDashboardPolling(document.hidden ? dashboardSyncIntervalHiddenMs : dashboardSyncIntervalActiveMs);
+            return;
+        }
+
+        usePollingFallback = false;
+        dashboardEcho.private('dashboard.global').listen('.dashboard.updated', scheduleRealtimeReload);
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => {
+            void bootRealtime();
+        }, { timeout: 1400 });
+    } else {
+        realtimeBootTimer = window.setTimeout(() => {
+            realtimeBootTimer = null;
+            void bootRealtime();
+        }, 900);
+    }
 });
 
 onUnmounted(() => {
+    if (realtimeRefreshTimer !== null) {
+        window.clearTimeout(realtimeRefreshTimer);
+        realtimeRefreshTimer = null;
+    }
+
+    if (realtimeBootTimer !== null) {
+        window.clearTimeout(realtimeBootTimer);
+        realtimeBootTimer = null;
+    }
+
+    if (dashboardPollTimer !== null) {
+        window.clearInterval(dashboardPollTimer);
+        dashboardPollTimer = null;
+    }
+
+    window.removeEventListener('focus', handlePageFocus);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+    if (dashboardEcho) {
+        dashboardEcho.leave('dashboard.global');
+        dashboardEcho = null;
+    }
+
     themeObserver?.disconnect();
     themeObserver = null;
 });
