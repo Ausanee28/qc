@@ -108,12 +108,12 @@ const chartTheme = computed(() => (
             tooltipTitle: '#fafaf9',
             tooltipBody: '#f5f5f4',
             tooltipBorder: 'rgba(251,146,60,0.2)',
-            ok: '#f59e0b',
-            okFill: 'rgba(245,158,11,0.15)',
+            ok: '#22c55e',
+            okFill: 'rgba(34,197,94,0.18)',
             ng: '#ef4444',
             ngFill: 'rgba(239,68,68,0.10)',
-            bar: 'rgba(245,158,11,0.3)',
-            axisRight: '#fb923c',
+            bar: 'rgba(16,185,129,0.32)',
+            axisRight: '#4ade80',
         }
 ));
 
@@ -541,7 +541,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     transition: border-color 200ms, transform 200ms;
 }
 .kpi:hover { border-color: rgba(251,146,60,0.2); transform: translateY(-2px); }
-.kpi--accent { border-color: rgba(245,158,11,0.25); background: linear-gradient(135deg, rgba(60,30,10,0.7), rgba(20,14,10,0.95)); }
+.kpi--accent { border-color: rgba(34,197,94,0.3); background: linear-gradient(135deg, rgba(14,42,26,0.78), rgba(9,22,15,0.95)); }
 .kpi__label {
     font-size: 0.78rem;
     font-weight: 700;
@@ -549,7 +549,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     text-transform: uppercase;
     color: rgba(255,255,255,0.55);
 }
-.kpi--accent .kpi__label { color: #fdba74; }
+.kpi--accent .kpi__label { color: #86efac; }
 .kpi--danger { border-color: rgba(239,68,68,0.25); background: linear-gradient(135deg, rgba(60,15,15,0.7), rgba(20,10,10,0.95)); }
 .kpi--danger .kpi__label { color: #fca5a5; }
 .kpi--danger .kpi__value { color: #fecaca; }
@@ -651,7 +651,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 }
 .doughnut-legend__item strong { color: #e7e5e4; font-size: 0.95rem; }
 .dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; flex-shrink: 0; }
-.dot--ok { background: #f59e0b; }
+.dot--ok { background: #22c55e; }
 .dot--ng { background: #ef4444; }
 .dot--today { background: #8b5cf6; }
 
@@ -810,7 +810,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 .lb-yield__value {
     font-size: 1.15rem;
     font-weight: 700;
-    color: #fbbf24;
+    color: #4ade80;
     line-height: 1;
 }
 .lb-yield__label {
@@ -830,7 +830,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 .lb-bar__fill {
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #f59e0b, #fb923c);
+    background: linear-gradient(90deg, #22c55e, #16a34a);
     transition: width 400ms ease;
 }
 .lb-empty {
