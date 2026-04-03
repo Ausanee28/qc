@@ -1005,7 +1005,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 }
 
 :global(.theme-shell[data-theme='light'] .dot--ok) {
-    background: #16a34a;
+    background: #1d4ed8;
 }
 
 :global(.theme-shell[data-theme='light'] .dot--ng) {
@@ -1013,7 +1013,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 }
 
 :global(.theme-shell[data-theme='light'] .dot--today) {
-    background: #1d4ed8;
+    background: #8b5cf6;
 }
 
 :global(.theme-shell[data-theme='light'] .kpi--danger .kpi__label),
