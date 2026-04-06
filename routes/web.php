@@ -64,6 +64,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('equipments', \App\Http\Controllers\EquipmentController::class)->except(['create', 'show', 'edit']);
         Route::resource('test-methods', \App\Http\Controllers\TestMethodController::class)->except(['create', 'show', 'edit']);
         Route::resource('users', \App\Http\Controllers\UserController::class)->except(['create', 'show', 'edit']);
+        Route::patch('users/{user}/active', [\App\Http\Controllers\UserController::class, 'setActive'])->name('users.set-active');
         Route::post('users/{user}/reset-password', [\App\Http\Controllers\UserController::class, 'resetPassword'])->name('users.reset-password');
         Route::resource('external-users', \App\Http\Controllers\ExternalUserController::class)->except(['create', 'show', 'edit']);
     });

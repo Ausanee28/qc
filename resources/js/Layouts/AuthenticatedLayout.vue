@@ -71,8 +71,18 @@ const groupedNav = computed(() => {
 });
 
 const user = computed(() => page.props.auth?.user ?? { name: '', role: '' });
+const csrfToken = computed(() => page.props.csrf_token ?? '');
 const currentDate = dateFormatter.format(new Date());
 const isActiveRoute = (routeName) => route().current(routeName);
+const logout = () => {
+    router.post(route('logout'), { _token: csrfToken.value }, {
+        preserveState: false,
+        preserveScroll: false,
+        onError: () => {
+            window.location.assign(route('login'));
+        },
+    });
+};
 const desktopNavClass = (routeName) => (
     isActiveRoute(routeName)
         ? (isLightTheme.value
@@ -405,9 +415,9 @@ onUnmounted(() => {
                         </div>
 
                         <!-- Logout Icon Button -->
-                        <Link :href="route('logout')" method="post" as="button" :class="[iconButtonClass, 'ml-1']" title="Log out">
+                        <button type="button" @click="logout" :class="[iconButtonClass, 'ml-1']" title="Log out">
                             <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                        </Link>
+                        </button>
                     </div>
                 </div>
             </header>

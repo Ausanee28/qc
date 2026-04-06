@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
+use App\Support\SchemaCapabilities;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +30,35 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (!Auth::attempt(['user_name' => $this->user_name, 'password' => $this->password], $this->boolean('remember'))) {
+        $hasIsActive = SchemaCapabilities::hasColumn('Internal_Users', 'is_active');
+        $matchedUserQuery = User::query()
+            ->where('user_name', (string) $this->user_name);
+
+        $matchedUser = $hasIsActive
+            ? $matchedUserQuery->first(['user_id', 'is_active'])
+            : $matchedUserQuery->first(['user_id']);
+
+        if ($hasIsActive && $matchedUser && !$matchedUser->is_active) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'user_name' => 'This account is inactive. Please contact an administrator.',
+            ]);
+        }
+
+        $credentials = [
+            'user_name' => $this->user_name,
+            'password' => $this->password,
+        ];
+
+        if ($hasIsActive) {
+            $credentials['is_active'] = 1;
+        }
+
+        $canRemember = SchemaCapabilities::hasColumn('Internal_Users', 'remember_token');
+        $remember = $canRemember ? $this->boolean('remember') : false;
+
+        if (!Auth::attempt($credentials, $remember)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

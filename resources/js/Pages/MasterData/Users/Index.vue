@@ -12,24 +12,35 @@ const showResetModal = ref(false);
 const resetTarget = ref(null);
 const defaultFilters = {
     search: '',
+    status: 'all',
     per_page: '20',
 };
 const filterForm = reactive({
     ...defaultFilters,
     search: props.filters?.search ?? defaultFilters.search,
+    status: props.filters?.status ?? defaultFilters.status,
     per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 
 const roleLabels = { admin: 'Admin', engineer: 'Engineer', inspector: 'Inspector' };
 const roleBadge = {
-    admin: 'bg-blue-100 text-blue-700 border-blue-200',
-    engineer: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-    inspector: 'bg-slate-100 text-slate-700 border-slate-200',
+    admin: 'users-pill users-pill--admin',
+    engineer: 'users-pill users-pill--engineer',
+    inspector: 'users-pill users-pill--inspector',
+};
+const statusLabels = {
+    true: 'Active',
+    false: 'Inactive',
+};
+const statusBadge = {
+    true: 'users-pill users-pill--active',
+    false: 'users-pill users-pill--inactive',
 };
 const userRows = computed(() => props.users?.data ?? []);
 const userLinks = computed(() => props.users?.links ?? []);
 const reloadOnly = ['users', 'filters', 'flash'];
 const invalidateCacheTags = ['master-data', 'master-data:users', 'workflow'];
+const editableRoles = ['admin', 'inspector'];
 
 const form = useForm({
     user_id: null,
@@ -37,6 +48,7 @@ const form = useForm({
     name: '',
     employee_id: '',
     role: 'inspector',
+    is_active: true,
     password: '',
     password_confirmation: '',
 });
@@ -49,6 +61,7 @@ const resetForm = useForm({
 
 const filterPayload = () => ({
     search: filterForm.search,
+    status: filterForm.status,
     per_page: filterForm.per_page,
 });
 
@@ -81,6 +94,7 @@ const openCreateModal = () => {
     form.reset();
     form.clearErrors();
     form.role = 'inspector';
+    form.is_active = true;
     showModal.value = true;
 };
 
@@ -107,7 +121,8 @@ const openEditModal = (user) => {
     form.user_name = user.user_name;
     form.name = user.name || '';
     form.employee_id = user.employee_id || '';
-    form.role = user.role || 'inspector';
+    form.role = editableRoles.includes(user.role) ? user.role : 'inspector';
+    form.is_active = Boolean(user.is_active);
     form.password = '';
     form.password_confirmation = '';
     showModal.value = true;
@@ -139,6 +154,23 @@ const deleteUser = (id) => {
             preserveScroll: true,
         });
     }
+};
+
+const toggleUserActive = (user) => {
+    const nextIsActive = !Boolean(user.is_active);
+    const actionLabel = nextIsActive ? 'activate' : 'deactivate';
+
+    if (!confirm(`Are you sure you want to ${actionLabel} this user?`)) {
+        return;
+    }
+
+    router.patch(route('master-data.users.set-active', user.user_id), {
+        is_active: nextIsActive,
+    }, {
+        only: reloadOnly,
+        invalidateCacheTags,
+        preserveScroll: true,
+    });
 };
 
 const submitReset = () => {
@@ -173,9 +205,9 @@ const submitReset = () => {
             </div>
 
             <!-- Flash Messages -->
-            <div v-if="$page.props.flash?.success" class="mb-4 rounded-lg bg-green-50 p-4 border border-green-200 flex items-center gap-3">
-                <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
-                <span class="text-sm font-medium text-green-800">{{ $page.props.flash.success }}</span>
+            <div v-if="$page.props.flash?.success" class="users-flash users-flash--success mb-4 rounded-lg border p-4 flex items-center gap-3">
+                <svg class="users-flash__icon h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                <span class="users-flash__text text-sm font-semibold">{{ $page.props.flash.success }}</span>
             </div>
             <div v-if="$page.props.flash?.error" class="mb-4 rounded-lg bg-red-50 p-4 border border-red-200 flex items-center gap-3">
                 <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>
@@ -191,6 +223,11 @@ const submitReset = () => {
                         </div>
                         <input v-model="filterForm.search" type="text" placeholder="Search name, username, employee ID, or role..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
+                    <select v-model="filterForm.status" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+                        <option value="all">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
                     <select v-model="filterForm.per_page" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
                         <option value="10">10 / page</option>
                         <option value="20">20 / page</option>
@@ -214,12 +251,13 @@ const submitReset = () => {
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Username</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Employee ID</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-right pr-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
                             <tr v-if="userRows.length === 0">
-                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">
+                                <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">
                                     {{ filterForm.search ? 'No results for "' + filterForm.search + '"' : 'No users found.' }}
                                 </td>
                             </tr>
@@ -239,15 +277,27 @@ const submitReset = () => {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">{{ user.user_name }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">{{ user.employee_id || '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span :class="['inline-flex px-2.5 py-0.5 rounded-md text-xs font-medium border', roleBadge[user.role] || 'bg-gray-100 text-gray-700 border-gray-200']">
+                                    <span :class="['inline-flex px-2.5 py-0.5 rounded-md text-xs font-medium border', roleBadge[user.role] || 'users-pill users-pill--neutral']">
                                         {{ roleLabels[user.role] || user.role }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right pr-6 text-sm font-medium">
-                                    <div class="flex justify-end gap-4">
-                                        <button @click="openEditModal(user)" class="text-gray-900 hover:text-black underline decoration-gray-300 underline-offset-4">Edit</button>
-                                        <button @click="openResetModal(user)" class="text-blue-700 hover:text-blue-900 underline decoration-blue-300 underline-offset-4">Reset Password</button>
-                                        <button @click="deleteUser(user.user_id)" class="text-red-600 hover:text-red-900">Delete</button>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span :class="['inline-flex px-2.5 py-0.5 rounded-md text-xs font-medium border', statusBadge[String(Boolean(user.is_active))]]">
+                                        {{ statusLabels[String(Boolean(user.is_active))] }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-right pr-6 text-sm font-medium">
+                                    <div class="ml-auto grid w-full max-w-[30rem] grid-cols-4 gap-2">
+                                        <button @click="openEditModal(user)" class="inline-flex w-full justify-center whitespace-nowrap text-xs font-semibold text-gray-900 underline decoration-gray-300 underline-offset-4 hover:text-black">Edit</button>
+                                        <button
+                                            @click="toggleUserActive(user)"
+                                            class="users-action-button inline-flex w-full justify-center whitespace-nowrap text-xs font-semibold underline underline-offset-4"
+                                            :class="Boolean(user.is_active) ? 'users-action--deactivate' : 'users-action--activate'"
+                                        >
+                                            {{ Boolean(user.is_active) ? 'Deactivate' : 'Activate' }}
+                                        </button>
+                                        <button @click="openResetModal(user)" class="inline-flex w-full justify-center whitespace-nowrap text-xs font-semibold text-blue-700 hover:text-blue-900 underline decoration-blue-300 underline-offset-4">Reset Password</button>
+                                        <button @click="deleteUser(user.user_id)" class="inline-flex w-full justify-center whitespace-nowrap text-xs font-semibold text-red-600 hover:text-red-900 underline decoration-red-300 underline-offset-4">Delete</button>
                                     </div>
                                 </td>
                             </tr>
@@ -297,10 +347,18 @@ const submitReset = () => {
                         <label class="block text-xs font-semibold uppercase tracking-wider text-stone-300 mb-2">Role <span class="text-rose-400">*</span></label>
                         <select v-model="form.role" required class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50">
                             <option value="inspector">Inspector</option>
-                            <option value="engineer">Engineer</option>
                             <option value="admin">Admin</option>
                         </select>
                         <div v-if="form.errors.role" class="mt-1 text-xs text-rose-400">{{ form.errors.role }}</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-5">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-stone-300 mb-2">Account Status</label>
+                        <select v-model="form.is_active" class="w-full h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-stone-100 focus:outline-none focus:ring-2 focus:ring-orange-500/50">
+                            <option :value="true">Active</option>
+                            <option :value="false">Inactive</option>
+                        </select>
                     </div>
                 </div>
                 <div v-if="!isEditing" class="grid grid-cols-2 gap-4">
@@ -371,3 +429,143 @@ const submitReset = () => {
         </CrudFormModal>
     </AuthenticatedLayout>
 </template>
+
+<style scoped>
+.users-pill {
+    font-weight: 700;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-pill--admin) {
+    background: rgba(251, 146, 60, 0.16) !important;
+    border-color: rgba(251, 146, 60, 0.56) !important;
+    color: #fed7aa !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-pill--engineer) {
+    background: rgba(59, 130, 246, 0.18) !important;
+    border-color: rgba(59, 130, 246, 0.56) !important;
+    color: #bfdbfe !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-pill--inspector) {
+    background: rgba(226, 232, 240, 0.18) !important;
+    border-color: rgba(226, 232, 240, 0.52) !important;
+    color: #f1f5f9 !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-pill--active) {
+    background: rgba(34, 197, 94, 0.18) !important;
+    border-color: rgba(34, 197, 94, 0.58) !important;
+    color: #bbf7d0 !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-pill--inactive) {
+    background: rgba(244, 63, 94, 0.18) !important;
+    border-color: rgba(244, 63, 94, 0.58) !important;
+    color: #fecdd3 !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-pill--neutral) {
+    background: rgba(148, 163, 184, 0.2) !important;
+    border-color: rgba(148, 163, 184, 0.56) !important;
+    color: #e2e8f0 !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-pill--admin) {
+    background: rgba(255, 237, 213, 0.95) !important;
+    border-color: rgba(251, 146, 60, 0.35) !important;
+    color: #c2410c !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-pill--engineer) {
+    background: rgba(224, 242, 254, 0.95) !important;
+    border-color: rgba(59, 130, 246, 0.32) !important;
+    color: #1d4ed8 !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-pill--inspector) {
+    background: rgba(241, 245, 249, 0.96) !important;
+    border-color: rgba(148, 163, 184, 0.34) !important;
+    color: #334155 !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-pill--active) {
+    background: rgba(220, 252, 231, 0.96) !important;
+    border-color: rgba(34, 197, 94, 0.34) !important;
+    color: #15803d !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-pill--inactive) {
+    background: rgba(255, 228, 230, 0.96) !important;
+    border-color: rgba(244, 63, 94, 0.34) !important;
+    color: #be123c !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-pill--neutral) {
+    background: rgba(241, 245, 249, 0.96) !important;
+    border-color: rgba(148, 163, 184, 0.34) !important;
+    color: #334155 !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-flash--success) {
+    background: #dcfce7 !important;
+    border-color: #86efac !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-flash--success .users-flash__icon) {
+    color: #16a34a !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-flash--success .users-flash__text) {
+    color: #166534 !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-flash--success) {
+    background: rgba(34, 197, 94, 0.18) !important;
+    border-color: rgba(74, 222, 128, 0.42) !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-flash--success .users-flash__icon) {
+    color: #4ade80 !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-flash--success .users-flash__text) {
+    color: #bbf7d0 !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-action--activate) {
+    color: #047857 !important;
+    text-decoration-color: rgba(5, 150, 105, 0.45) !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-action--activate:hover) {
+    color: #065f46 !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-action--activate) {
+    color: #4ade80 !important;
+    text-decoration-color: rgba(74, 222, 128, 0.6) !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-action--activate:hover) {
+    color: #86efac !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-action--deactivate) {
+    color: #b45309 !important;
+    text-decoration-color: rgba(245, 158, 11, 0.5) !important;
+}
+
+:global(.theme-shell[data-theme='light'] .users-action--deactivate:hover) {
+    color: #92400e !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-action--deactivate) {
+    color: #fbbf24 !important;
+    text-decoration-color: rgba(251, 191, 36, 0.6) !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .users-action--deactivate:hover) {
+    color: #fcd34d !important;
+}
+</style>

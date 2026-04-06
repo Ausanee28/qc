@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\PendingJobsVersion;
 use App\Support\DashboardCache;
 use App\Support\AuditLogger;
+use App\Support\SchemaCapabilities;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
@@ -61,7 +62,10 @@ class ExecuteTestController extends Controller
             'pendingJobsCount' => fn () => Cache::remember('execute_test.pending_jobs_count.active', now()->addSeconds(30), fn () => TransactionHeader::whereNull('return_date')->count()),
             'pendingJobsVersion' => fn () => $this->pendingJobsVersionToken(),
             'methods' => fn () => Cache::remember('execute_test.methods', now()->addMinutes(10), fn () => TestMethod::orderBy('method_name')->get()),
-            'inspectors' => fn () => Cache::remember('execute_test.inspectors', now()->addMinutes(10), fn () => User::orderBy('name')->get(['user_id', 'name'])),
+            'inspectors' => fn () => Cache::remember('execute_test.inspectors', now()->addMinutes(10), fn () => User::query()
+                ->when(SchemaCapabilities::hasColumn('Internal_Users', 'is_active'), fn ($query) => $query->where('is_active', true))
+                ->orderBy('name')
+                ->get(['user_id', 'name'])),
             'results' => fn () => TransactionDetail::query()
                 ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
                 ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())
@@ -289,6 +293,19 @@ class ExecuteTestController extends Controller
             throw ValidationException::withMessages([
                 'transaction_id' => 'Selected job is not open for test execution.',
             ]);
+        }
+
+        if (SchemaCapabilities::hasColumn('Internal_Users', 'is_active')) {
+            $isActiveInspector = User::query()
+                ->where('user_id', (int) $validated['internal_id'])
+                ->where('is_active', true)
+                ->exists();
+
+            if (!$isActiveInspector) {
+                throw ValidationException::withMessages([
+                    'internal_id' => 'Selected inspector is inactive.',
+                ]);
+            }
         }
 
         return $validated;

@@ -24,6 +24,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'email',
         'email_verified_at',
         'role',
+        'is_active',
         'remember_token',
     ];
 
@@ -34,6 +35,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'is_active' => 'boolean',
     ];
 
     public function getAuthPassword()

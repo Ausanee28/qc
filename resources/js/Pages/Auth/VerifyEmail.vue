@@ -51,6 +51,7 @@ const verificationLinkSent = computed(
                 <Link
                     :href="route('logout')"
                     method="post"
+                    :data="{ _token: $page.props.csrf_token }"
                     as="button"
                     class="verify-link rounded-md text-sm underline focus:outline-none focus:ring-2 focus:ring-offset-2"
                     >Log Out</Link

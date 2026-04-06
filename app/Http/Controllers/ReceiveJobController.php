@@ -9,6 +9,7 @@ use App\Models\TransactionDetail;
 use App\Support\PendingJobsVersion;
 use App\Support\DashboardCache;
 use App\Support\AuditLogger;
+use App\Support\SchemaCapabilities;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -78,7 +79,9 @@ class ReceiveJobController extends Controller
                     ->get(['external_id', 'external_name']);
             }),
             'internals' => fn () => Cache::remember('receive_job.internals', now()->addMinutes(10), function () {
-                return User::orderBy('name')
+                return User::query()
+                    ->when(SchemaCapabilities::hasColumn('Internal_Users', 'is_active'), fn ($query) => $query->where('is_active', true))
+                    ->orderBy('name')
                     ->get(['user_id', 'name']);
             }),
             'jobs' => fn () => $this->resolveJobsPayload($jobsQuery, $filters, $supportsHeaderSoftDeletes, $currentPage),
@@ -269,13 +272,28 @@ class ReceiveJobController extends Controller
 
     private function validatePayload(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'external_id' => 'required|exists:External_Users,external_id',
             'internal_id' => 'required|exists:Internal_Users,user_id',
             'detail' => 'nullable|string|max:255',
             'dmc' => 'nullable|string',
             'line' => 'nullable|string',
         ]);
+
+        if (SchemaCapabilities::hasColumn('Internal_Users', 'is_active')) {
+            $isActiveInspector = User::query()
+                ->where('user_id', (int) $validated['internal_id'])
+                ->where('is_active', true)
+                ->exists();
+
+            if (!$isActiveInspector) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'internal_id' => 'Selected inspector is inactive.',
+                ]);
+            }
+        }
+
+        return $validated;
     }
 
     private function forgetExecuteTestPendingJobsCaches(): void
