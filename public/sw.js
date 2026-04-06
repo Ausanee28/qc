@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'qc-static-v1';
-const RUNTIME_CACHE = 'qc-runtime-v1';
+const STATIC_CACHE = 'qc-static-v2';
+const RUNTIME_CACHE = 'qc-runtime-v2';
 const APP_SHELL = [
     '/',
 ];

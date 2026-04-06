@@ -54,7 +54,7 @@ const submit = () => {
                             type="text"
                             required
                             autofocus
-                            class="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-stone-100 outline-none transition focus:border-orange-400/40 focus:ring-4 focus:ring-orange-300/15"
+                            class="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-stone-100 outline-none transition focus:border-blue-500/40 focus:ring-4 focus:ring-blue-300/20"
                             :class="{ 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-rose-100': form.errors.user_name }"
                         />
                     <InputError class="mt-2 text-sm" :message="form.errors.user_name" />
@@ -68,7 +68,7 @@ const submit = () => {
                             v-model="form.password"
                             :type="showPassword ? 'text' : 'password'"
                             required
-                            class="password-input h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 pr-12 text-sm text-stone-100 outline-none transition focus:border-orange-400/40 focus:ring-4 focus:ring-orange-300/15"
+                            class="password-input h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 pr-12 text-sm text-stone-100 outline-none transition focus:border-blue-500/40 focus:ring-4 focus:ring-blue-300/20"
                             :class="{ 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-rose-100': form.errors.password }"
                         />
                         <button
@@ -91,7 +91,7 @@ const submit = () => {
 
                 <div class="login-block login-block--meta flex flex-col gap-3 text-sm text-stone-400 sm:flex-row sm:items-center sm:justify-between">
                     <label class="flex items-center gap-3">
-                        <input v-model="form.remember" type="checkbox" class="h-4 w-4 rounded border-white/10 bg-white/5 text-orange-500 focus:ring-orange-300/20" />
+                        <input v-model="form.remember" type="checkbox" class="h-4 w-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-300/25" />
                         <span>Remember me</span>
                     </label>
                     <Link v-if="canResetPassword" :href="route('password.request')" class="login-link font-semibold transition">
@@ -224,39 +224,46 @@ const submit = () => {
     transform: translateX(140%);
 }
 
-:global(html[data-theme='light']) .login-kicker {
-    border-color: rgba(29, 78, 216, 0.18);
-    background: rgba(219, 234, 254, 0.9);
-    color: #1d4ed8;
+:global(html[data-theme='light'] .login-kicker),
+:global(.theme-guest[data-theme='light'] .login-kicker) {
+    border-color: rgba(29, 78, 216, 0.22) !important;
+    background: rgba(219, 234, 254, 0.92) !important;
+    color: #1d4ed8 !important;
 }
 
-:global(html[data-theme='light']) .login-title {
+:global(html[data-theme='light'] .login-title),
+:global(.theme-guest[data-theme='light'] .login-title) {
     text-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
 }
 
-:global(html[data-theme='light']) .login-status {
+:global(html[data-theme='light'] .login-status),
+:global(.theme-guest[data-theme='light'] .login-status) {
     border-color: rgba(29, 78, 216, 0.16);
     background: rgba(239, 246, 255, 0.96);
     color: #1d4ed8;
 }
 
-:global(html[data-theme='light']) .login-eye:hover {
+:global(html[data-theme='light'] .login-eye:hover),
+:global(.theme-guest[data-theme='light'] .login-eye:hover) {
     background: rgba(219, 234, 254, 0.92);
     color: #1d4ed8;
 }
 
-:global(html[data-theme='light']) .login-link {
+:global(html[data-theme='light'] .login-link),
+:global(.theme-guest[data-theme='light'] .login-link) {
     color: #1e40af;
 }
 
-:global(html[data-theme='light']) .login-link:hover {
+:global(html[data-theme='light'] .login-link:hover),
+:global(.theme-guest[data-theme='light'] .login-link:hover) {
     color: #1d4ed8;
 }
 
-:global(html[data-theme='light']) .login-submit {
-    background: linear-gradient(135deg, #1d4ed8, #1e40af);
-    color: #ffffff;
-    box-shadow: 0 16px 30px rgba(29, 78, 216, 0.18);
+:global(html[data-theme='light'] .login-submit),
+:global(.theme-guest[data-theme='light'] .login-submit) {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+    color: #ffffff !important;
+    box-shadow: 0 16px 30px rgba(29, 78, 216, 0.18) !important;
 }
 
 @keyframes login-rise {
