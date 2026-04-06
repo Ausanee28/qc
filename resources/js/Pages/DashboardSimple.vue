@@ -214,22 +214,25 @@ const chartTheme = computed(() => (
             legend: '#111827',
             strong: '#101828',
             grid: 'rgba(15,23,42,0.18)',
+            gridSoft: 'rgba(15,23,42,0.12)',
             tooltipBg: 'rgba(255,255,255,1)',
             tooltipTitle: '#101828',
             tooltipBody: '#1f2937',
             tooltipBorder: 'rgba(15,23,42,0.2)',
-            ok: '#1d4ed8',
-            okFill: 'rgba(29,78,216,0.22)',
+            ok: '#16a34a',
+            okFill: 'rgba(22,163,74,0.2)',
             ng: '#e11d48',
             ngFill: 'rgba(225,29,72,0.16)',
-            bar: 'rgba(29,78,216,0.38)',
-            axisRight: '#1e40af',
+            bar: 'rgba(148,163,184,0.38)',
+            barBorder: 'rgba(100,116,139,0.46)',
+            axisRight: '#15803d',
         }
         : {
             axis: '#a8a29e',
             legend: '#e7e5e4',
             strong: '#fafaf9',
             grid: 'rgba(255,255,255,0.06)',
+            gridSoft: 'rgba(255,255,255,0.1)',
             tooltipBg: 'rgba(10,10,10,0.95)',
             tooltipTitle: '#fafaf9',
             tooltipBody: '#f5f5f4',
@@ -239,6 +242,7 @@ const chartTheme = computed(() => (
             ng: '#ef4444',
             ngFill: 'rgba(239,68,68,0.10)',
             bar: 'rgba(16,185,129,0.32)',
+            barBorder: 'rgba(34,197,94,0.42)',
             axisRight: '#4ade80',
         }
 ));
@@ -340,9 +344,50 @@ const monthlySeries = computed(() => {
 const monthlyTrendData = computed(() => ({
     labels: monthlySeries.value.map((m) => m.label),
     datasets: [
-        { type: 'bar', label: 'Total Tests', data: monthlySeries.value.map((m) => m.total), backgroundColor: chartTheme.value.bar, borderRadius: 8, yAxisID: 'y' },
-        { type: 'line', label: 'OK %', data: monthlySeries.value.map((m) => m.yield), borderColor: chartTheme.value.ok, backgroundColor: chartTheme.value.ok, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, yAxisID: 'y1' },
-        { type: 'line', label: 'NG %', data: monthlySeries.value.map((m) => m.ngRate), borderColor: chartTheme.value.ng, backgroundColor: chartTheme.value.ng, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, yAxisID: 'y1' },
+        {
+            type: 'bar',
+            label: 'Total Tests',
+            data: monthlySeries.value.map((m) => m.total),
+            backgroundColor: chartTheme.value.bar,
+            borderColor: chartTheme.value.barBorder,
+            borderWidth: 1,
+            borderRadius: 10,
+            barPercentage: 0.58,
+            categoryPercentage: 0.62,
+            maxBarThickness: 84,
+            yAxisID: 'y',
+            order: 3,
+        },
+        {
+            type: 'line',
+            label: 'OK %',
+            data: monthlySeries.value.map((m) => m.yield),
+            borderColor: chartTheme.value.ok,
+            backgroundColor: chartTheme.value.ok,
+            pointBackgroundColor: chartTheme.value.ok,
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: (ctx) => Number(ctx.raw || 0) > 0 ? 4 : 0,
+            pointHoverRadius: (ctx) => Number(ctx.raw || 0) > 0 ? 6 : 3,
+            pointHitRadius: 10,
+            yAxisID: 'y1',
+            order: 1,
+        },
+        {
+            type: 'line',
+            label: 'NG %',
+            data: monthlySeries.value.map((m) => m.ngRate),
+            borderColor: chartTheme.value.ng,
+            backgroundColor: chartTheme.value.ng,
+            pointBackgroundColor: chartTheme.value.ng,
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: (ctx) => Number(ctx.raw || 0) > 0 ? 4 : 0,
+            pointHoverRadius: (ctx) => Number(ctx.raw || 0) > 0 ? 6 : 3,
+            pointHitRadius: 10,
+            yAxisID: 'y1',
+            order: 2,
+        },
     ],
 }));
 
@@ -354,6 +399,10 @@ const monthlyMixedOpts = computed(() => ({
         tooltip: {
             ...tooltipStyle.value,
             callbacks: {
+                title: (items) => {
+                    const idx = items?.[0]?.dataIndex ?? -1;
+                    return monthlySeries.value[idx]?.fullLabel || items?.[0]?.label || '';
+                },
                 label: (ctx) => {
                     const value = Number(ctx.parsed.y || 0);
                     return ctx.dataset.yAxisID === 'y1'
@@ -365,8 +414,22 @@ const monthlyMixedOpts = computed(() => ({
     },
     scales: {
         x: { ticks: { color: chartTheme.value.axis }, grid: { display: false }, border: { display: false } },
-        y: { beginAtZero: true, ticks: { color: chartTheme.value.axis }, grid: { color: chartTheme.value.grid }, border: { display: false } },
-        y1: { beginAtZero: true, position: 'right', min: 0, max: 100, ticks: { color: chartTheme.value.axisRight, callback: (v) => `${v}%` }, grid: { display: false }, border: { display: false } },
+        y: {
+            beginAtZero: true,
+            grace: '8%',
+            ticks: { color: chartTheme.value.axis, precision: 0, maxTicksLimit: 6 },
+            grid: { color: chartTheme.value.gridSoft },
+            border: { display: false },
+        },
+        y1: {
+            beginAtZero: true,
+            position: 'right',
+            min: 0,
+            max: 100,
+            ticks: { color: chartTheme.value.axisRight, stepSize: 10, maxTicksLimit: 6, callback: (v) => `${v}%` },
+            grid: { display: false },
+            border: { display: false },
+        },
     },
 }));
 
@@ -990,7 +1053,6 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 
 :global(.theme-shell[data-theme='light'] .db-header) {
     padding: 0.15rem 0.1rem 0.35rem;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.1);
 }
 
 :global(.theme-shell[data-theme='light'] .db-badge) {
@@ -1078,13 +1140,37 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 }
 
 :global(.theme-shell[data-theme='light'] .kpi--accent) {
-    border-color: rgba(29, 78, 216, 0.42) !important;
-    background: linear-gradient(135deg, rgba(219, 234, 254, 0.98), rgba(239, 246, 255, 0.98)) !important;
+    border-width: 2px !important;
+    border-color: rgba(34, 197, 94, 0.52) !important;
+    background: linear-gradient(135deg, rgba(240, 253, 244, 0.98), rgba(236, 253, 245, 0.98)) !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(34, 197, 94, 0.12),
+        0 0 0 3px rgba(34, 197, 94, 0.14),
+        0 14px 28px rgba(22, 163, 74, 0.16) !important;
 }
 
 :global(.theme-shell[data-theme='light'] .kpi--danger) {
-    border-color: rgba(225, 29, 72, 0.4) !important;
+    border-width: 2px !important;
+    border-color: rgba(239, 68, 68, 0.52) !important;
     background: linear-gradient(135deg, rgba(255, 241, 242, 0.98), rgba(255, 248, 250, 0.98)) !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(239, 68, 68, 0.12),
+        0 0 0 3px rgba(239, 68, 68, 0.14),
+        0 14px 28px rgba(220, 38, 38, 0.14) !important;
+}
+
+:global(.theme-shell[data-theme='light'] .kpi--accent:hover) {
+    border-color: rgba(22, 163, 74, 0.7) !important;
+    background: linear-gradient(135deg, rgba(236, 253, 245, 1), rgba(220, 252, 231, 0.98)) !important;
+}
+
+:global(.theme-shell[data-theme='light'] .kpi--danger:hover) {
+    border-color: rgba(220, 38, 38, 0.68) !important;
+    background: linear-gradient(135deg, rgba(255, 228, 230, 0.98), rgba(255, 241, 242, 0.98)) !important;
+}
+
+:global(.theme-shell[data-theme='light'] .kpi--accent .kpi__label) {
+    color: #15803d;
 }
 
 :global(.theme-shell[data-theme='light'] .fc--accent) {
@@ -1108,11 +1194,11 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 }
 
 :global(.theme-shell[data-theme='light'] .lb-yield__value) {
-    color: #1e40af;
+    color: #15803d;
 }
 
 :global(.theme-shell[data-theme='light'] .lb-bar__fill) {
-    background: linear-gradient(90deg, #1d4ed8, #60a5fa);
+    background: linear-gradient(90deg, #16a34a, #4ade80);
 }
 
 :global(.theme-shell[data-theme='light'] .card__head) {
@@ -1131,7 +1217,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 }
 
 :global(.theme-shell[data-theme='light'] .dot--ok) {
-    background: #1d4ed8;
+    background: #16a34a;
 }
 
 :global(.theme-shell[data-theme='light'] .dot--ng) {

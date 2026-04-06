@@ -1597,6 +1597,28 @@ html[data-theme='light'] .theme-guest textarea::placeholder {
     box-shadow: 0 14px 30px rgba(15, 23, 42, 0.04) !important;
 }
 
+.theme-shell[data-theme='light'] .db .kpi--accent {
+    background: linear-gradient(180deg, rgba(236, 253, 245, 0.98), rgba(220, 252, 231, 0.96)) !important;
+    border-color: rgba(34, 197, 94, 0.56) !important;
+    box-shadow: 0 14px 30px rgba(22, 163, 74, 0.12) !important;
+}
+
+.theme-shell[data-theme='light'] .db .kpi--danger {
+    background: linear-gradient(180deg, rgba(255, 241, 242, 0.98), rgba(254, 226, 226, 0.96)) !important;
+    border-color: rgba(239, 68, 68, 0.56) !important;
+    box-shadow: 0 14px 30px rgba(220, 38, 38, 0.1) !important;
+}
+
+.theme-shell[data-theme='light'] .db .kpi--accent:hover {
+    background: linear-gradient(180deg, rgba(220, 252, 231, 1), rgba(187, 247, 208, 0.98)) !important;
+    border-color: rgba(22, 163, 74, 0.72) !important;
+}
+
+.theme-shell[data-theme='light'] .db .kpi--danger:hover {
+    background: linear-gradient(180deg, rgba(254, 226, 226, 1), rgba(254, 202, 202, 0.98)) !important;
+    border-color: rgba(220, 38, 38, 0.72) !important;
+}
+
 .theme-shell[data-theme='light'] .kpi__label,
 .theme-shell[data-theme='light'] .monthly-insight__label,
 .theme-shell[data-theme='light'] .fc__label,

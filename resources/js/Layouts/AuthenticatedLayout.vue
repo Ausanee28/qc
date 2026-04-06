@@ -93,7 +93,7 @@ const mobileNavClass = (routeName) => (
 );
 const brandBadgeClass = computed(() => (
     isLightTheme.value
-        ? 'bg-[linear-gradient(135deg,#1D4ED8,#1E3A8A)] text-white shadow-[0_12px_24px_rgba(29,78,216,0.22)]'
+        ? 'bg-[linear-gradient(135deg,#1D4ED8,#1E3A8A)] text-slate-50 shadow-[0_12px_24px_rgba(29,78,216,0.22)]'
         : 'bg-[linear-gradient(135deg,#fb923c,#ea580c)] text-[#140d08] shadow-[0_10px_24px_rgba(249,115,22,0.25)]'
 ));
 const shellRootClass = computed(() => (
@@ -148,7 +148,7 @@ const userNameClass = computed(() => (isLightTheme.value ? 'text-[13px] font-bol
 const userRoleClass = computed(() => (isLightTheme.value ? 'text-[10px] font-bold uppercase tracking-widest mt-0.5 text-[#1D4ED8]/75' : 'text-[10px] font-bold uppercase tracking-widest mt-0.5 text-orange-200/70'));
 const userAvatarClass = computed(() => (
     isLightTheme.value
-        ? 'w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold cursor-pointer hover:opacity-90 transition-opacity bg-[linear-gradient(135deg,#1D4ED8,#1E3A8A)] text-white shadow-[0_10px_22px_rgba(29,78,216,0.18)]'
+        ? 'w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold cursor-pointer hover:opacity-90 transition-opacity bg-[linear-gradient(135deg,#1D4ED8,#1E3A8A)] text-slate-50 shadow-[0_10px_22px_rgba(29,78,216,0.18)]'
         : 'w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold cursor-pointer hover:opacity-90 transition-opacity bg-[linear-gradient(135deg,#fb923c,#c2410c)] text-[#120d08] shadow-[0_8px_20px_rgba(249,115,22,0.28)]'
 ));
 const iconButtonClass = computed(() => (
