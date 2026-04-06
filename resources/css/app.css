@@ -771,6 +771,13 @@ tr:hover td {
     color: var(--theme-text-muted);
 }
 
+.theme-shell[data-theme='light'] .shell-nav-active,
+.theme-shell[data-theme='light'] .shell-nav-active:hover,
+.theme-shell[data-theme='light'] .shell-nav-active:focus-visible,
+.theme-shell[data-theme='light'] .shell-nav-active * {
+    color: #ffffff !important;
+}
+
 .theme-shell[data-theme='light'] .shell-theme-toggle:hover,
 .theme-shell[data-theme='light'] [class*='hover:bg-white/5']:hover,
 .theme-shell[data-theme='light'] [class*='hover:bg-gray-50']:hover,
@@ -820,6 +827,15 @@ tr:hover td {
 .theme-shell[data-theme='light'] .text-slate-500,
 .theme-shell[data-theme='light'] .text-slate-400 {
     color: #1f2937 !important;
+}
+
+.theme-shell[data-theme='light'] .shell-nav-active,
+.theme-shell[data-theme='light'] .shell-nav-active.text-white,
+.theme-shell[data-theme='light'] .shell-nav-active[class*='text-'],
+.theme-shell[data-theme='light'] .shell-nav-active:hover,
+.theme-shell[data-theme='light'] .shell-nav-active:focus-visible,
+.theme-shell[data-theme='light'] .shell-nav-active * {
+    color: #ffffff !important;
 }
 
 .theme-shell[data-theme='light'] th {

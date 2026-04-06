@@ -76,7 +76,7 @@ const isActiveRoute = (routeName) => route().current(routeName);
 const desktopNavClass = (routeName) => (
     isActiveRoute(routeName)
         ? (isLightTheme.value
-            ? 'border border-[rgba(29,78,216,0.34)] bg-[linear-gradient(135deg,#1D4ED8,#1E40AF)] text-white shadow-[0_18px_34px_rgba(29,78,216,0.24)]'
+            ? 'shell-nav-active border border-[rgba(29,78,216,0.34)] bg-[linear-gradient(135deg,#1D4ED8,#1E40AF)] text-white shadow-[0_18px_34px_rgba(29,78,216,0.24)]'
             : 'border border-orange-500/20 bg-[linear-gradient(135deg,rgba(251,146,60,0.2),rgba(249,115,22,0.1))] text-orange-100 shadow-[0_14px_28px_rgba(0,0,0,0.2)]')
         : (isLightTheme.value
             ? 'text-slate-700 hover:bg-[rgba(219,234,254,0.85)] hover:text-[#1E3A8A]'
@@ -85,7 +85,7 @@ const desktopNavClass = (routeName) => (
 const mobileNavClass = (routeName) => (
     isActiveRoute(routeName)
         ? (isLightTheme.value
-            ? 'bg-[linear-gradient(135deg,#1D4ED8,#1E40AF)] text-white font-semibold border border-[rgba(29,78,216,0.34)] shadow-[0_12px_28px_rgba(29,78,216,0.22)]'
+            ? 'shell-nav-active bg-[linear-gradient(135deg,#1D4ED8,#1E40AF)] text-white font-semibold border border-[rgba(29,78,216,0.34)] shadow-[0_12px_28px_rgba(29,78,216,0.22)]'
             : 'bg-orange-500/15 text-orange-100 font-semibold border border-orange-500/20')
         : (isLightTheme.value
             ? 'text-slate-700 hover:bg-[rgba(219,234,254,0.96)]'
