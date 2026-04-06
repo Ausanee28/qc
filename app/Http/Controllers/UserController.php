@@ -13,6 +13,8 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
+    private const DEFAULT_USERS_CACHE_KEY = 'master_data.users.default.status_all.per_page_20';
+
     public function index(Request $request)
     {
         $filters = $request->validate([
@@ -24,6 +26,7 @@ class UserController extends Controller
         $search = trim((string) ($filters['search'] ?? ''));
         $status = (string) ($filters['status'] ?? 'all');
         $perPage = (int) ($filters['per_page'] ?? 20);
+        $currentPage = max(1, (int) $request->integer('page', 1));
         $hasIsActive = SchemaCapabilities::hasColumn('Internal_Users', 'is_active');
 
         $usersQuery = User::query()
@@ -55,9 +58,7 @@ class UserController extends Controller
                 'status' => $status,
                 'per_page' => (string) $perPage,
             ],
-            'users' => fn () => $usersQuery
-                ->paginate($perPage)
-                ->withQueryString(),
+            'users' => fn () => $this->resolveUsersPayload($usersQuery, $search, $status, $perPage, $currentPage),
         ]);
     }
 
@@ -87,6 +88,8 @@ class UserController extends Controller
         User::create($payload);
         Cache::forget('receive_job.internals');
         Cache::forget('execute_test.inspectors');
+        Cache::forget('execute_test.results.default.active.per_page_20');
+        Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
 
         return redirect()->back()->with('success', 'User created successfully.');
     }
@@ -128,6 +131,8 @@ class UserController extends Controller
         $user->update($data);
         Cache::forget('receive_job.internals');
         Cache::forget('execute_test.inspectors');
+        Cache::forget('execute_test.results.default.active.per_page_20');
+        Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
 
         return redirect()->back()->with('success', 'User updated successfully.');
     }
@@ -167,6 +172,8 @@ class UserController extends Controller
         $user->delete();
         Cache::forget('receive_job.internals');
         Cache::forget('execute_test.inspectors');
+        Cache::forget('execute_test.results.default.active.per_page_20');
+        Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
 
         return redirect()->back()->with('success', 'User deleted successfully.');
     }
@@ -204,6 +211,8 @@ class UserController extends Controller
 
         Cache::forget('receive_job.internals');
         Cache::forget('execute_test.inspectors');
+        Cache::forget('execute_test.results.default.active.per_page_20');
+        Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
 
         return redirect()->back()->with('success', $isActive
             ? 'User activated successfully.'
@@ -241,5 +250,33 @@ class UserController extends Controller
         $user->update($updatePayload);
 
         return redirect()->back()->with('success', "Password reset successfully for {$user->name}.");
+    }
+
+    private function resolveUsersPayload($usersQuery, string $search, string $status, int $perPage, int $currentPage)
+    {
+        if ($this->shouldCacheDefaultUsersPayload($search, $status, $perPage, $currentPage)) {
+            return Cache::remember(
+                self::DEFAULT_USERS_CACHE_KEY,
+                now()->addSeconds(30),
+                fn () => $this->buildUsersPayload($usersQuery, $perPage)
+            );
+        }
+
+        return $this->buildUsersPayload($usersQuery, $perPage);
+    }
+
+    private function shouldCacheDefaultUsersPayload(string $search, string $status, int $perPage, int $currentPage): bool
+    {
+        return $currentPage === 1
+            && $search === ''
+            && $status === 'all'
+            && $perPage === 20;
+    }
+
+    private function buildUsersPayload($usersQuery, int $perPage)
+    {
+        return (clone $usersQuery)
+            ->paginate($perPage)
+            ->withQueryString();
     }
 }

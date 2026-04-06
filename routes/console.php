@@ -244,10 +244,25 @@ Artisan::command('qc:warm', function (DashboardMetricsService $metricsService) {
             'currentPeriod' => $period,
             'metrics' => $metricsService->getOverviewMetrics($from, $to),
             'weeklyData' => $metricsService->getWeeklyTrend(),
-            'dailyData' => $metricsService->getDailyTrend(),
-            'monthlyData' => $metricsService->getMonthlyTrend(),
-            'inspectorData' => $metricsService->getInspectorData(5, $from, $to)->toArray(),
         ]);
+
+        DashboardCache::store()->remember(
+            DashboardCache::simpleDailyKey($period),
+            now()->addMinutes(10),
+            fn () => $metricsService->getDailyTrend()
+        );
+
+        DashboardCache::store()->remember(
+            DashboardCache::simpleMonthlyKey($period),
+            now()->addMinutes(10),
+            fn () => $metricsService->getMonthlyTrend()
+        );
+
+        DashboardCache::store()->remember(
+            DashboardCache::simpleInspectorsKey($period),
+            now()->addMinutes(10),
+            fn () => $metricsService->getInspectorData(5, $from, $to)->toArray()
+        );
     }
 
     Cache::remember('receive_job.externals', now()->addMinutes(10), fn () => \App\Models\ExternalUser::orderBy('external_name')->get(['external_id', 'external_name']));

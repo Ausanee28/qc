@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Equipment;
 use App\Models\TestMethod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class EquipmentController extends Controller
 {
+    private const DEFAULT_EQUIPMENTS_CACHE_KEY = 'master_data.equipments.default.per_page_20';
+
     public function index(Request $request)
     {
         $filters = $request->validate([
@@ -18,20 +21,14 @@ class EquipmentController extends Controller
 
         $search = trim((string) ($filters['search'] ?? ''));
         $perPage = (int) ($filters['per_page'] ?? 20);
+        $currentPage = max(1, (int) $request->integer('page', 1));
 
         return Inertia::render('MasterData/Equipments/Index', [
             'filters' => [
                 'search' => $search,
                 'per_page' => (string) $perPage,
             ],
-            'equipments' => fn () => Equipment::query()
-                ->select(['equipment_id', 'equipment_name'])
-                ->when($search !== '', function ($query) use ($search) {
-                    $query->where('equipment_name', 'like', "%{$search}%");
-                })
-                ->orderBy('equipment_name')
-                ->paginate($perPage)
-                ->withQueryString(),
+            'equipments' => fn () => $this->resolveEquipmentsPayload($search, $perPage, $currentPage),
         ]);
     }
 
@@ -42,6 +39,8 @@ class EquipmentController extends Controller
         ]);
 
         Equipment::create($validated);
+        Cache::forget(self::DEFAULT_EQUIPMENTS_CACHE_KEY);
+        Cache::forget('master_data.test_methods.default.per_page_20');
 
         return redirect()->back()->with('success', 'Equipment created successfully.');
     }
@@ -55,6 +54,8 @@ class EquipmentController extends Controller
         ]);
 
         $equipment->update($validated);
+        Cache::forget(self::DEFAULT_EQUIPMENTS_CACHE_KEY);
+        Cache::forget('master_data.test_methods.default.per_page_20');
 
         return redirect()->back()->with('success', 'Equipment updated successfully.');
     }
@@ -69,7 +70,39 @@ class EquipmentController extends Controller
         }
 
         $equipment->delete();
+        Cache::forget(self::DEFAULT_EQUIPMENTS_CACHE_KEY);
+        Cache::forget('master_data.test_methods.default.per_page_20');
 
         return redirect()->back()->with('success', 'Equipment deleted successfully.');
+    }
+
+    private function resolveEquipmentsPayload(string $search, int $perPage, int $currentPage)
+    {
+        if ($this->shouldCacheDefaultEquipmentsPayload($search, $perPage, $currentPage)) {
+            return Cache::remember(
+                self::DEFAULT_EQUIPMENTS_CACHE_KEY,
+                now()->addSeconds(30),
+                fn () => $this->buildEquipmentsPayload($search, $perPage)
+            );
+        }
+
+        return $this->buildEquipmentsPayload($search, $perPage);
+    }
+
+    private function shouldCacheDefaultEquipmentsPayload(string $search, int $perPage, int $currentPage): bool
+    {
+        return $currentPage === 1 && $search === '' && $perPage === 20;
+    }
+
+    private function buildEquipmentsPayload(string $search, int $perPage)
+    {
+        return Equipment::query()
+            ->select(['equipment_id', 'equipment_name'])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where('equipment_name', 'like', "%{$search}%");
+            })
+            ->orderBy('equipment_name')
+            ->paginate($perPage)
+            ->withQueryString();
     }
 }

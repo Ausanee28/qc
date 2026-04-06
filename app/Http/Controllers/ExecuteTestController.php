@@ -21,9 +21,12 @@ use Inertia\Inertia;
 
 class ExecuteTestController extends Controller
 {
+    private const DEFAULT_RESULTS_CACHE_KEY = 'execute_test.results.default.active.per_page_20';
+
     public function create(Request $request)
     {
         $supportsDetailSoftDeletes = TransactionDetail::supportsSoftDeletes();
+        $currentPage = max(1, (int) $request->integer('page', 1));
 
         $validatedFilters = $request->validate([
             'search' => 'nullable|string|max:255',
@@ -66,60 +69,7 @@ class ExecuteTestController extends Controller
                 ->when(SchemaCapabilities::hasColumn('Internal_Users', 'is_active'), fn ($query) => $query->where('is_active', true))
                 ->orderBy('name')
                 ->get(['user_id', 'name'])),
-            'results' => fn () => TransactionDetail::query()
-                ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
-                ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())
-                ->leftJoin('Transaction_Header as TH', 'Transaction_Detail.transaction_id', '=', 'TH.transaction_id')
-                ->leftJoin('Test_Methods as TM', 'Transaction_Detail.method_id', '=', 'TM.method_id')
-                ->leftJoin('Internal_Users as IU', 'Transaction_Detail.internal_id', '=', 'IU.user_id')
-                ->select('Transaction_Detail.*')
-                ->selectRaw('TH.detail as job_detail')
-                ->selectRaw('TM.method_name as joined_method_name')
-                ->selectRaw('IU.name as joined_inspector_name')
-                ->when($filters['search'] !== '', function ($query) use ($filters) {
-                    $search = $filters['search'];
-
-                    $query->where(function ($subQuery) use ($search) {
-                        $subQuery->where('detail_id', 'like', "%{$search}%")
-                            ->orWhere('transaction_id', 'like', "%{$search}%")
-                            ->orWhere('remark', 'like', "%{$search}%")
-                            ->orWhere('max_value', 'like', "%{$search}%")
-                            ->orWhere('min_value', 'like', "%{$search}%")
-                            ->orWhere('TM.method_name', 'like', "%{$search}%")
-                            ->orWhere('IU.name', 'like', "%{$search}%")
-                            ->orWhere('TH.detail', 'like', "%{$search}%")
-                            ->orWhere('TH.dmc', 'like', "%{$search}%")
-                            ->orWhere('TH.line', 'like', "%{$search}%");
-                    });
-                })
-                ->when(
-                    $filters['judgement'] !== 'all',
-                    fn ($query) => $query->where('judgement', $filters['judgement'])
-                )
-                ->when($filters['date_from'] !== '', fn ($query) => $query->where('start_time', '>=', Carbon::parse($filters['date_from'])->startOfDay()))
-                ->when($filters['date_to'] !== '', fn ($query) => $query->where('start_time', '<=', Carbon::parse($filters['date_to'])->endOfDay()))
-                ->orderByDesc('Transaction_Detail.detail_id')
-                ->paginate($filters['per_page'])
-                ->withQueryString()
-                ->through(fn (TransactionDetail $detail) => [
-                    'detail_id' => $detail->detail_id,
-                    'transaction_id' => $detail->transaction_id,
-                    'method_id' => $detail->method_id,
-                    'internal_id' => $detail->internal_id,
-                    'judgement' => $detail->judgement,
-                    'max_value' => $detail->max_value,
-                    'min_value' => $detail->min_value,
-                    'remark' => $detail->remark,
-                    'start_date' => optional($detail->start_time)->format('Y-m-d'),
-                    'start_time' => optional($detail->start_time)->format('H:i'),
-                    'end_date' => optional($detail->end_time)->format('Y-m-d'),
-                    'end_time' => optional($detail->end_time)->format('H:i'),
-                    'deleted_at' => $supportsDetailSoftDeletes ? optional($detail->deleted_at)->format('Y-m-d H:i') : null,
-                    'job_label' => '#' . $detail->transaction_id . ' - ' . ($detail->job_detail ?: 'No detail'),
-                    'method_name' => $detail->joined_method_name,
-                    'inspector_name' => $detail->joined_inspector_name,
-                    'is_deleted' => $supportsDetailSoftDeletes && $detail->trashed(),
-                ]),
+            'results' => fn () => $this->resolveResultsPayload($filters, $supportsDetailSoftDeletes, $currentPage),
             'filters' => $filters,
         ]);
     }
@@ -351,6 +301,89 @@ class ExecuteTestController extends Controller
         Cache::forget('execute_test.pending_jobs_count.active');
         Cache::forget('performance.inspectors.30d');
         Cache::forget('performance.details.30d.recent50');
+        Cache::forget(self::DEFAULT_RESULTS_CACHE_KEY);
+    }
+
+    private function resolveResultsPayload(array $filters, bool $supportsDetailSoftDeletes, int $currentPage)
+    {
+        if ($this->shouldCacheDefaultResultsPayload($filters, $currentPage)) {
+            return Cache::remember(
+                self::DEFAULT_RESULTS_CACHE_KEY,
+                now()->addSeconds(30),
+                fn () => $this->buildResultsPayload($filters, $supportsDetailSoftDeletes)
+            );
+        }
+
+        return $this->buildResultsPayload($filters, $supportsDetailSoftDeletes);
+    }
+
+    private function shouldCacheDefaultResultsPayload(array $filters, int $currentPage): bool
+    {
+        return $currentPage === 1
+            && $filters['search'] === ''
+            && $filters['judgement'] === 'all'
+            && $filters['record_state'] === 'active'
+            && $filters['date_from'] === ''
+            && $filters['date_to'] === ''
+            && $filters['per_page'] === 20;
+    }
+
+    private function buildResultsPayload(array $filters, bool $supportsDetailSoftDeletes)
+    {
+        return TransactionDetail::query()
+            ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
+            ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())
+            ->leftJoin('Transaction_Header as TH', 'Transaction_Detail.transaction_id', '=', 'TH.transaction_id')
+            ->leftJoin('Test_Methods as TM', 'Transaction_Detail.method_id', '=', 'TM.method_id')
+            ->leftJoin('Internal_Users as IU', 'Transaction_Detail.internal_id', '=', 'IU.user_id')
+            ->select('Transaction_Detail.*')
+            ->selectRaw('TH.detail as job_detail')
+            ->selectRaw('TM.method_name as joined_method_name')
+            ->selectRaw('IU.name as joined_inspector_name')
+            ->when($filters['search'] !== '', function ($query) use ($filters) {
+                $search = $filters['search'];
+
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('detail_id', 'like', "%{$search}%")
+                        ->orWhere('transaction_id', 'like', "%{$search}%")
+                        ->orWhere('remark', 'like', "%{$search}%")
+                        ->orWhere('max_value', 'like', "%{$search}%")
+                        ->orWhere('min_value', 'like', "%{$search}%")
+                        ->orWhere('TM.method_name', 'like', "%{$search}%")
+                        ->orWhere('IU.name', 'like', "%{$search}%")
+                        ->orWhere('TH.detail', 'like', "%{$search}%")
+                        ->orWhere('TH.dmc', 'like', "%{$search}%")
+                        ->orWhere('TH.line', 'like', "%{$search}%");
+                });
+            })
+            ->when(
+                $filters['judgement'] !== 'all',
+                fn ($query) => $query->where('judgement', $filters['judgement'])
+            )
+            ->when($filters['date_from'] !== '', fn ($query) => $query->where('start_time', '>=', Carbon::parse($filters['date_from'])->startOfDay()))
+            ->when($filters['date_to'] !== '', fn ($query) => $query->where('start_time', '<=', Carbon::parse($filters['date_to'])->endOfDay()))
+            ->orderByDesc('Transaction_Detail.detail_id')
+            ->paginate($filters['per_page'])
+            ->withQueryString()
+            ->through(fn (TransactionDetail $detail) => [
+                'detail_id' => $detail->detail_id,
+                'transaction_id' => $detail->transaction_id,
+                'method_id' => $detail->method_id,
+                'internal_id' => $detail->internal_id,
+                'judgement' => $detail->judgement,
+                'max_value' => $detail->max_value,
+                'min_value' => $detail->min_value,
+                'remark' => $detail->remark,
+                'start_date' => optional($detail->start_time)->format('Y-m-d'),
+                'start_time' => optional($detail->start_time)->format('H:i'),
+                'end_date' => optional($detail->end_time)->format('Y-m-d'),
+                'end_time' => optional($detail->end_time)->format('H:i'),
+                'deleted_at' => $supportsDetailSoftDeletes ? optional($detail->deleted_at)->format('Y-m-d H:i') : null,
+                'job_label' => '#' . $detail->transaction_id . ' - ' . ($detail->job_detail ?: 'No detail'),
+                'method_name' => $detail->joined_method_name,
+                'inspector_name' => $detail->joined_inspector_name,
+                'is_deleted' => $supportsDetailSoftDeletes && $detail->trashed(),
+            ]);
     }
 
     private function detailAuditPayload(TransactionDetail $detail): array

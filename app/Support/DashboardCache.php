@@ -29,6 +29,21 @@ class DashboardCache
         return "dashboard.page.{$period}";
     }
 
+    public static function simpleDailyKey(string $period): string
+    {
+        return "dashboard.simple.daily.{$period}";
+    }
+
+    public static function simpleMonthlyKey(string $period): string
+    {
+        return "dashboard.simple.monthly.{$period}";
+    }
+
+    public static function simpleInspectorsKey(string $period): string
+    {
+        return "dashboard.simple.inspectors.{$period}";
+    }
+
     public static function store(): Repository
     {
         $store = (string) config('cache.default', 'file');
@@ -47,6 +62,9 @@ class DashboardCache
             self::store()->forget(self::primaryKey($period));
             self::store()->forget(self::secondaryKey($period));
             self::store()->forget(self::pageKey($period));
+            self::store()->forget(self::simpleDailyKey($period));
+            self::store()->forget(self::simpleMonthlyKey($period));
+            self::store()->forget(self::simpleInspectorsKey($period));
         }
     }
 }

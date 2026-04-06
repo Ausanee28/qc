@@ -27,13 +27,27 @@ class DashboardController extends Controller
                 'currentPeriod' => $period,
                 'metrics' => $this->metricsService->getOverviewMetrics($from, $to),
                 'weeklyData' => $this->metricsService->getWeeklyTrend(),
-                'dailyData' => $this->metricsService->getDailyTrend(),
-                'monthlyData' => $this->metricsService->getMonthlyTrend(),
-                'inspectorData' => $this->metricsService->getInspectorData(5, $from, $to)->toArray(),
             ];
         });
 
-        return Inertia::render('DashboardSimple', $payload);
+        return Inertia::render('DashboardSimple', [
+            ...$payload,
+            'dailyData' => Inertia::defer(fn () => DashboardCache::store()->remember(
+                DashboardCache::simpleDailyKey($period),
+                now()->addMinutes(10),
+                fn () => $this->metricsService->getDailyTrend()
+            ), 'dashboard-secondary'),
+            'monthlyData' => Inertia::defer(fn () => DashboardCache::store()->remember(
+                DashboardCache::simpleMonthlyKey($period),
+                now()->addMinutes(10),
+                fn () => $this->metricsService->getMonthlyTrend()
+            ), 'dashboard-secondary'),
+            'inspectorData' => Inertia::defer(fn () => DashboardCache::store()->remember(
+                DashboardCache::simpleInspectorsKey($period),
+                now()->addMinutes(10),
+                fn () => $this->metricsService->getInspectorData(5, $from, $to)->toArray()
+            ), 'dashboard-secondary'),
+        ]);
     }
 
     private function getDateRange(string $period): array

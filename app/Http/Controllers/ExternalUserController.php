@@ -10,6 +10,8 @@ use Inertia\Inertia;
 
 class ExternalUserController extends Controller
 {
+    private const DEFAULT_EXTERNAL_USERS_CACHE_KEY = 'master_data.external_users.default.per_page_20';
+
     public function index(Request $request)
     {
         $filters = $request->validate([
@@ -19,6 +21,7 @@ class ExternalUserController extends Controller
 
         $search = trim((string) ($filters['search'] ?? ''));
         $perPage = (int) ($filters['per_page'] ?? 20);
+        $currentPage = max(1, (int) $request->integer('page', 1));
 
         return Inertia::render('MasterData/ExternalUsers/Index', [
             'departments' => fn () => Department::query()->select(['department_id', 'department_name'])->orderBy('department_name')->get(),
@@ -26,21 +29,7 @@ class ExternalUserController extends Controller
                 'search' => $search,
                 'per_page' => (string) $perPage,
             ],
-            'externalUsers' => fn () => ExternalUser::query()
-                ->select(['external_id', 'external_name', 'department_id'])
-                ->with(['department:department_id,department_name'])
-                ->when($search !== '', function ($query) use ($search) {
-                    $query->where(function ($externalUserQuery) use ($search) {
-                        $externalUserQuery
-                            ->where('external_name', 'like', "%{$search}%")
-                            ->orWhereHas('department', function ($departmentQuery) use ($search) {
-                                $departmentQuery->where('department_name', 'like', "%{$search}%");
-                            });
-                    });
-                })
-                ->orderBy('external_name')
-                ->paginate($perPage)
-                ->withQueryString(),
+            'externalUsers' => fn () => $this->resolveExternalUsersPayload($search, $perPage, $currentPage),
         ]);
     }
 
@@ -53,6 +42,7 @@ class ExternalUserController extends Controller
 
         ExternalUser::create($validated);
         Cache::forget('receive_job.externals');
+        Cache::forget(self::DEFAULT_EXTERNAL_USERS_CACHE_KEY);
 
         return redirect()->back()->with('success', 'External user created successfully.');
     }
@@ -68,6 +58,7 @@ class ExternalUserController extends Controller
 
         $externalUser->update($validated);
         Cache::forget('receive_job.externals');
+        Cache::forget(self::DEFAULT_EXTERNAL_USERS_CACHE_KEY);
 
         return redirect()->back()->with('success', 'External user updated successfully.');
     }
@@ -79,9 +70,47 @@ class ExternalUserController extends Controller
         try {
             $externalUser->delete();
             Cache::forget('receive_job.externals');
+            Cache::forget(self::DEFAULT_EXTERNAL_USERS_CACHE_KEY);
             return redirect()->back()->with('success', 'External user deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Cannot delete this external user as it may be referenced in transactions.');
         }
+    }
+
+    private function resolveExternalUsersPayload(string $search, int $perPage, int $currentPage)
+    {
+        if ($this->shouldCacheDefaultExternalUsersPayload($search, $perPage, $currentPage)) {
+            return Cache::remember(
+                self::DEFAULT_EXTERNAL_USERS_CACHE_KEY,
+                now()->addSeconds(30),
+                fn () => $this->buildExternalUsersPayload($search, $perPage)
+            );
+        }
+
+        return $this->buildExternalUsersPayload($search, $perPage);
+    }
+
+    private function shouldCacheDefaultExternalUsersPayload(string $search, int $perPage, int $currentPage): bool
+    {
+        return $currentPage === 1 && $search === '' && $perPage === 20;
+    }
+
+    private function buildExternalUsersPayload(string $search, int $perPage)
+    {
+        return ExternalUser::query()
+            ->select(['external_id', 'external_name', 'department_id'])
+            ->with(['department:department_id,department_name'])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($externalUserQuery) use ($search) {
+                    $externalUserQuery
+                        ->where('external_name', 'like', "%{$search}%")
+                        ->orWhereHas('department', function ($departmentQuery) use ($search) {
+                            $departmentQuery->where('department_name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->orderBy('external_name')
+            ->paginate($perPage)
+            ->withQueryString();
     }
 }
