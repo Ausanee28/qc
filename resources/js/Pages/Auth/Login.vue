@@ -91,7 +91,7 @@ const submit = () => {
 
                 <div class="login-block login-block--meta flex flex-col gap-3 text-sm text-stone-400 sm:flex-row sm:items-center sm:justify-between">
                     <label class="flex items-center gap-3">
-                        <input v-model="form.remember" type="checkbox" class="h-4 w-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-300/25" />
+                        <input v-model="form.remember" type="checkbox" class="login-remember" />
                         <span>Remember me</span>
                     </label>
                     <Link v-if="canResetPassword" :href="route('password.request')" class="login-link font-semibold transition">
@@ -183,6 +183,44 @@ const submit = () => {
     color: #fdba74;
 }
 
+.login-remember {
+    appearance: none;
+    -webkit-appearance: none;
+    display: grid;
+    place-content: center;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 0.35rem;
+    border: 1px solid rgba(148, 163, 184, 0.65);
+    background-color: rgba(255, 255, 255, 0.96);
+    cursor: pointer;
+    transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.login-remember::before {
+    content: '';
+    width: 0.44rem;
+    height: 0.44rem;
+    transform: scale(0);
+    transition: transform 120ms ease-in-out;
+    clip-path: polygon(14% 53%, 0 67%, 39% 100%, 100% 31%, 86% 17%, 39% 70%);
+    background: #ffffff;
+}
+
+.login-remember:checked {
+    border-color: #1d4ed8;
+    background-color: #1d4ed8;
+}
+
+.login-remember:checked::before {
+    transform: scale(1);
+}
+
+.login-remember:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.2);
+}
+
 .password-input::-ms-reveal,
 .password-input::-ms-clear {
     display: none;
@@ -264,6 +302,23 @@ const submit = () => {
     background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
     color: #ffffff !important;
     box-shadow: 0 16px 30px rgba(29, 78, 216, 0.18) !important;
+}
+
+:global(html[data-theme='dark'] .login-remember),
+:global(.theme-guest[data-theme='dark'] .login-remember) {
+    border-color: rgba(251, 146, 60, 0.45);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+:global(html[data-theme='dark'] .login-remember:checked),
+:global(.theme-guest[data-theme='dark'] .login-remember:checked) {
+    border-color: #f97316;
+    background-color: #f97316;
+}
+
+:global(html[data-theme='dark'] .login-remember:focus-visible),
+:global(.theme-guest[data-theme='dark'] .login-remember:focus-visible) {
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
 }
 
 @keyframes login-rise {

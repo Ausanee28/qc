@@ -6,8 +6,8 @@ const { currentTheme, isLightTheme } = useTheme();
 
 const guestRootClass = computed(() => (
     isLightTheme.value
-        ? 'theme-guest relative flex min-h-dvh w-full items-center justify-center overflow-hidden bg-[linear-gradient(180deg,#f7fafc,#ffffff)] px-4 py-6 sm:px-6'
-        : 'theme-guest relative flex min-h-dvh w-full items-center justify-center overflow-hidden bg-[#090909] px-4 py-6 sm:px-6'
+        ? 'theme-guest relative flex min-h-dvh w-full items-center justify-center overflow-hidden bg-[linear-gradient(180deg,#f7fafc,#ffffff)] px-4 py-3 sm:px-6 sm:py-4'
+        : 'theme-guest relative flex min-h-dvh w-full items-center justify-center overflow-hidden bg-[#090909] px-4 py-3 sm:px-6 sm:py-4'
 ));
 
 const guestFrameClass = computed(() => (

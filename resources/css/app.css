@@ -1241,8 +1241,8 @@ tr:hover td {
 .theme-guest [class*='focus:border-zinc-500']:focus,
 .theme-guest [class*='focus:border-rose-400']:focus {
     outline: none;
-    border-color: rgba(251, 146, 60, 0.42) !important;
-    box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.14) !important;
+    border-color: rgba(148, 163, 184, 0.42) !important;
+    box-shadow: none !important;
 }
 
 .theme-guest input[readonly] {
