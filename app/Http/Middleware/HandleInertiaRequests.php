@@ -29,11 +29,20 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'csrf_token' => fn () => csrf_token(),
             'auth' => [
-                'user' => $request->user(),
+                'user' => fn () => $user ? [
+                    'user_id' => $user->user_id,
+                    'user_name' => $user->user_name,
+                    'name' => $user->name,
+                    'role' => $user->role,
+                    'employee_id' => $user->employee_id,
+                    'is_active' => $user->is_active ?? true,
+                ] : null,
             ],
             'flash' => [
                 'success' => fn() => $request->session()->get('success'),
