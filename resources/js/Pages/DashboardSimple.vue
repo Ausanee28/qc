@@ -5,7 +5,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Bar, Doughnut, Line } from '@/lib/dashboard-charts';
 import { getEcho } from '@/lib/realtime';
 
-const dashboardReloadOnly = ['currentPeriod', 'metrics', 'weeklyData', 'dailyData', 'monthlyData', 'inspectorData', 'flash'];
+const dashboardReloadOnly = ['currentPeriod', 'metrics', 'weeklyData', 'fourWeekData', 'dailyData', 'monthlyData', 'inspectorData', 'flash'];
 
 const props = defineProps({
     currentPeriod: { type: String, default: 'month' },
@@ -19,6 +19,7 @@ const props = defineProps({
         }),
     },
     weeklyData: { type: Array, default: () => [] },
+    fourWeekData: { type: Array, default: () => [] },
     dailyData: { type: Array, default: () => [] },
     monthlyData: { type: Array, default: () => [] },
     inspectorData: { type: Array, default: () => [] },
@@ -207,6 +208,34 @@ onUnmounted(() => {
 
 const fmt = (v) => Number(v || 0).toLocaleString();
 const pct = (v) => `${Number(v || 0).toFixed(1)}%`;
+const monthShortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const formatReadableDateLabel = (rawLabel) => {
+    const text = String(rawLabel ?? '').trim();
+    if (!text) return '';
+
+    const withWeekday = text.match(/^(?:[A-Za-z]{3,9})\s+(\d{1,2})\/(\d{1,2})(?:\/\d{2,4})?$/);
+    if (withWeekday) {
+        const day = Number(withWeekday[1]);
+        const monthIndex = Number(withWeekday[2]) - 1;
+        return `${day} ${monthShortNames[monthIndex] || withWeekday[2]}`;
+    }
+
+    const shortDate = text.match(/^(\d{1,2})\/(\d{1,2})(?:\/\d{2,4})?$/);
+    if (shortDate) {
+        const day = Number(shortDate[1]);
+        const monthIndex = Number(shortDate[2]) - 1;
+        return `${day} ${monthShortNames[monthIndex] || shortDate[2]}`;
+    }
+
+    const isoDate = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoDate) {
+        const day = Number(isoDate[3]);
+        const monthIndex = Number(isoDate[2]) - 1;
+        return `${day} ${monthShortNames[monthIndex] || isoDate[2]}`;
+    }
+
+    return text;
+};
 const chartTheme = computed(() => (
     isLightTheme.value
         ? {
@@ -253,7 +282,7 @@ const kpiCards = computed(() => ([
     { label: 'NG %', value: pct(props.metrics.defectRate), accent: false, danger: true },
     { label: 'Jobs', value: fmt(props.metrics.periodJobs) },
     { label: 'Total Tests', value: fmt(props.metrics.totalTests) },
-    { label: 'Avg Time', value: `${fmt(props.metrics.avgTestTime)} min`, icon: true },
+    { label: 'Today Tests', value: fmt(props.metrics.todayCount), icon: true },
     { label: 'Pending', value: fmt(props.metrics.pendingCount) },
 ]));
 
@@ -305,7 +334,7 @@ const lineOpts = computed(() => ({
         tooltip: tooltipStyle.value,
     },
     scales: {
-        x: { ticks: { color: chartTheme.value.axis }, grid: { display: false }, border: { display: false } },
+        x: { ticks: { color: chartTheme.value.axis, maxRotation: 0, minRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { display: false }, border: { display: false } },
         y: { beginAtZero: true, ticks: { color: chartTheme.value.axis }, grid: { color: chartTheme.value.grid }, border: { display: false } },
     },
     elements: { line: { tension: 0.35, borderWidth: 2.5 }, point: { radius: 2, hoverRadius: 5 } },
@@ -320,7 +349,7 @@ const barOpts = computed(() => ({
 /* โ”€โ”€ Daily trend โ”€โ”€ */
 const dailyRows = computed(() => {
     const src = props.dailyData?.length ? props.dailyData : props.weeklyData;
-    return src.map((d) => ({ label: d.label, ok: Number(d.ok || 0), ng: Number(d.ng || 0) }));
+    return src.map((d) => ({ label: formatReadableDateLabel(d.label), ok: Number(d.ok || 0), ng: Number(d.ng || 0) }));
 });
 
 const dailyTrendData = computed(() => ({
@@ -345,53 +374,29 @@ const monthlyTrendData = computed(() => ({
     labels: monthlySeries.value.map((m) => m.label),
     datasets: [
         {
-            type: 'bar',
-            label: 'Total Tests',
-            data: monthlySeries.value.map((m) => m.total),
-            backgroundColor: chartTheme.value.bar,
-            borderColor: chartTheme.value.barBorder,
-            borderWidth: 1,
-            borderRadius: 10,
-            barPercentage: 0.58,
-            categoryPercentage: 0.62,
-            maxBarThickness: 84,
-            yAxisID: 'y',
-            order: 3,
-        },
-        {
-            type: 'line',
-            label: 'OK %',
+            label: 'OK',
             data: monthlySeries.value.map((m) => m.yield),
             borderColor: chartTheme.value.ok,
-            backgroundColor: chartTheme.value.ok,
-            pointBackgroundColor: chartTheme.value.ok,
-            borderWidth: 3,
-            tension: 0.3,
-            pointRadius: (ctx) => Number(ctx.raw || 0) > 0 ? 4 : 0,
-            pointHoverRadius: (ctx) => Number(ctx.raw || 0) > 0 ? 6 : 3,
-            pointHitRadius: 10,
-            yAxisID: 'y1',
-            order: 1,
+            backgroundColor: chartTheme.value.okFill,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 2,
+            pointHoverRadius: 5,
         },
         {
-            type: 'line',
-            label: 'NG %',
+            label: 'NG',
             data: monthlySeries.value.map((m) => m.ngRate),
             borderColor: chartTheme.value.ng,
-            backgroundColor: chartTheme.value.ng,
-            pointBackgroundColor: chartTheme.value.ng,
-            borderWidth: 3,
-            tension: 0.3,
-            pointRadius: (ctx) => Number(ctx.raw || 0) > 0 ? 4 : 0,
-            pointHoverRadius: (ctx) => Number(ctx.raw || 0) > 0 ? 6 : 3,
-            pointHitRadius: 10,
-            yAxisID: 'y1',
-            order: 2,
+            backgroundColor: chartTheme.value.ngFill,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 2,
+            pointHoverRadius: 5,
         },
     ],
 }));
 
-const monthlyMixedOpts = computed(() => ({
+const monthlyTrendOpts = computed(() => ({
     responsive: true, maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
@@ -403,42 +408,83 @@ const monthlyMixedOpts = computed(() => ({
                     const idx = items?.[0]?.dataIndex ?? -1;
                     return monthlySeries.value[idx]?.fullLabel || items?.[0]?.label || '';
                 },
-                label: (ctx) => {
-                    const value = Number(ctx.parsed.y || 0);
-                    return ctx.dataset.yAxisID === 'y1'
-                        ? `${ctx.dataset.label}: ${value.toFixed(1)}%`
-                        : `${ctx.dataset.label}: ${value.toLocaleString()}`;
-                },
+                label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y || 0).toFixed(1)}%`,
             },
         },
     },
     scales: {
-        x: { ticks: { color: chartTheme.value.axis }, grid: { display: false }, border: { display: false } },
+        x: { ticks: { color: chartTheme.value.axis, maxRotation: 0, minRotation: 0 }, grid: { display: false }, border: { display: false } },
         y: {
             beginAtZero: true,
-            grace: '8%',
-            ticks: { color: chartTheme.value.axis, precision: 0, maxTicksLimit: 6 },
-            grid: { color: chartTheme.value.gridSoft },
-            border: { display: false },
-        },
-        y1: {
-            beginAtZero: true,
-            position: 'right',
             min: 0,
             max: 100,
             ticks: { color: chartTheme.value.axisRight, stepSize: 10, maxTicksLimit: 6, callback: (v) => `${v}%` },
-            grid: { display: false },
+            grid: { color: chartTheme.value.gridSoft },
             border: { display: false },
         },
     },
 }));
 
 /* โ”€โ”€ Weekly bar โ”€โ”€ */
+const hasFourWeekData = computed(() => Array.isArray(props.fourWeekData) && props.fourWeekData.length > 0);
+const weeklyCardTitle = computed(() => (hiddenWeekCount.value > 0 ? 'Recent Active Weeks OK / NG' : hasFourWeekData.value ? 'Last 4 Weeks OK / NG' : 'Weekly OK / NG'));
+
+const fourWeekSeries = computed(() => {
+    if (hasFourWeekData.value) {
+        return props.fourWeekData;
+    }
+
+    if (Array.isArray(props.weeklyData) && props.weeklyData.length > 0) {
+        return props.weeklyData.map((day) => ({
+            label: formatReadableDateLabel(day.label),
+            ok: Number(day.ok || 0),
+            ng: Number(day.ng || 0),
+        }));
+    }
+
+    return [{ label: 'No data', ok: 0, ng: 0 }];
+});
+
+const visibleWeeklySeries = computed(() => {
+    if (!hasFourWeekData.value) {
+        return fourWeekSeries.value;
+    }
+
+    const activeWeeks = fourWeekSeries.value.filter((week) => (Number(week.ok || 0) + Number(week.ng || 0)) > 0);
+    return activeWeeks.length ? activeWeeks : fourWeekSeries.value;
+});
+
+const hiddenWeekCount = computed(() => {
+    if (!hasFourWeekData.value) {
+        return 0;
+    }
+
+    return Math.max(0, fourWeekSeries.value.length - visibleWeeklySeries.value.length);
+});
+
+const weeklyCardNote = computed(() => (hiddenWeekCount.value > 0 ? `${hiddenWeekCount.value} week${hiddenWeekCount.value > 1 ? 's' : ''} had no tests` : ''));
+
 const weeklyBarData = computed(() => ({
-    labels: (props.weeklyData || []).map((d) => d.label),
+    labels: visibleWeeklySeries.value.map((d) => d.label),
     datasets: [
-        { label: 'OK', data: (props.weeklyData || []).map((d) => Number(d.ok || 0)), backgroundColor: chartTheme.value.ok, borderRadius: 6 },
-        { label: 'NG', data: (props.weeklyData || []).map((d) => Number(d.ng || 0)), backgroundColor: chartTheme.value.ng, borderRadius: 6 },
+        {
+            label: 'OK',
+            data: visibleWeeklySeries.value.map((d) => Number(d.ok || 0)),
+            backgroundColor: chartTheme.value.ok,
+            borderRadius: 6,
+            maxBarThickness: 28,
+            barPercentage: 0.7,
+            categoryPercentage: 0.7,
+        },
+        {
+            label: 'NG',
+            data: visibleWeeklySeries.value.map((d) => Number(d.ng || 0)),
+            backgroundColor: chartTheme.value.ng,
+            borderRadius: 6,
+            maxBarThickness: 28,
+            barPercentage: 0.7,
+            categoryPercentage: 0.7,
+        },
     ],
 }));
 
@@ -446,8 +492,8 @@ const weeklyBarOpts = computed(() => ({
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { labels: { color: chartTheme.value.legend, usePointStyle: true, pointStyle: 'circle', padding: 12 } }, tooltip: tooltipStyle.value },
     scales: {
-        x: { stacked: true, ticks: { color: chartTheme.value.axis }, grid: { display: false }, border: { display: false } },
-        y: { stacked: true, beginAtZero: true, ticks: { color: chartTheme.value.axis }, grid: { color: chartTheme.value.grid }, border: { display: false } },
+        x: { stacked: hasFourWeekData.value, ticks: { color: chartTheme.value.axis, maxRotation: 0, minRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { display: false }, border: { display: false } },
+        y: { stacked: hasFourWeekData.value, beginAtZero: true, ticks: { color: chartTheme.value.axis, precision: 0 }, grid: { color: chartTheme.value.grid }, border: { display: false } },
     },
 }));
 
@@ -504,7 +550,7 @@ const monthlyInsights = computed(() => {
             note: 'OK % / NG %',
         },
         {
-            label: 'Yield Change',
+            label: 'OK Change',
             value: `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts`,
             note: previous ? `compared with ${previous.label}` : 'no prior month',
         },
@@ -582,8 +628,8 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
             <!-- โ•โ•โ• ROW: Monthly Trend + Forecast & Weekly โ•โ•โ• -->
             <section class="chart-row chart-row--bottom">
                 <article class="card card--chart card--monthly">
-                    <div class="card__head">Monthly Tests, OK % and NG %</div>
-                    <div class="chart-area chart-area--tall"><Bar :data="monthlyTrendData" :options="monthlyMixedOpts" /></div>
+                    <div class="card__head">Monthly OK / NG Trend</div>
+                    <div class="chart-area chart-area--tall"><Line :data="monthlyTrendData" :options="monthlyTrendOpts" /></div>
 
                     <div class="monthly-insights">
                         <div v-for="item in monthlyInsights" :key="item.label" class="monthly-insight">
@@ -623,7 +669,8 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                     </article>
 
                     <article class="card card--chart card--compact">
-                        <div class="card__head">Weekly OK / NG</div>
+                        <div class="card__head">{{ weeklyCardTitle }}</div>
+                        <div v-if="weeklyCardNote" class="card__note">{{ weeklyCardNote }}</div>
                         <div class="chart-area chart-area--short"><Bar :data="weeklyBarData" :options="weeklyBarOpts" /></div>
                     </article>
                 </div>
@@ -637,7 +684,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                             <div class="lb-rank">{{ idx + 1 }}</div>
                             <div class="lb-info">
                                 <div class="lb-name">{{ ins.name }}</div>
-                                <div class="lb-meta">{{ fmt(ins.total) }} tests ยท {{ fmt(ins.ok) }} OK ยท {{ fmt(ins.ng) }} NG</div>
+                                <div class="lb-meta">{{ fmt(ins.total) }} tests | {{ fmt(ins.ok) }} OK | {{ fmt(ins.ng) }} NG</div>
                             </div>
                             <div class="lb-yield">
                                 <div class="lb-yield__value">{{ pct(ins.yield) }}</div>
@@ -766,6 +813,12 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     font-weight: 700;
     color: #e7e5e4;
     margin-bottom: 1rem;
+}
+.card__note {
+    margin-top: -0.45rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.76rem;
+    color: #a8a29e;
 }
 
 .card,
@@ -1108,6 +1161,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 }
 
 :global(.theme-shell[data-theme='light'] .monthly-insight__note),
+:global(.theme-shell[data-theme='light'] .card__note),
 :global(.theme-shell[data-theme='light'] .fc__sub),
 :global(.theme-shell[data-theme='light'] .lb-meta),
 :global(.theme-shell[data-theme='light'] .lb-empty) {
@@ -1176,6 +1230,20 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 :global(.theme-shell[data-theme='light'] .fc--accent) {
     border-color: rgba(29, 78, 216, 0.24) !important;
     background: linear-gradient(180deg, rgba(219, 234, 254, 0.94), rgba(239, 246, 255, 0.98)) !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .fc--accent) {
+    border-color: rgba(255, 255, 255, 0.07) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    box-shadow: none !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .fc--accent .fc__label) {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+:global(.theme-shell[data-theme='dark'] .card--forecast:hover) {
+    border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 :global(.theme-shell[data-theme='light'] .lb-rank) {

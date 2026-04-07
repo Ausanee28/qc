@@ -367,6 +367,34 @@ onBeforeUnmount(() => {
 const formatNumber = (value) => Number(value || 0).toLocaleString();
 const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`;
 const formatDecimal = (value) => Number(value || 0).toFixed(1);
+const monthShortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const formatReadableDateLabel = (rawLabel) => {
+    const text = String(rawLabel ?? '').trim();
+    if (!text) return '';
+
+    const withWeekday = text.match(/^(?:[A-Za-z]{3,9})\s+(\d{1,2})\/(\d{1,2})(?:\/\d{2,4})?$/);
+    if (withWeekday) {
+        const day = Number(withWeekday[1]);
+        const monthIndex = Number(withWeekday[2]) - 1;
+        return `${day} ${monthShortNames[monthIndex] || withWeekday[2]}`;
+    }
+
+    const shortDate = text.match(/^(\d{1,2})\/(\d{1,2})(?:\/\d{2,4})?$/);
+    if (shortDate) {
+        const day = Number(shortDate[1]);
+        const monthIndex = Number(shortDate[2]) - 1;
+        return `${day} ${monthShortNames[monthIndex] || shortDate[2]}`;
+    }
+
+    const isoDate = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoDate) {
+        const day = Number(isoDate[3]);
+        const monthIndex = Number(isoDate[2]) - 1;
+        return `${day} ${monthShortNames[monthIndex] || isoDate[2]}`;
+    }
+
+    return text;
+};
 
 const totalTests = computed(() => Number(props.metrics.totalTests || 0));
 const yieldPct = computed(() => Number(props.metrics.yieldRate || 0));
@@ -393,8 +421,9 @@ const weeklySummary = computed(() => {
         const ng = Number(day.ng || 0);
         const total = ok + ng;
         const yieldRate = total > 0 ? Number(((ok / total) * 100).toFixed(1)) : 0;
+        const readableLabel = formatReadableDateLabel(day.label);
         const row = {
-            label: day.label,
+            label: readableLabel,
             ok,
             ng,
             total,
@@ -402,7 +431,7 @@ const weeklySummary = computed(() => {
         };
 
         rows.push(row);
-        labels.push(day.label);
+        labels.push(readableLabel);
         okSeries.push(ok);
         ngSeries.push(ng);
         okTotal += ok;
@@ -610,6 +639,14 @@ const healthSummary = computed(() => {
 });
 
 const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
+const activeInspectorCount = computed(() => (props.inspectorData || []).filter((inspector) => Number(inspector?.total || 0) > 0).length);
+const testsPerActiveInspector = computed(() => {
+    if (!activeInspectorCount.value) {
+        return 0;
+    }
+
+    return totalTests.value / activeInspectorCount.value;
+});
 const recentActivityPreview = computed(() => props.recentActivities.slice(0, 5));
 const signalCards = computed(() => ([
     {
@@ -645,9 +682,11 @@ const heroSummaryCards = computed(() => ([
         note: `${formatDecimal(animatedMetrics.value.testsPerJob)} tests per job`,
     },
     {
-        label: 'Average test time',
-        value: `${formatNumber(animatedMetrics.value.avgTestTime)} min`,
-        note: 'Average time per completed inspection',
+        label: 'Active inspectors',
+        value: formatNumber(activeInspectorCount.value),
+        note: activeInspectorCount.value
+            ? `${formatDecimal(testsPerActiveInspector.value)} tests per active inspector`
+            : 'No inspector activity recorded in this period',
     },
     {
         label: 'Today completed',
@@ -692,7 +731,13 @@ const snapshotMetrics = computed(() => ([
     { label: 'Jobs received', value: formatNumber(periodJobs.value), note: `${selectedPeriodLabel.value} intake volume` },
     { label: 'Tests per job', value: formatDecimal(props.metrics.testsPerJob), note: 'Average inspection density per job' },
     { label: 'Pending jobs', value: formatNumber(pendingJobs.value), note: 'Jobs still waiting to close' },
-    { label: 'Avg test time', value: `${formatNumber(props.metrics.avgTestTime)} min`, note: 'Average time spent per inspection' },
+    {
+        label: 'Active inspectors',
+        value: formatNumber(activeInspectorCount.value),
+        note: activeInspectorCount.value
+            ? `${formatDecimal(testsPerActiveInspector.value)} tests per active inspector`
+            : 'No inspector activity recorded in this period',
+    },
 ]));
 const animatedMetricTargets = computed(() => ({
     periodJobs: periodJobs.value,
@@ -887,7 +932,7 @@ const chartPalette = computed(() => (
 ));
 
 const dailyLineData = computed(() => ({
-    labels: props.dailyData.map((day) => day.label),
+    labels: props.dailyData.map((day) => formatReadableDateLabel(day.label)),
     datasets: [
         {
             label: 'OK',
@@ -954,7 +999,7 @@ const monthlyLineData = computed(() => monthlySummary.value.chartData);
 
 const sharedCartesianScale = computed(() => ({
     x: {
-        ticks: { color: chartPalette.value.axis, font: { size: 11, family: chartFontFamily } },
+        ticks: { color: chartPalette.value.axis, font: { size: 11, family: chartFontFamily }, maxRotation: 0, minRotation: 0, autoSkip: true, maxTicksLimit: 7 },
         grid: { display: false },
         border: { display: false },
     },

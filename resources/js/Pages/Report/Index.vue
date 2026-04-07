@@ -317,7 +317,6 @@ const doExport = async () => {
                             <th>End</th>
                             <th>Result</th>
                             <th>Remark</th>
-                            <th>PDF</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -340,11 +339,6 @@ const doExport = async () => {
                                 <span v-else class="pill pill-y">{{ r.judgement }}</span>
                             </td>
                             <td style="font-size:11px;color:#78716c">{{ r.remark || '' }}</td>
-                            <td>
-                                <a :href="route('certificates.pdf', r.transaction_id)" target="_blank" class="btn-outline" style="padding:2px 8px;font-size:10px;text-decoration:none">
-                                    PDF
-                                </a>
-                            </td>
                         </tr>
                     </tbody>
                         </table>

@@ -287,6 +287,40 @@ class DashboardMetricsService
         return $weeklyData;
     }
 
+    public function getFourWeekTrend(): array
+    {
+        $from = now()->subDays(27)->startOfDay();
+        $to = now()->endOfDay();
+        $countsByDate = $this->getJudgementCountsByBucket(
+            $from,
+            $to,
+            $this->dateBucketExpression('Transaction_Header.receive_date')
+        );
+
+        $fourWeekData = [];
+        for ($block = 3; $block >= 0; $block--) {
+            $blockStart = now()->subDays(($block * 7) + 6)->startOfDay();
+            $blockEnd = now()->subDays($block * 7)->endOfDay();
+            $ok = 0;
+            $ng = 0;
+
+            for ($cursor = $blockStart->copy(); $cursor->lte($blockEnd); $cursor->addDay()) {
+                $dateKey = $cursor->format('Y-m-d');
+                $dayCounts = $countsByDate[$dateKey] ?? ['ok' => 0, 'ng' => 0];
+                $ok += (int) $dayCounts['ok'];
+                $ng += (int) $dayCounts['ng'];
+            }
+
+            $fourWeekData[] = [
+                'label' => $blockStart->format('j M') . ' - ' . $blockEnd->format('j M'),
+                'ok' => $ok,
+                'ng' => $ng,
+            ];
+        }
+
+        return $fourWeekData;
+    }
+
     public function getDailyTrend(): array
     {
         $startOfMonth = now()->startOfMonth();

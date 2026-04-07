@@ -19,6 +19,7 @@ use Inertia\Inertia;
 
 class ReceiveJobController extends Controller
 {
+    private const DISPLAY_TIMEZONE = 'Asia/Bangkok';
     private const EXECUTE_TEST_PENDING_JOBS_CACHE_KEY = 'execute_test.pending_jobs.active';
     private const EXECUTE_TEST_PENDING_JOBS_COUNT_CACHE_KEY = 'execute_test.pending_jobs_count.active';
     public const RECEIVE_JOB_DEFAULT_HISTORY_CACHE_KEY = 'receive_job.jobs.default.per_page_20';
@@ -372,15 +373,24 @@ class ReceiveJobController extends Controller
                 'detail' => $job->detail,
                 'dmc' => $job->dmc,
                 'line' => $job->line,
-                'receive_date' => optional($job->receive_date)->format('Y-m-d H:i'),
-                'return_date' => optional($job->return_date)->format('Y-m-d H:i'),
-                'deleted_at' => $supportsHeaderSoftDeletes ? optional($job->deleted_at)->format('Y-m-d H:i') : null,
+                'receive_date' => $this->formatDisplayDateTime($job->receive_date),
+                'return_date' => $this->formatDisplayDateTime($job->return_date),
+                'deleted_at' => $supportsHeaderSoftDeletes ? $this->formatDisplayDateTime($job->deleted_at) : null,
                 'details_count' => $job->details_count,
                 'external_name' => $job->external_name,
                 'internal_name' => $job->internal_name,
                 'is_closed' => $job->return_date !== null,
                 'is_deleted' => $supportsHeaderSoftDeletes && $job->trashed(),
             ]);
+    }
+
+    private function formatDisplayDateTime($value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        return $value->copy()->timezone(self::DISPLAY_TIMEZONE)->format('Y-m-d H:i');
     }
 
     private function headerAuditPayload(TransactionHeader $job): array

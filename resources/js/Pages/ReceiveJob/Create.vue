@@ -37,6 +37,15 @@ const filterForm = reactive({
 
 const externalOptions = computed(() => props.externals ?? []);
 const internalOptions = computed(() => props.internals ?? []);
+const lineOptions = [
+    ...Array.from({ length: 11 }, (_, i) => `Line ${i + 1}`),
+    'P4#1',
+    'P4#2',
+    'P4#3',
+    'MTA 1',
+    'MTA 2',
+    'ES30',
+];
 const externalOptionsReady = computed(() => Array.isArray(props.externals));
 const internalOptionsReady = computed(() => Array.isArray(props.internals));
 const jobPaginator = computed(() => props.jobs ?? null);
@@ -257,14 +266,14 @@ const toggleJobStatus = (job) => {
                     <div class="form-grid" style="margin-bottom:24px">
                         <div>
                             <label class="form-lbl">DMC Code</label>
-                            <input v-model="form.dmc" type="text" class="form-inp" style="padding:10px 12px" placeholder="e.g. DMC-2026-001">
+                            <input v-model="form.dmc" type="text" class="form-inp" style="padding:10px 12px">
                             <div v-if="form.errors.dmc" class="mt-1 text-xs text-red-600">{{ form.errors.dmc }}</div>
                         </div>
                         <div>
                             <label class="form-lbl">Line</label>
                             <select v-model="form.line" class="form-inp" style="padding:10px 12px">
                                 <option value="">-- Select Line --</option>
-                                <option v-for="n in 10" :key="n" :value="'Line ' + n">Line {{ n }}</option>
+                                <option v-for="lineOption in lineOptions" :key="lineOption" :value="lineOption">{{ lineOption }}</option>
                             </select>
                             <div v-if="form.errors.line" class="mt-1 text-xs text-red-600">{{ form.errors.line }}</div>
                         </div>
@@ -272,7 +281,7 @@ const toggleJobStatus = (job) => {
 
                     <div>
                         <label class="form-lbl">Detail</label>
-                        <textarea v-model="form.detail" class="form-inp" style="padding:10px 12px;min-height:80px;resize:vertical" placeholder="Enter job details..."></textarea>
+                        <textarea v-model="form.detail" class="form-inp" style="padding:10px 12px;min-height:80px;resize:vertical"></textarea>
                         <div v-if="form.errors.detail" class="mt-1 text-xs text-red-600">{{ form.errors.detail }}</div>
                     </div>
                 </div>

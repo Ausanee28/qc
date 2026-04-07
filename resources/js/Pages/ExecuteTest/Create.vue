@@ -80,8 +80,8 @@ const pendingJobsReloadOnly = ['pendingJobs', 'pendingJobsCount', 'pendingJobsVe
 const workflowInvalidateTags = ['workflow', 'dashboard', 'report', 'certificates', 'performance'];
 
 const judgementClass = (result) => result.judgement === 'OK'
-    ? 'bg-emerald-100 text-emerald-700'
-    : 'bg-rose-100 text-rose-700';
+    ? 'judge-pill judge-pill--ok'
+    : 'judge-pill judge-pill--ng';
 
 const canEditResult = (result) => !result.is_deleted;
 const canDeleteResult = (result) => canDelete && !result.is_deleted;
@@ -495,7 +495,6 @@ onBeforeUnmount(() => {
                                 type="text"
                                 class="form-inp"
                                 style="padding:10px 12px"
-                                placeholder="e.g. 10.0 mm / Upper limit / Spec max"
                             >
                             <div v-if="form.errors.max_value" class="mt-1 text-xs text-red-600">{{ form.errors.max_value }}</div>
                         </div>
@@ -506,7 +505,6 @@ onBeforeUnmount(() => {
                                 type="text"
                                 class="form-inp"
                                 style="padding:10px 12px"
-                                placeholder="e.g. 5.0 mm / Lower limit / Spec min"
                             >
                             <div v-if="form.errors.min_value" class="mt-1 text-xs text-red-600">{{ form.errors.min_value }}</div>
                         </div>
@@ -514,7 +512,7 @@ onBeforeUnmount(() => {
 
                     <div>
                         <label class="form-lbl">Remark</label>
-                        <textarea v-model="form.remark" class="form-inp" style="padding:10px 12px;min-height:60px;resize:vertical" placeholder="Optional notes about this test..."></textarea>
+                        <textarea v-model="form.remark" class="form-inp" style="padding:10px 12px;min-height:60px;resize:vertical"></textarea>
                     </div>
                 </div>
 

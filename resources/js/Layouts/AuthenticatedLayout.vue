@@ -205,7 +205,19 @@ const navCacheTags = (routeName) => (
                             : ['nav']
 );
 const userInitial = computed(() => user.value.name.charAt(0).toUpperCase());
-const userRoleLabel = computed(() => (user.value.role === 'admin' ? 'Admin' : 'QC Tech'));
+const userRoleLabel = computed(() => {
+    const role = String(user.value.role || '').toLowerCase();
+
+    if (role === 'admin') {
+        return 'Admin';
+    }
+
+    if (role === 'inspector') {
+        return 'QC Lab';
+    }
+
+    return 'User';
+});
 const navPrefetchTimers = [];
 const navPrefetchIdleHandles = [];
 const prefetchedNavRoutes = new Set();

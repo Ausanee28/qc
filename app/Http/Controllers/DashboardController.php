@@ -27,6 +27,7 @@ class DashboardController extends Controller
                 'currentPeriod' => $period,
                 'metrics' => $this->metricsService->getOverviewMetrics($from, $to),
                 'weeklyData' => $this->metricsService->getWeeklyTrend(),
+                'fourWeekData' => $this->metricsService->getFourWeekTrend(),
             ];
         });
 
