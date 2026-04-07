@@ -34,6 +34,16 @@ class DashboardCache
         return "dashboard.simple.daily.{$period}";
     }
 
+    public static function simpleWeeklyKey(string $period): string
+    {
+        return "dashboard.simple.weekly.{$period}";
+    }
+
+    public static function simpleFourWeekKey(string $period): string
+    {
+        return "dashboard.simple.four-week.{$period}";
+    }
+
     public static function simpleMonthlyKey(string $period): string
     {
         return "dashboard.simple.monthly.{$period}";
@@ -63,6 +73,8 @@ class DashboardCache
             self::store()->forget(self::secondaryKey($period));
             self::store()->forget(self::pageKey($period));
             self::store()->forget(self::simpleDailyKey($period));
+            self::store()->forget(self::simpleWeeklyKey($period));
+            self::store()->forget(self::simpleFourWeekKey($period));
             self::store()->forget(self::simpleMonthlyKey($period));
             self::store()->forget(self::simpleInspectorsKey($period));
         }

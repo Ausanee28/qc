@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { useTheme, initializeThemePreference } from '@/composables/useTheme';
 
@@ -218,78 +218,7 @@ const userRoleLabel = computed(() => {
 
     return 'User';
 });
-const navPrefetchTimers = [];
-const navPrefetchIdleHandles = [];
 const prefetchedNavRoutes = new Set();
-const workflowNavRoutes = computed(() => {
-    const availableRoutes = new Set(groupedNav.value.flatMap((group) => group.items.map((item) => item.route)));
-
-    return ['receive-job.create', 'execute-test.create']
-        .filter((routeName) => availableRoutes.has(routeName) && !isActiveRoute(routeName));
-});
-const secondaryNavRoutes = computed(() => {
-    const priority = [
-        'dashboard',
-        'report.index',
-        'performance.index',
-    ];
-
-    const availableRoutes = new Set(groupedNav.value.flatMap((group) => group.items.map((item) => item.route)));
-
-    return priority.filter((routeName) => availableRoutes.has(routeName) && !isActiveRoute(routeName));
-});
-const allNavRoutes = computed(() => (
-    groupedNav.value
-        .flatMap((group) => group.items.map((item) => item.route))
-        .filter((routeName) => !isActiveRoute(routeName))
-));
-
-const clearNavPrefetchSchedule = () => {
-    while (navPrefetchTimers.length) {
-        window.clearTimeout(navPrefetchTimers.pop());
-    }
-
-    while (navPrefetchIdleHandles.length) {
-        const handle = navPrefetchIdleHandles.pop();
-
-        if (typeof window.cancelIdleCallback === 'function') {
-            window.cancelIdleCallback(handle);
-        } else {
-            window.clearTimeout(handle);
-        }
-    }
-};
-
-const scheduleIdlePrefetch = (callback, delay = 0) => {
-    if (typeof window.requestIdleCallback === 'function') {
-        const handle = window.requestIdleCallback(callback, { timeout: 900 + delay });
-        navPrefetchIdleHandles.push(handle);
-        return;
-    }
-
-    const handle = window.setTimeout(callback, 180 + delay);
-    navPrefetchIdleHandles.push(handle);
-};
-
-const prefetchNavRoutes = (routeNames, delayStep = 120) => {
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-
-    if (connection?.saveData) {
-        return;
-    }
-
-    routeNames.forEach((routeName, index) => {
-        const timer = window.setTimeout(() => {
-            prefetchedNavRoutes.add(routeName);
-            router.prefetch(route(routeName), {}, {
-                cacheFor: navCacheFor(routeName),
-                cacheTags: navCacheTags(routeName),
-            });
-        }, index * delayStep);
-
-        navPrefetchTimers.push(timer);
-    });
-};
 
 const warmNavRoute = (routeName) => {
     if (!routeName || isActiveRoute(routeName) || prefetchedNavRoutes.has(routeName)) {
@@ -305,13 +234,6 @@ const warmNavRoute = (routeName) => {
 
 onMounted(() => {
     initializeThemePreference();
-    prefetchNavRoutes(workflowNavRoutes.value, 80);
-    scheduleIdlePrefetch(() => prefetchNavRoutes(secondaryNavRoutes.value), 180);
-    scheduleIdlePrefetch(() => prefetchNavRoutes(allNavRoutes.value, 110), 420);
-});
-
-onUnmounted(() => {
-    clearNavPrefetchSchedule();
 });
 </script>
 

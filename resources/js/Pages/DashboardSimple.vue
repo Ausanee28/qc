@@ -1,8 +1,7 @@
 ﻿<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { Bar, Doughnut, Line } from '@/lib/dashboard-charts';
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue';
 import { getEcho } from '@/lib/realtime';
 
 const dashboardReloadOnly = ['currentPeriod', 'metrics', 'weeklyData', 'fourWeekData', 'dailyData', 'monthlyData', 'inspectorData', 'flash'];
@@ -41,6 +40,7 @@ const periodLabels = {
 const selectedPeriod = ref(props.currentPeriod);
 const isChangingPeriod = ref(false);
 const currentTheme = ref('dark');
+const chartsReady = ref(false);
 const realtimeMode = ref('connecting');
 const lastRealtimeSyncAt = ref(null);
 const lastRealtimeEventAt = ref(null);
@@ -48,6 +48,7 @@ let themeObserver = null;
 let dashboardEcho = null;
 let realtimeRefreshTimer = null;
 let realtimeBootTimer = null;
+let chartsBootTimer = null;
 let dashboardPollTimer = null;
 let echoConnection = null;
 let echoConnectionStateHandler = null;
@@ -57,6 +58,18 @@ const dashboardSyncIntervalActiveMs = 30000;
 const dashboardSyncIntervalHiddenMs = 90000;
 const currentPeriodLabel = computed(() => periodLabels[props.currentPeriod] || 'This Month');
 const dashboardInvalidateTags = ['dashboard', 'workflow', 'performance', 'report', 'certificates'];
+const Line = defineAsyncComponent({
+    loader: () => import('@/lib/dashboard-charts').then((mod) => mod.Line),
+    suspensible: false,
+});
+const Bar = defineAsyncComponent({
+    loader: () => import('@/lib/dashboard-charts').then((mod) => mod.Bar),
+    suspensible: false,
+});
+const Doughnut = defineAsyncComponent({
+    loader: () => import('@/lib/dashboard-charts').then((mod) => mod.Doughnut),
+    suspensible: false,
+});
 
 const syncTheme = () => {
     if (typeof document === 'undefined') {
@@ -216,6 +229,16 @@ const handleVisibilityChange = () => {
 onMounted(() => {
     syncTheme();
     lastRealtimeSyncAt.value = new Date().toISOString();
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => {
+            chartsReady.value = true;
+        }, { timeout: 1200 });
+    } else {
+        chartsBootTimer = window.setTimeout(() => {
+            chartsBootTimer = null;
+            chartsReady.value = true;
+        }, 320);
+    }
 
     if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
         themeObserver = new MutationObserver(syncTheme);
@@ -294,6 +317,11 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    if (chartsBootTimer !== null) {
+        window.clearTimeout(chartsBootTimer);
+        chartsBootTimer = null;
+    }
+
     if (realtimeRefreshTimer !== null) {
         window.clearTimeout(realtimeRefreshTimer);
         realtimeRefreshTimer = null;
@@ -719,7 +747,8 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                 <article class="card card--doughnut">
                     <div class="card__head">OK / NG Ratio</div>
                     <div class="doughnut-wrap">
-                        <Doughnut :data="qualityChartData" :options="doughnutOpts" />
+                        <Doughnut v-if="chartsReady" :data="qualityChartData" :options="doughnutOpts" />
+                        <div v-else class="shimmer shimmer--chart"></div>
                         <div class="doughnut-center">
                             <div class="doughnut-center__ok"><strong>{{ pct(metrics.yieldRate) }}</strong> <span>OK</span></div>
                             <div class="doughnut-center__ng"><strong>{{ pct(metrics.defectRate) }}</strong> <span>NG</span></div>
@@ -746,7 +775,10 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 
                 <article class="card card--chart">
                     <div class="card__head">Daily OK / NG Trend</div>
-                    <div class="chart-area"><Line :data="dailyTrendData" :options="lineOpts" /></div>
+                    <div class="chart-area">
+                        <Line v-if="chartsReady" :data="dailyTrendData" :options="lineOpts" />
+                        <div v-else class="shimmer shimmer--chart"></div>
+                    </div>
                 </article>
             </section>
 
@@ -754,7 +786,10 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
             <section class="chart-row chart-row--bottom">
                 <article class="card card--chart card--monthly">
                     <div class="card__head">Monthly OK / NG Trend</div>
-                    <div class="chart-area chart-area--tall"><Line :data="monthlyTrendData" :options="monthlyTrendOpts" /></div>
+                    <div class="chart-area chart-area--tall">
+                        <Line v-if="chartsReady" :data="monthlyTrendData" :options="monthlyTrendOpts" />
+                        <div v-else class="shimmer shimmer--chart"></div>
+                    </div>
 
                     <div class="monthly-insights">
                         <div v-for="item in monthlyInsights" :key="item.label" class="monthly-insight">
@@ -796,7 +831,10 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                     <article class="card card--chart card--compact">
                         <div class="card__head">{{ weeklyCardTitle }}</div>
                         <div v-if="weeklyCardNote" class="card__note">{{ weeklyCardNote }}</div>
-                        <div class="chart-area chart-area--short"><Bar :data="weeklyBarData" :options="weeklyBarOpts" /></div>
+                        <div class="chart-area chart-area--short">
+                            <Bar v-if="chartsReady" :data="weeklyBarData" :options="weeklyBarOpts" />
+                            <div v-else class="shimmer shimmer--chart"></div>
+                        </div>
                     </article>
                 </div>
             </section>
@@ -1172,6 +1210,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     background-size: 200% 100%;
     animation: shimmer 1.6s linear infinite;
 }
+.shimmer--chart { height: 100%; border-radius: 14px; }
 .shimmer--tall { height: 320px; }
 .shimmer--short { height: 200px; }
 

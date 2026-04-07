@@ -7,15 +7,6 @@ import { initializeThemePreference, readStoredTheme } from './composables/useThe
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const pages = import.meta.glob('./Pages/**/*.vue');
-const eagerPages = import.meta.glob([
-    './Pages/DashboardSimple.vue',
-    './Pages/Certificates/Index.vue',
-    './Pages/ExecuteTest/Create.vue',
-    './Pages/ReceiveJob/Create.vue',
-    './Pages/Report/Index.vue',
-    './Pages/Performance/Index.vue',
-    './Pages/MasterData/**/*.vue',
-], { eager: true });
 let activeNavigationVisits = 0;
 let navBusyTimer = null;
 const navBusyDelay = 260;
@@ -103,12 +94,6 @@ const updateNavigationBusyState = () => {
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => {
-        const eagerPage = eagerPages[`./Pages/${name}.vue`];
-
-        if (eagerPage) {
-            return eagerPage.default ?? eagerPage;
-        }
-
         const page = pages[`./Pages/${name}.vue`];
 
         if (!page) {

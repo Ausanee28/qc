@@ -26,13 +26,21 @@ class DashboardController extends Controller
             return [
                 'currentPeriod' => $period,
                 'metrics' => $this->metricsService->getOverviewMetrics($from, $to),
-                'weeklyData' => $this->metricsService->getWeeklyTrend(),
-                'fourWeekData' => $this->metricsService->getFourWeekTrend(),
             ];
         });
 
         return Inertia::render('DashboardSimple', [
             ...$payload,
+            'weeklyData' => Inertia::defer(fn () => DashboardCache::store()->remember(
+                DashboardCache::simpleWeeklyKey($period),
+                now()->addMinutes(10),
+                fn () => $this->metricsService->getWeeklyTrend()
+            ), 'dashboard-secondary'),
+            'fourWeekData' => Inertia::defer(fn () => DashboardCache::store()->remember(
+                DashboardCache::simpleFourWeekKey($period),
+                now()->addMinutes(10),
+                fn () => $this->metricsService->getFourWeekTrend()
+            ), 'dashboard-secondary'),
             'dailyData' => Inertia::defer(fn () => DashboardCache::store()->remember(
                 DashboardCache::simpleDailyKey($period),
                 now()->addMinutes(10),
