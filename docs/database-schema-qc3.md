@@ -1,6 +1,6 @@
 # Database Schema Reference (qc3)
 
-- Generated at: 2026-04-06 09:37:11
+- Generated at: 2026-04-07 08:27:09
 - Driver: mariadb
 - Database: qc3
 - Table count: 9
@@ -9,15 +9,15 @@
 
 | Table | Approx. rows |
 |---|---:|
-| `Audit_Logs` | 18 |
+| `Audit_Logs` | 46 |
 | `Departments` | 5 |
-| `Equipments` | 6 |
+| `Equipments` | 7 |
 | `External_Users` | 3 |
-| `Internal_Users` | 2 |
-| `migrations` | 21 |
+| `Internal_Users` | 3 |
+| `migrations` | 20 |
 | `Test_Methods` | 1 |
-| `Transaction_Detail` | 9 |
-| `Transaction_Header` | 3 |
+| `Transaction_Detail` | 2 |
+| `Transaction_Header` | 1 |
 
 ## Table Details
 

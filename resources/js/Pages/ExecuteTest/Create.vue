@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { getEcho } from '@/lib/realtime';
 
 const props = defineProps({
@@ -18,6 +18,8 @@ const currentUserRole = usePage().props.auth?.user?.role ?? '';
 const canDelete = currentUserRole === 'admin';
 const submitted = ref(false);
 const isEditing = ref(false);
+const editFormRef = ref(null);
+const jobSelectRef = ref(null);
 const syncingPendingJobs = ref(false);
 const checkingPendingJobsVersion = ref(false);
 const pendingJobsSyncIntervalActiveMs = 30000;
@@ -33,6 +35,8 @@ const defaultFilters = {
 };
 let pendingJobsVersionTimer = null;
 let pendingJobsEcho = null;
+let pendingJobsEchoConnection = null;
+let pendingJobsEchoConnectionStateHandler = null;
 let usePollingFallback = true;
 const jsonHeaders = {
     Accept: 'application/json',
@@ -163,6 +167,38 @@ const submit = () => {
     form.post(route('execute-test.store'), options);
 };
 
+const scrollToEditForm = async () => {
+    await nextTick();
+
+    const formElement = editFormRef.value;
+
+    if (formElement instanceof HTMLElement) {
+        const topOffset = 88;
+        const scrollContainer = formElement.closest('.shell-scroll-region');
+
+        if (scrollContainer instanceof HTMLElement) {
+            const targetTop = scrollContainer.scrollTop
+                + formElement.getBoundingClientRect().top
+                - scrollContainer.getBoundingClientRect().top
+                - topOffset;
+
+            scrollContainer.scrollTo({
+                top: Math.max(targetTop, 0),
+                behavior: 'smooth',
+            });
+        } else {
+            formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    window.setTimeout(() => {
+        const firstInput = jobSelectRef.value;
+        if (firstInput && typeof firstInput.focus === 'function') {
+            firstInput.focus({ preventScroll: true });
+        }
+    }, 220);
+};
+
 const editResult = (result) => {
     isEditing.value = true;
     form.clearErrors();
@@ -178,7 +214,7 @@ const editResult = (result) => {
     form.min_value = result.min_value || '';
     form.judgement = result.judgement || '';
     form.remark = result.remark || '';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    void scrollToEditForm();
 };
 
 const deleteResult = (result) => {
@@ -322,12 +358,37 @@ const handleVisibilityChange = () => {
     startPendingJobsPolling(pendingJobsSyncIntervalHiddenMs);
 };
 
+const stopPendingJobsPolling = () => {
+    if (pendingJobsVersionTimer !== null) {
+        window.clearInterval(pendingJobsVersionTimer);
+        pendingJobsVersionTimer = null;
+    }
+};
+
 const startPendingJobsPolling = (intervalMs) => {
     if (pendingJobsVersionTimer !== null) {
         window.clearInterval(pendingJobsVersionTimer);
     }
 
     pendingJobsVersionTimer = window.setInterval(checkPendingJobsVersion, intervalMs);
+};
+
+const enablePollingFallback = () => {
+    if (usePollingFallback) {
+        return;
+    }
+
+    usePollingFallback = true;
+    startPendingJobsPolling(document.hidden ? pendingJobsSyncIntervalHiddenMs : pendingJobsSyncIntervalActiveMs);
+};
+
+const disablePollingFallback = () => {
+    if (!usePollingFallback) {
+        return;
+    }
+
+    usePollingFallback = false;
+    stopPendingJobsPolling();
 };
 
 onMounted(() => {
@@ -338,8 +399,38 @@ onMounted(() => {
         pendingJobsEcho = await getEcho();
 
         if (pendingJobsEcho) {
-            usePollingFallback = false;
-            pendingJobsEcho.private('dashboard.global').listen('.dashboard.updated', reloadPendingJobs);
+            disablePollingFallback();
+
+            const dashboardChannel = pendingJobsEcho.private('dashboard.global');
+            dashboardChannel.listen('.dashboard.updated', reloadPendingJobs);
+
+            if (typeof dashboardChannel.error === 'function') {
+                dashboardChannel.error(() => {
+                    enablePollingFallback();
+                });
+            }
+
+            const nextConnection = pendingJobsEcho?.connector?.pusher?.connection ?? null;
+            if (nextConnection && typeof nextConnection.bind === 'function') {
+                pendingJobsEchoConnection = nextConnection;
+                pendingJobsEchoConnectionStateHandler = ({ current }) => {
+                    const state = String(current || '').toLowerCase();
+
+                    if (state === 'connected') {
+                        disablePollingFallback();
+                        checkPendingJobsVersion({ force: true });
+                        return;
+                    }
+
+                    if (state === 'connecting' || state === 'initialized') {
+                        return;
+                    }
+
+                    enablePollingFallback();
+                };
+
+                pendingJobsEchoConnection.bind('state_change', pendingJobsEchoConnectionStateHandler);
+            }
             return;
         }
 
@@ -349,9 +440,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-    if (pendingJobsVersionTimer !== null) {
-        window.clearInterval(pendingJobsVersionTimer);
-    }
+    stopPendingJobsPolling();
 
     window.removeEventListener('focus', handlePageFocus);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -360,6 +449,12 @@ onBeforeUnmount(() => {
         pendingJobsEcho.leave('dashboard.global');
         pendingJobsEcho = null;
     }
+
+    if (pendingJobsEchoConnection && pendingJobsEchoConnectionStateHandler && typeof pendingJobsEchoConnection.unbind === 'function') {
+        pendingJobsEchoConnection.unbind('state_change', pendingJobsEchoConnectionStateHandler);
+    }
+    pendingJobsEchoConnection = null;
+    pendingJobsEchoConnectionStateHandler = null;
 });
 </script>
 
@@ -396,7 +491,7 @@ onBeforeUnmount(() => {
                 {{ flash.error }}
             </div>
 
-            <form @submit.prevent="submit" class="card card-fill" style="margin:0;display:flex;flex-direction:column;">
+            <form ref="editFormRef" @submit.prevent="submit" class="card card-fill" style="margin:0;display:flex;flex-direction:column;">
                 <div class="flex items-center justify-between gap-4 border-b border-gray-200 pb-4">
                     <div>
                         <h3 class="text-[15px] font-semibold text-gray-900">{{ isEditing ? 'Edit Test Result' : 'Test Execution' }}</h3>
@@ -411,7 +506,7 @@ onBeforeUnmount(() => {
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
                                 <label class="form-lbl" style="margin-bottom:0">Open Job *</label>
                             </div>
-                            <select v-model="form.transaction_id" required :disabled="!pendingJobsReady" class="form-inp" style="padding:10px 12px">
+                            <select ref="jobSelectRef" v-model="form.transaction_id" required :disabled="!pendingJobsReady" class="form-inp" style="padding:10px 12px">
                                 <option value="" disabled>{{ pendingJobsReady ? 'Select job...' : 'Loading open jobs...' }}</option>
                                 <option v-for="j in pendingJobOptions" :key="j.transaction_id" :value="j.transaction_id">
                                     #{{ j.transaction_id }} - {{ j.detail || 'No detail' }} {{ j.dmc ? `(${j.dmc})` : '' }}

@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, reactive, ref } from 'vue';
+import { computed, nextTick, reactive, ref } from 'vue';
 
 const props = defineProps({ externals: Array, internals: Array, jobs: Object, filters: Object });
 const flash = usePage().props.flash || {};
@@ -9,6 +9,8 @@ const currentUserRole = usePage().props.auth?.user?.role ?? '';
 const canDelete = currentUserRole === 'admin';
 const submitted = ref(false);
 const isEditing = ref(false);
+const editFormRef = ref(null);
+const senderSelectRef = ref(null);
 const defaultFilters = {
     search: '',
     status: 'all',
@@ -146,6 +148,37 @@ const submit = () => {
     form.post(route('receive-job.store'), options);
 };
 
+const scrollToEditForm = async () => {
+    await nextTick();
+
+    const formElement = editFormRef.value;
+    if (formElement instanceof HTMLElement) {
+        const topOffset = 88;
+        const scrollContainer = formElement.closest('.shell-scroll-region');
+
+        if (scrollContainer instanceof HTMLElement) {
+            const targetTop = scrollContainer.scrollTop
+                + formElement.getBoundingClientRect().top
+                - scrollContainer.getBoundingClientRect().top
+                - topOffset;
+
+            scrollContainer.scrollTo({
+                top: Math.max(targetTop, 0),
+                behavior: 'smooth',
+            });
+        } else {
+            formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    window.setTimeout(() => {
+        const firstInput = senderSelectRef.value;
+        if (firstInput && typeof firstInput.focus === 'function') {
+            firstInput.focus({ preventScroll: true });
+        }
+    }, 220);
+};
+
 const editJob = (job) => {
     isEditing.value = true;
     form.clearErrors();
@@ -155,7 +188,7 @@ const editJob = (job) => {
     form.detail = job.detail || '';
     form.dmc = job.dmc || '';
     form.line = job.line || '';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    void scrollToEditForm();
 };
 
 const deleteJob = (job) => {
@@ -234,7 +267,7 @@ const toggleJobStatus = (job) => {
                 {{ flash.error }}
             </div>
 
-            <form @submit.prevent="submit" class="card card-fill" style="margin:0;display:flex;flex-direction:column;">
+            <form ref="editFormRef" @submit.prevent="submit" class="card card-fill" style="margin:0;display:flex;flex-direction:column;">
                 <div class="flex items-center justify-between gap-4 border-b border-gray-200 pb-4">
                     <div>
                         <h3 class="text-[15px] font-semibold text-gray-900">{{ isEditing ? 'Edit Job' : 'Job Registration' }}</h3>
@@ -247,7 +280,7 @@ const toggleJobStatus = (job) => {
                     <div class="form-grid" style="margin-bottom:24px">
                         <div>
                             <label class="form-lbl">Sender (External) *</label>
-                            <select v-model="form.external_id" required :disabled="!externalOptionsReady" class="form-inp" style="padding:10px 12px">
+                            <select ref="senderSelectRef" v-model="form.external_id" required :disabled="!externalOptionsReady" class="form-inp" style="padding:10px 12px">
                                 <option value="" disabled>{{ externalOptionsReady ? '-- Select Sender --' : 'Loading senders...' }}</option>
                                 <option v-for="e in externalOptions" :key="e.external_id" :value="e.external_id">{{ e.external_name }}</option>
                             </select>

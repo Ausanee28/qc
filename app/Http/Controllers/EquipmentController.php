@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\DashboardDataChanged;
 use App\Models\Equipment;
 use App\Models\TestMethod;
+use App\Support\DashboardCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
@@ -41,6 +43,7 @@ class EquipmentController extends Controller
         Equipment::create($validated);
         Cache::forget(self::DEFAULT_EQUIPMENTS_CACHE_KEY);
         Cache::forget('master_data.test_methods.default.per_page_20');
+        $this->refreshDashboardRealtime();
 
         return redirect()->back()->with('success', 'Equipment created successfully.');
     }
@@ -56,6 +59,7 @@ class EquipmentController extends Controller
         $equipment->update($validated);
         Cache::forget(self::DEFAULT_EQUIPMENTS_CACHE_KEY);
         Cache::forget('master_data.test_methods.default.per_page_20');
+        $this->refreshDashboardRealtime();
 
         return redirect()->back()->with('success', 'Equipment updated successfully.');
     }
@@ -72,6 +76,7 @@ class EquipmentController extends Controller
         $equipment->delete();
         Cache::forget(self::DEFAULT_EQUIPMENTS_CACHE_KEY);
         Cache::forget('master_data.test_methods.default.per_page_20');
+        $this->refreshDashboardRealtime();
 
         return redirect()->back()->with('success', 'Equipment deleted successfully.');
     }
@@ -104,5 +109,11 @@ class EquipmentController extends Controller
             ->orderBy('equipment_name')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    private function refreshDashboardRealtime(): void
+    {
+        DashboardCache::flush();
+        DashboardDataChanged::dispatchSafely();
     }
 }

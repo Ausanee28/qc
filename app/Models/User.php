@@ -2,15 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Auth\MustVerifyEmail;
-use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable implements MustVerifyEmailContract
+class User extends Authenticatable
 {
-    use HasFactory, MustVerifyEmail, Notifiable;
+    use HasFactory, Notifiable;
 
     protected $table = 'Internal_Users';
     protected $primaryKey = 'user_id';
@@ -21,20 +19,15 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'user_password',
         'employee_id',
         'name',
-        'email',
-        'email_verified_at',
         'role',
         'is_active',
-        'remember_token',
     ];
 
     protected $hidden = [
         'user_password',
-        'remember_token',
     ];
 
     protected $casts = [
-        'email_verified_at' => 'datetime',
         'is_active' => 'boolean',
     ];
 

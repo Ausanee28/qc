@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\DashboardDataChanged;
 use App\Support\SchemaCapabilities;
 use App\Models\User;
+use App\Support\DashboardCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -90,6 +92,7 @@ class UserController extends Controller
         Cache::forget('execute_test.inspectors');
         Cache::forget('execute_test.results.default.active.per_page_20');
         Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
+        $this->refreshDashboardRealtime();
 
         return redirect()->back()->with('success', 'User created successfully.');
     }
@@ -133,6 +136,7 @@ class UserController extends Controller
         Cache::forget('execute_test.inspectors');
         Cache::forget('execute_test.results.default.active.per_page_20');
         Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
+        $this->refreshDashboardRealtime();
 
         return redirect()->back()->with('success', 'User updated successfully.');
     }
@@ -174,6 +178,7 @@ class UserController extends Controller
         Cache::forget('execute_test.inspectors');
         Cache::forget('execute_test.results.default.active.per_page_20');
         Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
+        $this->refreshDashboardRealtime();
 
         return redirect()->back()->with('success', 'User deleted successfully.');
     }
@@ -213,6 +218,7 @@ class UserController extends Controller
         Cache::forget('execute_test.inspectors');
         Cache::forget('execute_test.results.default.active.per_page_20');
         Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
+        $this->refreshDashboardRealtime();
 
         return redirect()->back()->with('success', $isActive
             ? 'User activated successfully.'
@@ -278,5 +284,11 @@ class UserController extends Controller
         return (clone $usersQuery)
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    private function refreshDashboardRealtime(): void
+    {
+        DashboardCache::flush();
+        DashboardDataChanged::dispatchSafely();
     }
 }

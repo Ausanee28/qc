@@ -1,5 +1,11 @@
 <?php
 
+$reverbHost = env('REVERB_HOST');
+
+if (is_string($reverbHost) && strtolower(trim($reverbHost)) === 'localhost') {
+    $reverbHost = '127.0.0.1';
+}
+
 return [
 
     /*
@@ -32,7 +38,7 @@ return [
             'host' => env('REVERB_SERVER_HOST', '0.0.0.0'),
             'port' => env('REVERB_SERVER_PORT', 8080),
             'path' => env('REVERB_SERVER_PATH', ''),
-            'hostname' => env('REVERB_HOST'),
+            'hostname' => $reverbHost ?: '127.0.0.1',
             'options' => [
                 'tls' => [],
             ],
@@ -77,7 +83,7 @@ return [
                 'secret' => env('REVERB_APP_SECRET'),
                 'app_id' => env('REVERB_APP_ID'),
                 'options' => [
-                    'host' => env('REVERB_HOST'),
+                    'host' => $reverbHost ?: '127.0.0.1',
                     'port' => env('REVERB_PORT', 443),
                     'scheme' => env('REVERB_SCHEME', 'https'),
                     'useTLS' => env('REVERB_SCHEME', 'https') === 'https',

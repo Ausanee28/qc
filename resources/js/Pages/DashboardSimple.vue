@@ -41,11 +41,16 @@ const periodLabels = {
 const selectedPeriod = ref(props.currentPeriod);
 const isChangingPeriod = ref(false);
 const currentTheme = ref('dark');
+const realtimeMode = ref('connecting');
+const lastRealtimeSyncAt = ref(null);
+const lastRealtimeEventAt = ref(null);
 let themeObserver = null;
 let dashboardEcho = null;
 let realtimeRefreshTimer = null;
 let realtimeBootTimer = null;
 let dashboardPollTimer = null;
+let echoConnection = null;
+let echoConnectionStateHandler = null;
 let usePollingFallback = true;
 const realtimeRefreshDelayMs = 250;
 const dashboardSyncIntervalActiveMs = 30000;
@@ -62,6 +67,42 @@ const syncTheme = () => {
 };
 
 const isLightTheme = computed(() => currentTheme.value === 'light');
+
+const formatRealtimeClock = (value) => {
+    if (!value) {
+        return '';
+    }
+
+    const dateValue = value instanceof Date ? value : new Date(value);
+
+    if (Number.isNaN(dateValue.getTime())) {
+        return '';
+    }
+
+    return dateValue.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+};
+
+const realtimeStatusLabel = computed(() => {
+    if (realtimeMode.value === 'live') {
+        return 'Live';
+    }
+
+    if (realtimeMode.value === 'polling') {
+        return 'Auto Sync';
+    }
+
+    return 'Connecting';
+});
+
+const realtimeStatusNote = computed(() => {
+    if (realtimeMode.value === 'connecting') {
+        return 'starting...';
+    }
+
+    const reference = lastRealtimeEventAt.value || lastRealtimeSyncAt.value;
+    const formatted = formatRealtimeClock(reference);
+    return formatted ? `updated ${formatted}` : '';
+});
 
 watch(() => props.currentPeriod, (v) => { selectedPeriod.value = v; });
 watch(selectedPeriod, (v, prev) => {
@@ -88,6 +129,7 @@ const reloadDashboardRealtime = () => {
         preserveScroll: true,
         onFinish: () => {
             isChangingPeriod.value = false;
+            lastRealtimeSyncAt.value = new Date().toISOString();
         },
     });
 };
@@ -107,6 +149,15 @@ const scheduleRealtimeReload = () => {
     }, realtimeRefreshDelayMs);
 };
 
+const stopDashboardPolling = () => {
+    if (dashboardPollTimer === null) {
+        return;
+    }
+
+    window.clearInterval(dashboardPollTimer);
+    dashboardPollTimer = null;
+};
+
 const startDashboardPolling = (intervalMs) => {
     if (dashboardPollTimer !== null) {
         window.clearInterval(dashboardPollTimer);
@@ -119,6 +170,25 @@ const startDashboardPolling = (intervalMs) => {
 
         reloadDashboardRealtime();
     }, intervalMs);
+};
+
+const enablePollingFallback = () => {
+    if (usePollingFallback) {
+        return;
+    }
+
+    usePollingFallback = true;
+    realtimeMode.value = 'polling';
+    startDashboardPolling(document.hidden ? dashboardSyncIntervalHiddenMs : dashboardSyncIntervalActiveMs);
+};
+
+const disablePollingFallback = () => {
+    if (!usePollingFallback) {
+        return;
+    }
+
+    usePollingFallback = false;
+    stopDashboardPolling();
 };
 
 const handlePageFocus = () => {
@@ -145,6 +215,7 @@ const handleVisibilityChange = () => {
 
 onMounted(() => {
     syncTheme();
+    lastRealtimeSyncAt.value = new Date().toISOString();
 
     if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
         themeObserver = new MutationObserver(syncTheme);
@@ -155,15 +226,59 @@ onMounted(() => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     const bootRealtime = async () => {
+        realtimeMode.value = 'connecting';
         dashboardEcho = await getEcho();
 
         if (!dashboardEcho) {
+            realtimeMode.value = 'polling';
             startDashboardPolling(document.hidden ? dashboardSyncIntervalHiddenMs : dashboardSyncIntervalActiveMs);
             return;
         }
 
-        usePollingFallback = false;
-        dashboardEcho.private('dashboard.global').listen('.dashboard.updated', scheduleRealtimeReload);
+        disablePollingFallback();
+        realtimeMode.value = 'live';
+
+        const dashboardChannel = dashboardEcho.private('dashboard.global');
+
+        dashboardChannel.listen('.dashboard.updated', (eventPayload) => {
+            if (eventPayload?.updatedAt) {
+                lastRealtimeEventAt.value = eventPayload.updatedAt;
+            } else {
+                lastRealtimeEventAt.value = new Date().toISOString();
+            }
+
+            scheduleRealtimeReload();
+        });
+
+        if (typeof dashboardChannel.error === 'function') {
+            dashboardChannel.error(() => {
+                enablePollingFallback();
+            });
+        }
+
+        const nextConnection = dashboardEcho?.connector?.pusher?.connection ?? null;
+        if (nextConnection && typeof nextConnection.bind === 'function') {
+            echoConnection = nextConnection;
+            echoConnectionStateHandler = ({ current }) => {
+                const state = String(current || '').toLowerCase();
+
+                if (state === 'connected') {
+                    realtimeMode.value = 'live';
+                    disablePollingFallback();
+                    scheduleRealtimeReload();
+                    return;
+                }
+
+                if (state === 'connecting' || state === 'initialized') {
+                    realtimeMode.value = 'connecting';
+                    return;
+                }
+
+                enablePollingFallback();
+            };
+
+            echoConnection.bind('state_change', echoConnectionStateHandler);
+        }
     };
 
     if (typeof window.requestIdleCallback === 'function') {
@@ -189,10 +304,7 @@ onUnmounted(() => {
         realtimeBootTimer = null;
     }
 
-    if (dashboardPollTimer !== null) {
-        window.clearInterval(dashboardPollTimer);
-        dashboardPollTimer = null;
-    }
+    stopDashboardPolling();
 
     window.removeEventListener('focus', handlePageFocus);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -201,6 +313,12 @@ onUnmounted(() => {
         dashboardEcho.leave('dashboard.global');
         dashboardEcho = null;
     }
+
+    if (echoConnection && echoConnectionStateHandler && typeof echoConnection.unbind === 'function') {
+        echoConnection.unbind('state_change', echoConnectionStateHandler);
+    }
+    echoConnection = null;
+    echoConnectionStateHandler = null;
 
     themeObserver?.disconnect();
     themeObserver = null;
@@ -569,9 +687,16 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
             <header class="db-header">
                 <div class="db-header__left">
                     <h1 class="db-header__title">QC Dashboard</h1>
-                    <div class="db-badge">
-                        <span class="db-badge__dot"></span>
-                        {{ currentPeriodLabel }}
+                    <div class="db-header__status">
+                        <div class="db-badge">
+                            <span class="db-badge__dot"></span>
+                            {{ currentPeriodLabel }}
+                        </div>
+                        <div class="db-status" :data-mode="realtimeMode">
+                            <span class="db-status__dot"></span>
+                            <span>{{ realtimeStatusLabel }}</span>
+                            <span v-if="realtimeStatusNote" class="db-status__note">{{ realtimeStatusNote }}</span>
+                        </div>
                     </div>
                 </div>
                 <label class="db-period">
@@ -724,6 +849,12 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     gap: 1rem;
     flex-wrap: wrap;
 }
+.db-header__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
 .db-header__title {
     font-size: 1.5rem;
     font-weight: 700;
@@ -747,6 +878,49 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     border-radius: 50%;
     background: #fb923c;
     box-shadow: 0 0 0 4px rgba(251,146,60,0.18);
+}
+.db-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.02);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #e7e5e4;
+}
+.db-status__dot {
+    width: 0.46rem;
+    height: 0.46rem;
+    border-radius: 50%;
+    background: #f59e0b;
+    box-shadow: 0 0 0 4px rgba(245,158,11,0.2);
+    flex-shrink: 0;
+}
+.db-status__note {
+    color: #a8a29e;
+    font-size: 0.72rem;
+    font-weight: 500;
+}
+.db-status[data-mode='live'] {
+    border-color: rgba(34,197,94,0.38);
+    background: rgba(22,163,74,0.12);
+    color: #bbf7d0;
+}
+.db-status[data-mode='live'] .db-status__dot {
+    background: #22c55e;
+    box-shadow: 0 0 0 4px rgba(34,197,94,0.22);
+}
+.db-status[data-mode='polling'] {
+    border-color: rgba(59,130,246,0.38);
+    background: rgba(37,99,235,0.12);
+    color: #bfdbfe;
+}
+.db-status[data-mode='polling'] .db-status__dot {
+    background: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59,130,246,0.22);
 }
 .db-period select {
     border: 1px solid rgba(255,255,255,0.12);
@@ -1118,6 +1292,29 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 :global(.theme-shell[data-theme='light'] .db-badge__dot) {
     background: #1d4ed8;
     box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.16);
+}
+
+:global(.theme-shell[data-theme='light'] .db-status) {
+    border-color: rgba(15, 23, 42, 0.16);
+    background: rgba(255, 255, 255, 0.98);
+    color: #1f2937;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+:global(.theme-shell[data-theme='light'] .db-status__note) {
+    color: #64748b;
+}
+
+:global(.theme-shell[data-theme='light'] .db-status[data-mode='live']) {
+    border-color: rgba(22, 163, 74, 0.34);
+    background: rgba(240, 253, 244, 0.98);
+    color: #166534;
+}
+
+:global(.theme-shell[data-theme='light'] .db-status[data-mode='polling']) {
+    border-color: rgba(37, 99, 235, 0.3);
+    background: rgba(239, 246, 255, 0.98);
+    color: #1e40af;
 }
 
 :global(.theme-shell[data-theme='light'] .db-period select),

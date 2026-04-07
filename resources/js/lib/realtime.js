@@ -1,6 +1,15 @@
 let echoInstance = null;
 let echoBootPromise = null;
 
+const normalizeReverbHost = (host) => {
+    const normalized = String(host ?? '').trim();
+    if (normalized.toLowerCase() === 'localhost') {
+        return '127.0.0.1';
+    }
+
+    return normalized || window.location.hostname;
+};
+
 export const getEcho = async () => {
     if (echoInstance) {
         return echoInstance;
@@ -24,7 +33,7 @@ export const getEcho = async () => {
             echoInstance = new Echo({
                 broadcaster: 'reverb',
                 key: reverbKey,
-                wsHost: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
+                wsHost: normalizeReverbHost(import.meta.env.VITE_REVERB_HOST),
                 wsPort: Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
                 wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
                 forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',

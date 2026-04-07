@@ -72,6 +72,9 @@ class DashboardDataChanged implements ShouldBroadcastNow
 
         $options = (array) config('broadcasting.connections.reverb.options', []);
         $host = (string) ($options['host'] ?? '127.0.0.1');
+        if (strtolower(trim($host)) === 'localhost') {
+            $host = '127.0.0.1';
+        }
         $port = (int) ($options['port'] ?? 8080);
 
         if ($host === '' || $port <= 0) {

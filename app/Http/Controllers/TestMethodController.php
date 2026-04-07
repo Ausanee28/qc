@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\DashboardDataChanged;
 use App\Models\TestMethod;
 use App\Models\Equipment;
+use App\Support\DashboardCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
@@ -43,6 +45,7 @@ class TestMethodController extends Controller
         TestMethod::create($validated);
         Cache::forget('execute_test.methods');
         Cache::forget(self::DEFAULT_TEST_METHODS_CACHE_KEY);
+        $this->refreshDashboardRealtime();
 
         return redirect()->back()->with('success', 'Test Method created successfully.');
     }
@@ -59,6 +62,7 @@ class TestMethodController extends Controller
         $method->update($validated);
         Cache::forget('execute_test.methods');
         Cache::forget(self::DEFAULT_TEST_METHODS_CACHE_KEY);
+        $this->refreshDashboardRealtime();
 
         return redirect()->back()->with('success', 'Test Method updated successfully.');
     }
@@ -74,6 +78,7 @@ class TestMethodController extends Controller
         $method->delete();
         Cache::forget('execute_test.methods');
         Cache::forget(self::DEFAULT_TEST_METHODS_CACHE_KEY);
+        $this->refreshDashboardRealtime();
 
         return redirect()->back()->with('success', 'Test Method deleted successfully.');
     }
@@ -113,5 +118,11 @@ class TestMethodController extends Controller
             ->orderBy('method_name')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    private function refreshDashboardRealtime(): void
+    {
+        DashboardCache::flush();
+        DashboardDataChanged::dispatchSafely();
     }
 }
