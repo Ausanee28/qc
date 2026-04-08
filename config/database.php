@@ -19,6 +19,18 @@ return [
     'default' => env('DB_CONNECTION', 'sqlite'),
 
     /*
+    |----------------------------------------------------------------------
+    | Reporting Database Connection Name
+    |----------------------------------------------------------------------
+    |
+    | Heavy read paths (report/performance) can be directed to a read
+    | replica by pointing this at another configured connection.
+    |
+    */
+
+    'reporting_connection' => env('DB_REPORT_CONNECTION', env('DB_CONNECTION', 'sqlite')),
+
+    /*
     |--------------------------------------------------------------------------
     | Database Connections
     |--------------------------------------------------------------------------
@@ -80,6 +92,26 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        'reporting' => [
+            'driver' => env('DB_REPORT_DRIVER', env('DB_CONNECTION', 'mariadb')),
+            'url' => env('DB_REPORT_URL', env('DB_URL')),
+            'host' => env('DB_REPORT_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_REPORT_PORT', env('DB_PORT', '3306')),
+            'database' => env('DB_REPORT_DATABASE', env('DB_DATABASE', 'laravel')),
+            'username' => env('DB_REPORT_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('DB_REPORT_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('DB_REPORT_SOCKET', env('DB_SOCKET', '')),
+            'charset' => env('DB_REPORT_CHARSET', env('DB_CHARSET', 'utf8mb4')),
+            'collation' => env('DB_REPORT_COLLATION', env('DB_COLLATION', 'utf8mb4_unicode_ci')),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('DB_REPORT_MYSQL_ATTR_SSL_CA', env('MYSQL_ATTR_SSL_CA')),
             ]) : [],
         ],
 

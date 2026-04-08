@@ -10,7 +10,10 @@ class Department extends Model
     protected $table = 'Departments';
     protected $primaryKey = 'department_id';
     public $timestamps = false;
-    protected $fillable = ['department_name', 'internal_phone'];
+    protected $fillable = ['department_name', 'internal_phone', 'is_active'];
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 
     public function externalUsers(): HasMany
     {

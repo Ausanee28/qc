@@ -11,7 +11,10 @@ class ExternalUser extends Model
     protected $table = 'External_Users';
     protected $primaryKey = 'external_id';
     public $timestamps = false;
-    protected $fillable = ['external_name', 'department_id'];
+    protected $fillable = ['external_name', 'department_id', 'is_active'];
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 
     public function department(): BelongsTo
     {

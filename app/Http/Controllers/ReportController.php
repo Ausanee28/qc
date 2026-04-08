@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Support\SimpleXlsxExporter;
 use App\Support\TemplateXlsxExporter;
+use App\Support\ReportCacheKey;
+use App\Support\ReportingConnection;
 use App\Support\SchemaCapabilities;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -140,7 +142,7 @@ class ReportController extends Controller
                     (new SimpleXlsxExporter())->store(
                         $rows,
                         $tempWorkbook,
-                        [16, 14, 20, 36, 16, 24, 22, 22, 12, 12, 10, 42],
+                        [14, 20, 36, 16, 24, 22, 22, 12, 12, 10, 12, 12, 42],
                         'QC Report'
                     );
                 }
@@ -260,21 +262,56 @@ class ReportController extends Controller
     private function buildResultsQuery(string $dateFrom, string $dateTo, ?string $dmc = null, ?array $transactionIds = null)
     {
         return $this->buildBaseResultsQuery($dateFrom, $dateTo, $dmc, $transactionIds)
+            ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id')
+            ->join('Test_Methods as TM', 'TD.method_id', '=', 'TM.method_id')
+            ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
             ->select(
                 'TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date',
                 'EU.external_name as sender', 'TH.detail',
                 'TM.method_name', 'IU.name as inspector',
-                'TD.start_time', 'TD.end_time', 'TD.judgement', 'TD.remark'
+                'TD.start_time', 'TD.end_time', 'TD.judgement', 'TD.max_value', 'TD.min_value', 'TD.remark'
             )
             ->orderByDesc('TH.receive_date');
     }
 
     private function buildResultsSummary(string $dateFrom, string $dateTo, ?string $dmc = null): array
     {
-        $summary = $this->buildBaseResultsQuery($dateFrom, $dateTo, $dmc)
-            ->selectRaw('COUNT(*) as total_rows')
-            ->selectRaw("SUM(CASE WHEN TD.judgement = 'OK' THEN 1 ELSE 0 END) as ok_count")
-            ->selectRaw("SUM(CASE WHEN TD.judgement = 'NG' THEN 1 ELSE 0 END) as ng_count")
+        [$fromDateTime, $toDateTime] = $this->resolveDateRange($dateFrom, $dateTo);
+        $fromDate = $fromDateTime->toDateString();
+        $toDate = $toDateTime->toDateString();
+
+        if (!SchemaCapabilities::hasTable('report_daily_aggregates')) {
+            $summary = $this->buildBaseResultsQuery($dateFrom, $dateTo, $dmc)
+                ->selectRaw('COUNT(*) as total_rows')
+                ->selectRaw("SUM(CASE WHEN TD.judgement = 'OK' THEN 1 ELSE 0 END) as ok_count")
+                ->selectRaw("SUM(CASE WHEN TD.judgement = 'NG' THEN 1 ELSE 0 END) as ng_count")
+                ->first();
+
+            return [
+                'total_rows' => (int) ($summary->total_rows ?? 0),
+                'ok_count' => (int) ($summary->ok_count ?? 0),
+                'ng_count' => (int) ($summary->ng_count ?? 0),
+            ];
+        }
+
+        $connection = ReportingConnection::connection();
+        $canUseMonthly = SchemaCapabilities::hasTable('report_monthly_aggregates')
+            && $this->isFullMonthWindow($fromDateTime, $toDateTime);
+
+        $summaryQuery = $canUseMonthly
+            ? $connection->table('report_monthly_aggregates')
+                ->whereBetween('month_key', [$fromDateTime->format('Y-m'), $toDateTime->format('Y-m')])
+            : $connection->table('report_daily_aggregates')
+                ->whereBetween('date_key', [$fromDate, $toDate]);
+
+        if ($dmc !== null && trim($dmc) !== '') {
+            $summaryQuery->where('dmc', 'like', '%' . trim($dmc) . '%');
+        }
+
+        $summary = $summaryQuery
+            ->selectRaw('SUM(total_rows) as total_rows')
+            ->selectRaw('SUM(ok_count) as ok_count')
+            ->selectRaw('SUM(ng_count) as ng_count')
             ->first();
 
         return [
@@ -284,17 +321,21 @@ class ReportController extends Controller
         ];
     }
 
+    private function isFullMonthWindow(Carbon $fromDateTime, Carbon $toDateTime): bool
+    {
+        return $fromDateTime->isSameDay($fromDateTime->copy()->startOfMonth())
+            && $toDateTime->isSameDay($toDateTime->copy()->endOfMonth());
+    }
+
     private function buildBaseResultsQuery(string $dateFrom, string $dateTo, ?string $dmc = null, ?array $transactionIds = null)
     {
         $hasDetailDeletedAt = SchemaCapabilities::hasColumn('Transaction_Detail', 'deleted_at');
         $hasHeaderDeletedAt = SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at');
         [$fromDateTime, $toDateTime] = $this->resolveDateRange($dateFrom, $dateTo);
+        $connection = ReportingConnection::connection();
 
-        $query = DB::table('Transaction_Detail as TD')
-            ->join('Transaction_Header as TH', 'TD.transaction_id', '=', 'TH.transaction_id')
-            ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id')
-            ->join('Test_Methods as TM', 'TD.method_id', '=', 'TM.method_id')
-            ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
+        $query = $connection->table('Transaction_Header as TH')
+            ->join('Transaction_Detail as TD', 'TD.transaction_id', '=', 'TH.transaction_id')
             ->whereBetween('TH.receive_date', [$fromDateTime, $toDateTime]);
 
         if ($hasDetailDeletedAt) {
@@ -305,7 +346,7 @@ class ReportController extends Controller
             $query->whereNull('TH.deleted_at');
         }
 
-        if ($dmc) {
+        if ($dmc !== null && trim($dmc) !== '') {
             $query->where('TH.dmc', 'like', "%{$dmc}%");
         }
 
@@ -369,7 +410,6 @@ class ReportController extends Controller
 
         if ($includeHeader) {
             $rows[] = [
-                'Transaction ID',
                 'Line',
                 'DMC',
                 'Detail',
@@ -380,13 +420,14 @@ class ReportController extends Controller
                 'Start Time',
                 'End Time',
                 'Result',
+                'MAX',
+                'MIN',
                 'Remark',
             ];
         }
 
         foreach ($this->streamResults($dateFrom, $dateTo, $dmc, $ids) as $r) {
             $rows[] = [
-                $r->transaction_id,
                 $r->line ?? '',
                 $r->dmc ?? '',
                 $r->detail ?? '',
@@ -397,6 +438,8 @@ class ReportController extends Controller
                 $this->formatExportTime($r->start_time),
                 $this->formatExportTime($r->end_time),
                 $r->judgement ?? '',
+                $r->max_value ?? '',
+                $r->min_value ?? '',
                 $r->remark ?? '',
             ];
         }
@@ -686,6 +729,6 @@ class ReportController extends Controller
 
     private function reportCacheKey(string $segment, array $payload): string
     {
-        return 'report.' . $segment . '.' . md5(json_encode($payload));
+        return ReportCacheKey::make($segment, $payload);
     }
 }

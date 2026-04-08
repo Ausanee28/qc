@@ -9,6 +9,7 @@ use App\Models\TransactionDetail;
 use App\Support\PendingJobsVersion;
 use App\Support\DashboardCache;
 use App\Support\AuditLogger;
+use App\Support\SearchTerm;
 use App\Support\SchemaCapabilities;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -60,12 +61,33 @@ class ReceiveJobController extends Controller
                 $search = $filters['search'];
 
                 $query->where(function ($subQuery) use ($search) {
-                    $subQuery->where('detail', 'like', "%{$search}%")
-                        ->orWhere('dmc', 'like', "%{$search}%")
-                        ->orWhere('line', 'like', "%{$search}%")
-                        ->orWhere('transaction_id', 'like', "%{$search}%")
-                        ->orWhere('EU.external_name', 'like', "%{$search}%")
-                        ->orWhere('IU.name', 'like', "%{$search}%");
+                    $applyLikeSearch = static function ($likeQuery) use ($search): void {
+                        $likeQuery->where('detail', 'like', "%{$search}%")
+                            ->orWhere('dmc', 'like', "%{$search}%")
+                            ->orWhere('line', 'like', "%{$search}%")
+                            ->orWhere('transaction_id', 'like', "%{$search}%")
+                            ->orWhere('EU.external_name', 'like', "%{$search}%")
+                            ->orWhere('IU.name', 'like', "%{$search}%");
+                    };
+
+                    if (SearchTerm::canUseFullText($search)) {
+                        $term = SearchTerm::toBooleanTerm($search);
+
+                        if ($term !== '') {
+                            $subQuery
+                                ->whereRaw("MATCH(Transaction_Header.detail, Transaction_Header.dmc, Transaction_Header.line) AGAINST (? IN BOOLEAN MODE)", [$term])
+                                ->orWhereRaw("MATCH(EU.external_name) AGAINST (? IN BOOLEAN MODE)", [$term])
+                                ->orWhereRaw("MATCH(IU.name) AGAINST (? IN BOOLEAN MODE)", [$term]);
+
+                            $subQuery->orWhere(function ($likeQuery) use ($applyLikeSearch) {
+                                $applyLikeSearch($likeQuery);
+                            });
+
+                            return;
+                        }
+                    }
+
+                    $applyLikeSearch($subQuery);
                 });
             })
             ->when($supportsHeaderSoftDeletes && $filters['status'] === 'deleted', fn ($query) => $query->onlyTrashed())
@@ -76,7 +98,9 @@ class ReceiveJobController extends Controller
 
         return Inertia::render('ReceiveJob/Create', [
             'externals' => fn () => Cache::remember('receive_job.externals', now()->addMinutes(10), function () {
-                return ExternalUser::orderBy('external_name')
+                return ExternalUser::query()
+                    ->when(SchemaCapabilities::hasColumn('External_Users', 'is_active'), fn ($query) => $query->where('is_active', true))
+                    ->orderBy('external_name')
                     ->get(['external_id', 'external_name']);
             }),
             'internals' => fn () => Cache::remember('receive_job.internals', now()->addMinutes(10), function () {
@@ -294,6 +318,19 @@ class ReceiveJobController extends Controller
             }
         }
 
+        if (SchemaCapabilities::hasColumn('External_Users', 'is_active')) {
+            $isActiveExternal = ExternalUser::query()
+                ->where('external_id', (int) $validated['external_id'])
+                ->where('is_active', true)
+                ->exists();
+
+            if (!$isActiveExternal) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'external_id' => 'Selected external user is inactive.',
+                ]);
+            }
+        }
+
         return $validated;
     }
 
@@ -364,7 +401,7 @@ class ReceiveJobController extends Controller
     {
         return (clone $jobsQuery)
             ->orderByDesc('Transaction_Header.receive_date')
-            ->paginate($filters['per_page'])
+            ->simplePaginate($filters['per_page'])
             ->withQueryString()
             ->through(fn (TransactionHeader $job) => [
                 'transaction_id' => $job->transaction_id,

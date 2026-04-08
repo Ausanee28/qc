@@ -146,16 +146,6 @@ const submit = () => {
     }
 };
 
-const deleteUser = (id) => {
-    if (confirm('Are you sure you want to delete this user?')) {
-        form.delete(route('master-data.users.destroy', id), {
-            only: reloadOnly,
-            invalidateCacheTags,
-            preserveScroll: true,
-        });
-    }
-};
-
 const toggleUserActive = (user) => {
     const nextIsActive = !Boolean(user.is_active);
     const actionLabel = nextIsActive ? 'activate' : 'deactivate';
@@ -287,7 +277,7 @@ const submitReset = () => {
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-right pr-6 text-sm font-medium">
-                                    <div class="ml-auto grid w-full max-w-[30rem] grid-cols-4 gap-2">
+                                    <div class="ml-auto grid w-full max-w-[28rem] grid-cols-3 gap-2">
                                         <button @click="openEditModal(user)" class="inline-flex w-full justify-center whitespace-nowrap text-xs font-semibold text-gray-900 underline decoration-gray-300 underline-offset-4 hover:text-black">Edit</button>
                                         <button
                                             @click="toggleUserActive(user)"
@@ -297,7 +287,6 @@ const submitReset = () => {
                                             {{ Boolean(user.is_active) ? 'Deactivate' : 'Activate' }}
                                         </button>
                                         <button @click="openResetModal(user)" class="inline-flex w-full justify-center whitespace-nowrap text-xs font-semibold text-blue-700 hover:text-blue-900 underline decoration-blue-300 underline-offset-4">Reset Password</button>
-                                        <button @click="deleteUser(user.user_id)" class="inline-flex w-full justify-center whitespace-nowrap text-xs font-semibold text-red-600 hover:text-red-900 underline decoration-red-300 underline-offset-4">Delete</button>
                                     </div>
                                 </td>
                             </tr>

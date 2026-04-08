@@ -10,11 +10,13 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const defaultFilters = {
     search: '',
+    status: 'all',
     per_page: '20',
 };
 const filterForm = reactive({
     ...defaultFilters,
     search: props.filters?.search ?? defaultFilters.search,
+    status: props.filters?.status ?? defaultFilters.status,
     per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 const equipmentOptions = computed(() => props.equipments ?? []);
@@ -23,6 +25,14 @@ const methodRows = computed(() => props.testMethods?.data ?? []);
 const methodLinks = computed(() => props.testMethods?.links ?? []);
 const reloadOnly = ['testMethods', 'filters', 'flash'];
 const invalidateCacheTags = ['master-data', 'master-data:test-methods', 'master-data:equipments', 'workflow'];
+const statusLabels = {
+    true: 'Active',
+    false: 'Inactive',
+};
+const statusBadge = {
+    true: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+    false: 'bg-rose-100 text-rose-700 border border-rose-200',
+};
 
 const form = useForm({
     method_id: null,
@@ -32,6 +42,7 @@ const form = useForm({
 
 const filterPayload = () => ({
     search: filterForm.search,
+    status: filterForm.status,
     per_page: filterForm.per_page,
 });
 
@@ -97,14 +108,21 @@ const submit = () => {
     }
 };
 
-const deleteMethod = (id) => {
-    if (confirm('Are you sure you want to delete this test method?')) {
-        form.delete(route('master-data.test-methods.destroy', id), {
-            only: reloadOnly,
-            invalidateCacheTags,
-            preserveScroll: true,
-        });
+const toggleMethodActive = (method) => {
+    const nextIsActive = !Boolean(method.is_active);
+    const actionLabel = nextIsActive ? 'activate' : 'deactivate';
+
+    if (!confirm(`Are you sure you want to ${actionLabel} this test method?`)) {
+        return;
     }
+
+    router.patch(route('master-data.test-methods.set-active', method.method_id), {
+        is_active: nextIsActive,
+    }, {
+        only: reloadOnly,
+        invalidateCacheTags,
+        preserveScroll: true,
+    });
 };
 </script>
 
@@ -146,6 +164,11 @@ const deleteMethod = (id) => {
                         </div>
                         <input v-model="filterForm.search" type="text" placeholder="Search method or equipment..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
+                    <select v-model="filterForm.status" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+                        <option value="all">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
                     <select v-model="filterForm.per_page" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
                         <option value="10">10 / page</option>
                         <option value="20">20 / page</option>
@@ -167,12 +190,13 @@ const deleteMethod = (id) => {
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">ID</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Method Name</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Parent Equipment</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-right pr-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
                             <tr v-if="methodRows.length === 0">
-                                <td colspan="4" class="px-6 py-10 text-center text-sm text-gray-500">
+                                <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
                                     {{ filterForm.search ? 'No results for "' + filterForm.search + '"' : 'No test methods found.' }}
                                 </td>
                             </tr>
@@ -184,10 +208,20 @@ const deleteMethod = (id) => {
                                         {{ method.equipment?.equipment_name ?? 'Unknown' }}
                                     </span>
                                 </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span :class="['inline-flex px-2.5 py-0.5 rounded-md text-xs font-medium', statusBadge[String(Boolean(method.is_active))]]">
+                                        {{ statusLabels[String(Boolean(method.is_active))] }}
+                                    </span>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right pr-6 text-sm font-medium">
                                     <div class="flex justify-end gap-4">
                                         <button @click="openEditModal(method)" class="text-gray-900 hover:text-black underline decoration-gray-300 underline-offset-4">Edit</button>
-                                        <button @click="deleteMethod(method.method_id)" class="text-red-600 hover:text-red-900">Delete</button>
+                                        <button
+                                            @click="toggleMethodActive(method)"
+                                            :class="Boolean(method.is_active) ? 'text-amber-700 hover:text-amber-900' : 'text-emerald-700 hover:text-emerald-900'"
+                                        >
+                                            {{ Boolean(method.is_active) ? 'Deactivate' : 'Activate' }}
+                                        </button>
                                     </div>
                                 </td>
                             </tr>

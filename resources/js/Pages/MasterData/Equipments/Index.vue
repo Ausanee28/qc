@@ -10,17 +10,27 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const defaultFilters = {
     search: '',
+    status: 'all',
     per_page: '20',
 };
 const filterForm = reactive({
     ...defaultFilters,
     search: props.filters?.search ?? defaultFilters.search,
+    status: props.filters?.status ?? defaultFilters.status,
     per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 const equipmentRows = computed(() => props.equipments?.data ?? []);
 const equipmentLinks = computed(() => props.equipments?.links ?? []);
 const reloadOnly = ['equipments', 'filters', 'flash'];
 const invalidateCacheTags = ['master-data', 'master-data:equipments', 'master-data:test-methods'];
+const statusLabels = {
+    true: 'Active',
+    false: 'Inactive',
+};
+const statusBadge = {
+    true: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+    false: 'bg-rose-100 text-rose-700 border border-rose-200',
+};
 
 const form = useForm({
     equipment_id: null,
@@ -29,6 +39,7 @@ const form = useForm({
 
 const filterPayload = () => ({
     search: filterForm.search,
+    status: filterForm.status,
     per_page: filterForm.per_page,
 });
 
@@ -93,14 +104,21 @@ const submit = () => {
     }
 };
 
-const deleteEquipment = (id) => {
-    if (confirm('Are you sure you want to delete this equipment?')) {
-        form.delete(route('master-data.equipments.destroy', id), {
-            only: reloadOnly,
-            invalidateCacheTags,
-            preserveScroll: true,
-        });
+const toggleEquipmentActive = (equipment) => {
+    const nextIsActive = !Boolean(equipment.is_active);
+    const actionLabel = nextIsActive ? 'activate' : 'deactivate';
+
+    if (!confirm(`Are you sure you want to ${actionLabel} this equipment?`)) {
+        return;
     }
+
+    router.patch(route('master-data.equipments.set-active', equipment.equipment_id), {
+        is_active: nextIsActive,
+    }, {
+        only: reloadOnly,
+        invalidateCacheTags,
+        preserveScroll: true,
+    });
 };
 </script>
 
@@ -142,6 +160,11 @@ const deleteEquipment = (id) => {
                         </div>
                         <input v-model="filterForm.search" type="text" placeholder="Search equipment name..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
+                    <select v-model="filterForm.status" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+                        <option value="all">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
                     <select v-model="filterForm.per_page" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
                         <option value="10">10 / page</option>
                         <option value="20">20 / page</option>
@@ -162,22 +185,33 @@ const deleteEquipment = (id) => {
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">ID</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Equipment Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-right pr-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
                             <tr v-if="equipmentRows.length === 0">
-                                <td colspan="3" class="px-6 py-10 text-center text-sm text-gray-500">
+                                <td colspan="4" class="px-6 py-10 text-center text-sm text-gray-500">
                                     {{ filterForm.search ? 'No results for "' + filterForm.search + '"' : 'No equipment found.' }}
                                 </td>
                             </tr>
                             <tr v-for="eq in equipmentRows" :key="eq.equipment_id" class="hover:bg-gray-50 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">#{{ eq.equipment_id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ eq.equipment_name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span :class="['inline-flex px-2.5 py-0.5 rounded-md text-xs font-medium', statusBadge[String(Boolean(eq.is_active))]]">
+                                        {{ statusLabels[String(Boolean(eq.is_active))] }}
+                                    </span>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right pr-6 text-sm font-medium">
                                     <div class="flex justify-end gap-4">
                                         <button @click="openEditModal(eq)" class="text-gray-900 hover:text-black underline decoration-gray-300 underline-offset-4">Edit</button>
-                                        <button @click="deleteEquipment(eq.equipment_id)" class="text-red-600 hover:text-red-900">Delete</button>
+                                        <button
+                                            @click="toggleEquipmentActive(eq)"
+                                            :class="Boolean(eq.is_active) ? 'text-amber-700 hover:text-amber-900' : 'text-emerald-700 hover:text-emerald-900'"
+                                        >
+                                            {{ Boolean(eq.is_active) ? 'Deactivate' : 'Activate' }}
+                                        </button>
                                     </div>
                                 </td>
                             </tr>

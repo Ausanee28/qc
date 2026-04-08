@@ -10,11 +10,13 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const defaultFilters = {
     search: '',
+    status: 'all',
     per_page: '20',
 };
 const filterForm = reactive({
     ...defaultFilters,
     search: props.filters?.search ?? defaultFilters.search,
+    status: props.filters?.status ?? defaultFilters.status,
     per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 const departmentOptions = computed(() => props.departments ?? []);
@@ -23,6 +25,14 @@ const externalUserRows = computed(() => props.externalUsers?.data ?? []);
 const externalUserLinks = computed(() => props.externalUsers?.links ?? []);
 const reloadOnly = ['externalUsers', 'filters', 'flash'];
 const invalidateCacheTags = ['master-data', 'master-data:external-users', 'master-data:departments', 'workflow'];
+const statusLabels = {
+    true: 'Active',
+    false: 'Inactive',
+};
+const statusBadge = {
+    true: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+    false: 'bg-rose-100 text-rose-700 border border-rose-200',
+};
 
 const form = useForm({
     external_id: null,
@@ -32,6 +42,7 @@ const form = useForm({
 
 const filterPayload = () => ({
     search: filterForm.search,
+    status: filterForm.status,
     per_page: filterForm.per_page,
 });
 
@@ -97,14 +108,21 @@ const submit = () => {
     }
 };
 
-const deleteUser = (id) => {
-    if (confirm('Are you sure you want to delete this external user?')) {
-        form.delete(route('master-data.external-users.destroy', id), {
-            only: reloadOnly,
-            invalidateCacheTags,
-            preserveScroll: true,
-        });
+const toggleExternalUserActive = (user) => {
+    const nextIsActive = !Boolean(user.is_active);
+    const actionLabel = nextIsActive ? 'activate' : 'deactivate';
+
+    if (!confirm(`Are you sure you want to ${actionLabel} this external user?`)) {
+        return;
     }
+
+    router.patch(route('master-data.external-users.set-active', user.external_id), {
+        is_active: nextIsActive,
+    }, {
+        only: reloadOnly,
+        invalidateCacheTags,
+        preserveScroll: true,
+    });
 };
 </script>
 
@@ -146,6 +164,11 @@ const deleteUser = (id) => {
                         </div>
                         <input v-model="filterForm.search" type="text" placeholder="Search name or department..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
+                    <select v-model="filterForm.status" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+                        <option value="all">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
                     <select v-model="filterForm.per_page" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
                         <option value="10">10 / page</option>
                         <option value="20">20 / page</option>
@@ -167,12 +190,13 @@ const deleteUser = (id) => {
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">ID</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Department</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-right pr-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
                             <tr v-if="externalUserRows.length === 0">
-                                <td colspan="4" class="px-6 py-10 text-center text-sm text-gray-500">
+                                <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
                                     {{ filterForm.search ? 'No results for "' + filterForm.search + '"' : 'No external users found.' }}
                                 </td>
                             </tr>
@@ -184,10 +208,20 @@ const deleteUser = (id) => {
                                         {{ user.department?.department_name ?? '-' }}
                                     </span>
                                 </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span :class="['inline-flex px-2.5 py-0.5 rounded-md text-xs font-medium', statusBadge[String(Boolean(user.is_active))]]">
+                                        {{ statusLabels[String(Boolean(user.is_active))] }}
+                                    </span>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right pr-6 text-sm font-medium">
                                     <div class="flex justify-end gap-4">
                                         <button @click="openEditModal(user)" class="text-gray-900 hover:text-black underline decoration-gray-300 underline-offset-4">Edit</button>
-                                        <button @click="deleteUser(user.external_id)" class="text-red-600 hover:text-red-900">Delete</button>
+                                        <button
+                                            @click="toggleExternalUserActive(user)"
+                                            :class="Boolean(user.is_active) ? 'text-amber-700 hover:text-amber-900' : 'text-emerald-700 hover:text-emerald-900'"
+                                        >
+                                            {{ Boolean(user.is_active) ? 'Deactivate' : 'Activate' }}
+                                        </button>
                                     </div>
                                 </td>
                             </tr>

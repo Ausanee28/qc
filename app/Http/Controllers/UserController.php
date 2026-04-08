@@ -143,6 +143,10 @@ class UserController extends Controller
 
     public function destroy($id)
     {
+        if (SchemaCapabilities::hasColumn('Internal_Users', 'is_active')) {
+            return redirect()->back()->with('error', 'Delete is disabled. Please change status instead.');
+        }
+
         $user = User::findOrFail($id);
         $hasDetailDeletedAt = SchemaCapabilities::hasColumn('Transaction_Detail', 'deleted_at');
         $hasHeaderDeletedAt = SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at');

@@ -409,7 +409,9 @@ const toggleJobStatus = (job) => {
 
                 <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div class="text-sm text-gray-600">
-                            Showing {{ jobPaginator?.from ?? 0 }} to {{ jobPaginator?.to ?? 0 }} of {{ jobPaginator?.total ?? 0 }} jobs
+                            Showing {{ jobPaginator?.from ?? 0 }} to {{ jobPaginator?.to ?? 0 }}
+                            <span v-if="typeof jobPaginator?.total === 'number'">of {{ jobPaginator.total }}</span>
+                            jobs
                         </div>
                         <div class="flex flex-wrap justify-end gap-2">
                             <button

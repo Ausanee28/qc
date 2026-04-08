@@ -28,6 +28,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Execute Test
     Route::get('/execute-test', [ExecuteTestController::class , 'create'])->name('execute-test.create');
+    Route::get('/execute-test/pending-jobs', [ExecuteTestController::class, 'pendingJobs'])
+        ->middleware('throttle:600,1')
+        ->name('execute-test.pending-jobs');
     Route::get('/execute-test/pending-jobs-version', [ExecuteTestController::class, 'pendingJobsVersion'])
         ->middleware('throttle:600,1')
         ->name('execute-test.pending-jobs-version');
@@ -60,13 +63,21 @@ Route::middleware(['auth'])->group(function () {
 
     // Master Data
     Route::prefix('master-data')->middleware('admin')->name('master-data.')->group(function () {
-        Route::resource('departments', \App\Http\Controllers\DepartmentController::class)->except(['create', 'show', 'edit']);
-        Route::resource('equipments', \App\Http\Controllers\EquipmentController::class)->except(['create', 'show', 'edit']);
-        Route::resource('test-methods', \App\Http\Controllers\TestMethodController::class)->except(['create', 'show', 'edit']);
-        Route::resource('users', \App\Http\Controllers\UserController::class)->except(['create', 'show', 'edit']);
+        Route::resource('departments', \App\Http\Controllers\DepartmentController::class)->except(['create', 'show', 'edit', 'destroy']);
+        Route::patch('departments/{department}/active', [\App\Http\Controllers\DepartmentController::class, 'setActive'])->name('departments.set-active');
+
+        Route::resource('equipments', \App\Http\Controllers\EquipmentController::class)->except(['create', 'show', 'edit', 'destroy']);
+        Route::patch('equipments/{equipment}/active', [\App\Http\Controllers\EquipmentController::class, 'setActive'])->name('equipments.set-active');
+
+        Route::resource('test-methods', \App\Http\Controllers\TestMethodController::class)->except(['create', 'show', 'edit', 'destroy']);
+        Route::patch('test-methods/{test_method}/active', [\App\Http\Controllers\TestMethodController::class, 'setActive'])->name('test-methods.set-active');
+
+        Route::resource('users', \App\Http\Controllers\UserController::class)->except(['create', 'show', 'edit', 'destroy']);
         Route::patch('users/{user}/active', [\App\Http\Controllers\UserController::class, 'setActive'])->name('users.set-active');
         Route::post('users/{user}/reset-password', [\App\Http\Controllers\UserController::class, 'resetPassword'])->name('users.reset-password');
-        Route::resource('external-users', \App\Http\Controllers\ExternalUserController::class)->except(['create', 'show', 'edit']);
+        
+        Route::resource('external-users', \App\Http\Controllers\ExternalUserController::class)->except(['create', 'show', 'edit', 'destroy']);
+        Route::patch('external-users/{external_user}/active', [\App\Http\Controllers\ExternalUserController::class, 'setActive'])->name('external-users.set-active');
     });
 });
 

@@ -371,7 +371,7 @@ const doExport = async () => {
                 <div class="modal-card">
                     <div class="modal-header">
                         <h3 class="modal-title">Export to Excel</h3>
-                        <button class="modal-close" @click="showExportModal = false">ร—</button>
+                        <button class="modal-close" @click="showExportModal = false">&times;</button>
                     </div>
                     <div class="modal-body">
                         <label class="modal-label">File name</label>
@@ -856,12 +856,16 @@ const doExport = async () => {
 :global(.theme-shell[data-theme='light'] .report-toolbar__hint),
 :global(.theme-shell[data-theme='light'] .modal-hint),
 :global(.theme-shell[data-theme='light'] .modal-label),
-:global(.theme-shell[data-theme='light'] .modal-close) {
+:global(.theme-shell[data-theme='light'] .modal-close),
+:global(html[data-theme='light'] .modal-hint),
+:global(html[data-theme='light'] .modal-label),
+:global(html[data-theme='light'] .modal-close) {
     color: #475569;
 }
 
 :global(.theme-shell[data-theme='light'] .report-meta__stats strong),
-:global(.theme-shell[data-theme='light'] .modal-title) {
+:global(.theme-shell[data-theme='light'] .modal-title),
+:global(html[data-theme='light'] .modal-title) {
     color: #0f172a;
 }
 
@@ -907,39 +911,79 @@ const doExport = async () => {
     accent-color: #1d4ed8;
 }
 
-:global(.theme-shell[data-theme='light'] .modal-overlay) {
+:global(.theme-shell[data-theme='light'] .modal-overlay),
+:global(html[data-theme='light'] .modal-overlay) {
     background: rgba(15, 23, 42, 0.16);
 }
 
-:global(.theme-shell[data-theme='light'] .modal-card) {
+:global(.theme-shell[data-theme='light'] .modal-card),
+:global(html[data-theme='light'] .modal-card) {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 252, 0.97));
     border-color: rgba(15, 23, 42, 0.08);
     box-shadow: 0 28px 70px rgba(15, 23, 42, 0.14);
 }
 
-:global(.theme-shell[data-theme='light'] .modal-close:hover) {
+:global(.theme-shell[data-theme='light'] .modal-header),
+:global(.theme-shell[data-theme='light'] .modal-footer),
+:global(html[data-theme='light'] .modal-header),
+:global(html[data-theme='light'] .modal-footer) {
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+:global(.theme-shell[data-theme='light'] .modal-close:hover),
+:global(html[data-theme='light'] .modal-close:hover) {
     background: rgba(219, 234, 254, 0.92);
     color: #1d4ed8;
 }
 
 :global(.theme-shell[data-theme='light'] .modal-input),
-:global(.theme-shell[data-theme='light'] .modal-select) {
+:global(.theme-shell[data-theme='light'] .modal-select),
+:global(html[data-theme='light'] .modal-input),
+:global(html[data-theme='light'] .modal-select) {
     background: rgba(255, 255, 255, 0.96);
     border-color: rgba(15, 23, 42, 0.08);
     color: #0f172a;
 }
 
 :global(.theme-shell[data-theme='light'] .modal-input:focus),
-:global(.theme-shell[data-theme='light'] .modal-select:focus) {
+:global(.theme-shell[data-theme='light'] .modal-select:focus),
+:global(html[data-theme='light'] .modal-input:focus),
+:global(html[data-theme='light'] .modal-select:focus) {
     border-color: rgba(29, 78, 216, 0.28);
     box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
     background: rgba(255, 255, 255, 0.99);
 }
 
-:global(.theme-shell[data-theme='light'] .modal-ext) {
+:global(.theme-shell[data-theme='light'] .modal-ext),
+:global(html[data-theme='light'] .modal-ext) {
     background: rgba(241, 245, 249, 0.96);
     border-color: rgba(15, 23, 42, 0.08);
     color: #475569;
+}
+
+:global(.theme-shell[data-theme='light'] .modal-footer .export-btn-outline),
+:global(html[data-theme='light'] .modal-footer .export-btn-outline) {
+    background: rgba(255, 255, 255, 0.94);
+    color: #0f172a;
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+:global(.theme-shell[data-theme='light'] .modal-footer .export-btn-outline:hover),
+:global(html[data-theme='light'] .modal-footer .export-btn-outline:hover) {
+    background: rgba(239, 246, 255, 0.96);
+    border-color: rgba(29, 78, 216, 0.16);
+}
+
+:global(.theme-shell[data-theme='light'] .modal-footer .export-btn-primary),
+:global(html[data-theme='light'] .modal-footer .export-btn-primary) {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    color: #ffffff;
+    box-shadow: 0 14px 26px rgba(29, 78, 216, 0.18);
+}
+
+:global(.theme-shell[data-theme='light'] .modal-footer .export-btn-primary:hover),
+:global(html[data-theme='light'] .modal-footer .export-btn-primary:hover) {
+    box-shadow: 0 18px 30px rgba(29, 78, 216, 0.22);
 }
 
 @media (max-width: 900px) {

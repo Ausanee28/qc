@@ -10,7 +10,10 @@ class Equipment extends Model
     protected $table = 'Equipments';
     protected $primaryKey = 'equipment_id';
     public $timestamps = false;
-    protected $fillable = ['equipment_name'];
+    protected $fillable = ['equipment_name', 'is_active'];
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 
     public function transactionHeaders(): HasMany
     {

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\PendingJobsVersion;
 use App\Support\DashboardCache;
 use App\Support\AuditLogger;
+use App\Support\SearchTerm;
 use App\Support\SchemaCapabilities;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,8 @@ use Inertia\Inertia;
 class ExecuteTestController extends Controller
 {
     private const DEFAULT_RESULTS_CACHE_KEY = 'execute_test.results.default.active.per_page_20';
+    private const PENDING_JOBS_WINDOW = 500;
+    private const PENDING_JOBS_PAGE_SIZE = 50;
 
     public function create(Request $request)
     {
@@ -52,8 +55,9 @@ class ExecuteTestController extends Controller
 
         return Inertia::render('ExecuteTest/Create', [
             'pendingJobs' => fn () => Cache::remember('execute_test.pending_jobs.active', now()->addSeconds(30), function () {
-                return TransactionHeader::whereNull('return_date')
+                return $this->pendingJobsQuery('')
                     ->orderByDesc('receive_date')
+                    ->limit(self::PENDING_JOBS_WINDOW)
                     ->get(['transaction_id', 'dmc', 'line', 'detail'])
                     ->map(fn ($job) => [
                         'transaction_id' => $job->transaction_id,
@@ -63,8 +67,13 @@ class ExecuteTestController extends Controller
                     ]);
             }),
             'pendingJobsCount' => fn () => Cache::remember('execute_test.pending_jobs_count.active', now()->addSeconds(30), fn () => TransactionHeader::whereNull('return_date')->count()),
+            'pendingJobsWindow' => self::PENDING_JOBS_WINDOW,
+            'pendingJobsPageSize' => self::PENDING_JOBS_PAGE_SIZE,
             'pendingJobsVersion' => fn () => $this->pendingJobsVersionToken(),
-            'methods' => fn () => Cache::remember('execute_test.methods', now()->addMinutes(10), fn () => TestMethod::orderBy('method_name')->get()),
+            'methods' => fn () => Cache::remember('execute_test.methods', now()->addMinutes(10), fn () => TestMethod::query()
+                ->when(SchemaCapabilities::hasColumn('Test_Methods', 'is_active'), fn ($query) => $query->where('is_active', true))
+                ->orderBy('method_name')
+                ->get()),
             'inspectors' => fn () => Cache::remember('execute_test.inspectors', now()->addMinutes(10), fn () => User::query()
                 ->when(SchemaCapabilities::hasColumn('Internal_Users', 'is_active'), fn ($query) => $query->where('is_active', true))
                 ->orderBy('name')
@@ -77,6 +86,46 @@ class ExecuteTestController extends Controller
     public function pendingJobsVersion(): JsonResponse
     {
         return response()->json([
+            'version' => $this->pendingJobsVersionToken(),
+        ]);
+    }
+
+    public function pendingJobs(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'search' => 'nullable|string|max:255',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|in:20,50',
+        ]);
+
+        $search = trim((string) ($validated['search'] ?? ''));
+        $page = max(1, (int) ($validated['page'] ?? 1));
+        $perPage = (int) ($validated['per_page'] ?? self::PENDING_JOBS_PAGE_SIZE);
+
+        $paginator = $this->pendingJobsQuery($search)
+            ->orderByDesc('receive_date')
+            ->simplePaginate($perPage, ['transaction_id', 'dmc', 'line', 'detail'], 'page', $page);
+
+        return response()->json([
+            'items' => $paginator->getCollection()->map(fn ($job) => [
+                'transaction_id' => $job->transaction_id,
+                'dmc' => $job->dmc,
+                'line' => $job->line,
+                'detail' => $job->detail,
+            ])->values(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'has_more_pages' => $paginator->hasMorePages(),
+                'next_page_url' => $paginator->nextPageUrl(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+                'search' => $search,
+                'open_jobs_count' => Cache::remember(
+                    'execute_test.pending_jobs_count.active',
+                    now()->addSeconds(30),
+                    fn () => TransactionHeader::whereNull('return_date')->count()
+                ),
+            ],
             'version' => $this->pendingJobsVersionToken(),
         ]);
     }
@@ -295,6 +344,41 @@ class ExecuteTestController extends Controller
         return PendingJobsVersion::current();
     }
 
+    private function pendingJobsQuery(string $search)
+    {
+        $query = TransactionHeader::query()
+            ->whereNull('return_date');
+
+        if ($search === '') {
+            return $query;
+        }
+
+        if (ctype_digit($search)) {
+            return $query->where('transaction_id', (int) $search);
+        }
+
+        if (SearchTerm::canUseFullText($search)) {
+            $term = SearchTerm::toBooleanTerm($search);
+
+            if ($term !== '') {
+                return $query->where(function ($subQuery) use ($term, $search) {
+                    $subQuery
+                        ->whereRaw("MATCH(detail, dmc, line) AGAINST (? IN BOOLEAN MODE)", [$term])
+                        ->orWhere('dmc', 'like', "%{$search}%")
+                        ->orWhere('line', 'like', "%{$search}%")
+                        ->orWhere('detail', 'like', "%{$search}%");
+                });
+            }
+        }
+
+        return $query->where(function ($subQuery) use ($search) {
+            $subQuery
+                ->where('dmc', 'like', "%{$search}%")
+                ->orWhere('line', 'like', "%{$search}%")
+                ->orWhere('detail', 'like', "%{$search}%");
+        });
+    }
+
     private function forgetPerformanceCaches(): void
     {
         Cache::forget('execute_test.pending_jobs.active');
@@ -342,18 +426,38 @@ class ExecuteTestController extends Controller
             ->selectRaw('IU.name as joined_inspector_name')
             ->when($filters['search'] !== '', function ($query) use ($filters) {
                 $search = $filters['search'];
-
                 $query->where(function ($subQuery) use ($search) {
-                    $subQuery->where('detail_id', 'like', "%{$search}%")
-                        ->orWhere('transaction_id', 'like', "%{$search}%")
-                        ->orWhere('remark', 'like', "%{$search}%")
-                        ->orWhere('max_value', 'like', "%{$search}%")
-                        ->orWhere('min_value', 'like', "%{$search}%")
-                        ->orWhere('TM.method_name', 'like', "%{$search}%")
-                        ->orWhere('IU.name', 'like', "%{$search}%")
-                        ->orWhere('TH.detail', 'like', "%{$search}%")
-                        ->orWhere('TH.dmc', 'like', "%{$search}%")
-                        ->orWhere('TH.line', 'like', "%{$search}%");
+                    $applyLikeSearch = static function ($likeQuery) use ($search): void {
+                        $likeQuery->where('detail_id', 'like', "%{$search}%")
+                            ->orWhere('transaction_id', 'like', "%{$search}%")
+                            ->orWhere('remark', 'like', "%{$search}%")
+                            ->orWhere('max_value', 'like', "%{$search}%")
+                            ->orWhere('min_value', 'like', "%{$search}%")
+                            ->orWhere('TM.method_name', 'like', "%{$search}%")
+                            ->orWhere('IU.name', 'like', "%{$search}%")
+                            ->orWhere('TH.detail', 'like', "%{$search}%")
+                            ->orWhere('TH.dmc', 'like', "%{$search}%")
+                            ->orWhere('TH.line', 'like', "%{$search}%");
+                    };
+
+                    if (SearchTerm::canUseFullText($search)) {
+                        $term = SearchTerm::toBooleanTerm($search);
+                        if ($term !== '') {
+                            $subQuery
+                                ->whereRaw("MATCH(Transaction_Detail.remark, Transaction_Detail.max_value, Transaction_Detail.min_value) AGAINST (? IN BOOLEAN MODE)", [$term])
+                                ->orWhereRaw("MATCH(TM.method_name) AGAINST (? IN BOOLEAN MODE)", [$term])
+                                ->orWhereRaw("MATCH(IU.name) AGAINST (? IN BOOLEAN MODE)", [$term])
+                                ->orWhereRaw("MATCH(TH.detail, TH.dmc, TH.line) AGAINST (? IN BOOLEAN MODE)", [$term]);
+
+                            $subQuery->orWhere(function ($likeQuery) use ($applyLikeSearch) {
+                                $applyLikeSearch($likeQuery);
+                            });
+
+                            return;
+                        }
+                    }
+
+                    $applyLikeSearch($subQuery);
                 });
             })
             ->when(
@@ -363,7 +467,7 @@ class ExecuteTestController extends Controller
             ->when($filters['date_from'] !== '', fn ($query) => $query->where('start_time', '>=', Carbon::parse($filters['date_from'])->startOfDay()))
             ->when($filters['date_to'] !== '', fn ($query) => $query->where('start_time', '<=', Carbon::parse($filters['date_to'])->endOfDay()))
             ->orderByDesc('Transaction_Detail.detail_id')
-            ->paginate($filters['per_page'])
+            ->simplePaginate($filters['per_page'])
             ->withQueryString()
             ->through(fn (TransactionDetail $detail) => [
                 'detail_id' => $detail->detail_id,

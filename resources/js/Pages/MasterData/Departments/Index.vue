@@ -10,17 +10,27 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const defaultFilters = {
     search: '',
+    status: 'all',
     per_page: '20',
 };
 const filterForm = reactive({
     ...defaultFilters,
     search: props.filters?.search ?? defaultFilters.search,
+    status: props.filters?.status ?? defaultFilters.status,
     per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 const departmentRows = computed(() => props.departments?.data ?? []);
 const departmentLinks = computed(() => props.departments?.links ?? []);
 const reloadOnly = ['departments', 'filters', 'flash'];
 const invalidateCacheTags = ['master-data', 'master-data:departments', 'master-data:external-users'];
+const statusLabels = {
+    true: 'Active',
+    false: 'Inactive',
+};
+const statusBadge = {
+    true: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+    false: 'bg-rose-100 text-rose-700 border border-rose-200',
+};
 
 const form = useForm({
     department_id: null,
@@ -30,6 +40,7 @@ const form = useForm({
 
 const filterPayload = () => ({
     search: filterForm.search,
+    status: filterForm.status,
     per_page: filterForm.per_page,
 });
 
@@ -95,14 +106,21 @@ const submit = () => {
     }
 };
 
-const deleteDepartment = (id) => {
-    if (confirm('Are you sure you want to delete this department?')) {
-        form.delete(route('master-data.departments.destroy', id), {
-            only: reloadOnly,
-            invalidateCacheTags,
-            preserveScroll: true,
-        });
+const toggleDepartmentActive = (department) => {
+    const nextIsActive = !Boolean(department.is_active);
+    const actionLabel = nextIsActive ? 'activate' : 'deactivate';
+
+    if (!confirm(`Are you sure you want to ${actionLabel} this department?`)) {
+        return;
     }
+
+    router.patch(route('master-data.departments.set-active', department.department_id), {
+        is_active: nextIsActive,
+    }, {
+        only: reloadOnly,
+        invalidateCacheTags,
+        preserveScroll: true,
+    });
 };
 </script>
 
@@ -144,6 +162,11 @@ const deleteDepartment = (id) => {
                         </div>
                         <input v-model="filterForm.search" type="text" placeholder="Search department or phone..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                     </div>
+                    <select v-model="filterForm.status" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+                        <option value="all">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
                     <select v-model="filterForm.per_page" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
                         <option value="10">10 / page</option>
                         <option value="20">20 / page</option>
@@ -165,12 +188,13 @@ const deleteDepartment = (id) => {
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">ID</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Department Name</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Internal Phone</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-right pr-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
                             <tr v-if="departmentRows.length === 0">
-                                <td colspan="4" class="px-6 py-10 text-center text-sm text-gray-500">
+                                <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
                                     {{ filterForm.search ? 'No results for "' + filterForm.search + '"' : 'No departments found.' }}
                                 </td>
                             </tr>
@@ -178,10 +202,20 @@ const deleteDepartment = (id) => {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">#{{ dept.department_id }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ dept.department_name }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">{{ dept.internal_phone || '-' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span :class="['inline-flex px-2.5 py-0.5 rounded-md text-xs font-medium', statusBadge[String(Boolean(dept.is_active))]]">
+                                        {{ statusLabels[String(Boolean(dept.is_active))] }}
+                                    </span>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right pr-6 text-sm font-medium">
                                     <div class="flex justify-end gap-4">
                                         <button @click="openEditModal(dept)" class="text-gray-900 hover:text-black underline decoration-gray-300 underline-offset-4">Edit</button>
-                                        <button @click="deleteDepartment(dept.department_id)" class="text-red-600 hover:text-red-900">Delete</button>
+                                        <button
+                                            @click="toggleDepartmentActive(dept)"
+                                            :class="Boolean(dept.is_active) ? 'text-amber-700 hover:text-amber-900' : 'text-emerald-700 hover:text-emerald-900'"
+                                        >
+                                            {{ Boolean(dept.is_active) ? 'Deactivate' : 'Activate' }}
+                                        </button>
                                     </div>
                                 </td>
                             </tr>

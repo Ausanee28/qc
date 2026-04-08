@@ -15,6 +15,7 @@ class SchemaCapabilities
      * @var array<string, bool>
      */
     private static array $columnExistsCache = [];
+    private static array $tableExistsCache = [];
     private const CACHE_TTL_SECONDS = 900;
 
     public static function hasColumn(string $table, string $column): bool
@@ -40,6 +41,27 @@ class SchemaCapabilities
         return self::$columnExistsCache[$key];
     }
 
+    public static function hasTable(string $table): bool
+    {
+        if (array_key_exists($table, self::$tableExistsCache)) {
+            return self::$tableExistsCache[$table];
+        }
+
+        $persistentKey = self::persistentTableCacheKey($table);
+
+        try {
+            self::$tableExistsCache[$table] = (bool) Cache::remember(
+                $persistentKey,
+                now()->addSeconds(self::CACHE_TTL_SECONDS),
+                static fn () => Schema::hasTable($table)
+            );
+        } catch (\Throwable) {
+            self::$tableExistsCache[$table] = false;
+        }
+
+        return self::$tableExistsCache[$table];
+    }
+
     private static function persistentCacheKey(string $table, string $column): string
     {
         $connection = DB::connection();
@@ -47,5 +69,14 @@ class SchemaCapabilities
         $databaseName = (string) ($connection->getDatabaseName() ?? 'default');
 
         return "schema.capability.{$connectionName}.{$databaseName}.{$table}.{$column}";
+    }
+
+    private static function persistentTableCacheKey(string $table): string
+    {
+        $connection = DB::connection();
+        $connectionName = (string) $connection->getName();
+        $databaseName = (string) ($connection->getDatabaseName() ?? 'default');
+
+        return "schema.table.{$connectionName}.{$databaseName}.{$table}";
     }
 }

@@ -1,12 +1,13 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { getEcho } from '@/lib/realtime';
 
 const props = defineProps({
     pendingJobs: Array,
     pendingJobsCount: Number,
+    pendingJobsWindow: Number,
     pendingJobsVersion: String,
     methods: Array,
     inspectors: Array,
@@ -25,6 +26,8 @@ const checkingPendingJobsVersion = ref(false);
 const pendingJobsSyncIntervalActiveMs = 30000;
 const pendingJobsSyncIntervalHiddenMs = 90000;
 const currentPendingJobsVersion = ref(props.pendingJobsVersion ?? '');
+const openJobCountState = ref(Number(props.pendingJobsCount ?? 0));
+const pendingJobsState = ref(Array.isArray(props.pendingJobs) ? props.pendingJobs : []);
 const defaultFilters = {
     search: '',
     judgement: 'all',
@@ -68,9 +71,10 @@ const filterForm = reactive({
     per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 
-const pendingJobOptions = computed(() => props.pendingJobs ?? []);
+const pendingJobOptions = computed(() => pendingJobsState.value ?? []);
 const pendingJobsReady = computed(() => Array.isArray(props.pendingJobs));
-const openJobCount = computed(() => Number(props.pendingJobsCount ?? pendingJobOptions.value.length ?? 0));
+const pendingJobsWindow = computed(() => Number(props.pendingJobsWindow ?? pendingJobOptions.value.length ?? 0));
+const openJobCount = computed(() => Number(openJobCountState.value ?? pendingJobOptions.value.length ?? 0));
 const methodOptions = computed(() => props.methods ?? []);
 const inspectorOptions = computed(() => props.inspectors ?? []);
 const methodOptionsReady = computed(() => Array.isArray(props.methods));
@@ -456,6 +460,24 @@ onBeforeUnmount(() => {
     pendingJobsEchoConnection = null;
     pendingJobsEchoConnectionStateHandler = null;
 });
+
+watch(
+    () => props.pendingJobs,
+    (nextJobs) => {
+        pendingJobsState.value = Array.isArray(nextJobs) ? nextJobs : [];
+    },
+    { immediate: true }
+);
+
+watch(
+    () => props.pendingJobsCount,
+    (count) => {
+        if (Number.isFinite(Number(count))) {
+            openJobCountState.value = Number(count);
+        }
+    },
+    { immediate: true }
+);
 </script>
 
 <template>
@@ -506,12 +528,27 @@ onBeforeUnmount(() => {
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
                                 <label class="form-lbl" style="margin-bottom:0">Open Job *</label>
                             </div>
-                            <select ref="jobSelectRef" v-model="form.transaction_id" required :disabled="!pendingJobsReady" class="form-inp" style="padding:10px 12px">
-                                <option value="" disabled>{{ pendingJobsReady ? 'Select job...' : 'Loading open jobs...' }}</option>
-                                <option v-for="j in pendingJobOptions" :key="j.transaction_id" :value="j.transaction_id">
-                                    #{{ j.transaction_id }} - {{ j.detail || 'No detail' }} {{ j.dmc ? `(${j.dmc})` : '' }}
+                            <input
+                                ref="jobSelectRef"
+                                v-model="form.transaction_id"
+                                required
+                                :disabled="!pendingJobsReady"
+                                :list="pendingJobsReady ? 'execute-test-pending-jobs' : undefined"
+                                placeholder="Type open job ID (e.g., 12345)"
+                                inputmode="numeric"
+                                pattern="[0-9]*"
+                                class="form-inp"
+                                style="padding:10px 12px"
+                            />
+                            <datalist id="execute-test-pending-jobs">
+                                <option v-for="j in pendingJobOptions" :key="j.transaction_id" :value="String(j.transaction_id)">
+                                    {{ j.detail || 'No detail' }} {{ j.dmc ? `(${j.dmc})` : '' }}
                                 </option>
-                            </select>
+                            </datalist>
+                            <div class="mt-1 text-xs text-gray-500">
+                                Suggestions show latest open jobs window ({{ pendingJobsWindow }}).
+                                Type any open job ID even if it is not in the suggestions.
+                            </div>
                             <div v-if="form.errors.transaction_id" class="mt-1 text-xs text-red-600">{{ form.errors.transaction_id }}</div>
                         </div>
                         <div>
@@ -708,7 +745,9 @@ onBeforeUnmount(() => {
 
                 <div class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div class="text-sm text-gray-600">
-                            Showing {{ resultPaginator?.from ?? 0 }} to {{ resultPaginator?.to ?? 0 }} of {{ resultPaginator?.total ?? 0 }} results
+                            Showing {{ resultPaginator?.from ?? 0 }} to {{ resultPaginator?.to ?? 0 }}
+                            <span v-if="typeof resultPaginator?.total === 'number'">of {{ resultPaginator.total }}</span>
+                            results
                         </div>
                         <div class="flex flex-wrap justify-end gap-2">
                             <button
