@@ -10,6 +10,19 @@ const inspectorRows = computed(() => props.inspectors ?? []);
 const detailRows = computed(() => props.details ?? []);
 const currentTheme = ref('dark');
 
+const toSec = (value) => {
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+
+    const n = Number(value);
+    if (!Number.isFinite(n)) {
+        return null;
+    }
+
+    return n;
+};
+
 const syncTheme = () => {
     if (typeof document === 'undefined') {
         return;
@@ -21,18 +34,34 @@ const syncTheme = () => {
 let themeObserver = null;
 
 const fmt = (sec) => {
-    if (!sec || sec < 0) return '-';
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = sec % 60;
+    const n = toSec(sec);
+    if (n === null || n < 0) return '-';
+
+    const h = Math.floor(n / 3600);
+    const m = Math.floor((n % 3600) / 60);
+    const s = Math.round(n % 60);
 
     return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
 };
 
 const fmtMin = (sec) => {
-    if (!sec || sec < 0) return '-';
+    const n = toSec(sec);
+    if (n === null || n < 0) return '-';
 
-    return `${Math.round(sec / 60)}m`;
+    if (n < 60) {
+        return `${Math.round(n)}s`;
+    }
+
+    return `${Math.round(n / 60)}m`;
+};
+
+const toMinutesForChart = (sec) => {
+    const n = toSec(sec);
+    if (n === null || n < 0) {
+        return 0;
+    }
+
+    return Number((n / 60).toFixed(2));
 };
 
 const perfOpts = computed(() => {
@@ -47,7 +76,16 @@ const perfOpts = computed(() => {
                 beginAtZero: true,
                 grid: { color: isLight ? 'rgba(15,23,42,0.10)' : 'rgba(255,255,255,0.08)' },
                 border: { color: isLight ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.1)' },
-                ticks: { color: isLight ? '#0f172a' : '#a8a29e', font: { size: 10 }, callback: (v) => `${v}m` },
+                ticks: {
+                    color: isLight ? '#0f172a' : '#a8a29e',
+                    font: { size: 10 },
+                    callback: (v) => {
+                        const minutes = Number(v);
+                        if (!Number.isFinite(minutes)) return `${v}`;
+                        if (minutes < 1) return `${Math.round(minutes * 60)}s`;
+                        return `${minutes}m`;
+                    },
+                },
             },
             y: {
                 grid: { display: false },
@@ -72,7 +110,7 @@ const perfOpts = computed(() => {
 const avgChartData = computed(() => ({
     labels: inspectorRows.value.map((inspector) => inspector.name),
     datasets: [{
-        data: inspectorRows.value.map((inspector) => Math.round((inspector.avg_sec || 0) / 60)),
+        data: inspectorRows.value.map((inspector) => toMinutesForChart(inspector.avg_sec)),
         backgroundColor: inspectorRows.value.map((_, index) => currentTheme.value === 'light'
             ? `rgba(29,78,216,${0.86 - index * 0.12})`
             : `rgba(245,158,11,${0.7 - index * 0.15})`),
@@ -84,7 +122,7 @@ const avgChartData = computed(() => ({
 const fastChartData = computed(() => ({
     labels: inspectorRows.value.map((inspector) => inspector.name),
     datasets: [{
-        data: inspectorRows.value.map((inspector) => Math.round((inspector.min_sec || 0) / 60)),
+        data: inspectorRows.value.map((inspector) => toMinutesForChart(inspector.min_sec)),
         backgroundColor: inspectorRows.value.map((_, index) => currentTheme.value === 'light'
             ? `rgba(59,130,246,${0.78 - index * 0.1})`
             : `rgba(251,146,60,${0.68 - index * 0.12})`),
@@ -96,7 +134,7 @@ const fastChartData = computed(() => ({
 const slowChartData = computed(() => ({
     labels: inspectorRows.value.map((inspector) => inspector.name),
     datasets: [{
-        data: inspectorRows.value.map((inspector) => Math.round((inspector.max_sec || 0) / 60)),
+        data: inspectorRows.value.map((inspector) => toMinutesForChart(inspector.max_sec)),
         backgroundColor: inspectorRows.value.map((_, index) => currentTheme.value === 'light'
             ? `rgba(30,64,175,${0.88 - index * 0.08})`
             : `rgba(120,53,15,${0.76 - index * 0.12})`),

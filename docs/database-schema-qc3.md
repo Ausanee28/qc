@@ -1,23 +1,26 @@
 # Database Schema Reference (qc3)
 
-- Generated at: 2026-04-07 08:27:09
+- Generated at: 2026-04-08 09:46:14
 - Driver: mariadb
 - Database: qc3
-- Table count: 9
+- Table count: 12
 
 ## Table List
 
 | Table | Approx. rows |
 |---|---:|
-| `Audit_Logs` | 46 |
+| `Audit_Logs` | 62 |
 | `Departments` | 5 |
 | `Equipments` | 7 |
 | `External_Users` | 3 |
-| `Internal_Users` | 3 |
-| `migrations` | 20 |
+| `Internal_Users` | 2 |
+| `migrations` | 30 |
+| `performance_daily_inspector_aggregates` | 2 |
+| `report_daily_aggregates` | 1 |
+| `report_monthly_aggregates` | 1 |
 | `Test_Methods` | 1 |
-| `Transaction_Detail` | 2 |
-| `Transaction_Header` | 1 |
+| `Transaction_Detail` | 8 |
+| `Transaction_Header` | 3 |
 
 ## Table Details
 
@@ -38,13 +41,13 @@
 
 **Indexes**
 
-| Index | Unique | Columns |
-|---|---|---|
-| `idx_audit_actor` | No | `performed_by` |
-| `idx_audit_created_at` | No | `created_at` |
-| `idx_audit_module_action` | No | `module`, `action` |
-| `idx_audit_record` | No | `record_type`, `record_id` |
-| `PRIMARY` | Yes | `audit_id` |
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `idx_audit_actor` | No | BTREE | `performed_by` |
+| `idx_audit_created_at` | No | BTREE | `created_at` |
+| `idx_audit_module_action` | No | BTREE | `module`, `action` |
+| `idx_audit_record` | No | BTREE | `record_type`, `record_id` |
+| `PRIMARY` | Yes | BTREE | `audit_id` |
 
 **Foreign Keys**
 
@@ -59,13 +62,19 @@
 | `department_id` | `int(10) unsigned` | NO | PRI | `NULL` | auto_increment |
 | `department_name` | `varchar(100)` | NO | MUL | `NULL` | - |
 | `internal_phone` | `varchar(255)` | YES | - | `NULL` | - |
+| `is_active` | `tinyint(1)` | NO | MUL | `1` | - |
 
 **Indexes**
 
-| Index | Unique | Columns |
-|---|---|---|
-| `idx_departments_name` | No | `department_name` |
-| `PRIMARY` | Yes | `department_id` |
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `idx_departments_active_name` | No | BTREE | `is_active`, `department_name` |
+| `idx_departments_name` | No | BTREE | `department_name` |
+| `PRIMARY` | Yes | BTREE | `department_id` |
+
+**Foreign Keys**
+
+None
 
 ### `Equipments`
 
@@ -73,13 +82,19 @@
 |---|---|---|---|---|---|
 | `equipment_id` | `int(10) unsigned` | NO | PRI | `NULL` | auto_increment |
 | `equipment_name` | `varchar(100)` | YES | MUL | `NULL` | - |
+| `is_active` | `tinyint(1)` | NO | MUL | `1` | - |
 
 **Indexes**
 
-| Index | Unique | Columns |
-|---|---|---|
-| `idx_equipments_name` | No | `equipment_name` |
-| `PRIMARY` | Yes | `equipment_id` |
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `idx_equipments_active_name` | No | BTREE | `is_active`, `equipment_name` |
+| `idx_equipments_name` | No | BTREE | `equipment_name` |
+| `PRIMARY` | Yes | BTREE | `equipment_id` |
+
+**Foreign Keys**
+
+None
 
 ### `External_Users`
 
@@ -88,14 +103,17 @@
 | `external_id` | `int(10) unsigned` | NO | PRI | `NULL` | auto_increment |
 | `external_name` | `varchar(100)` | NO | MUL | `NULL` | - |
 | `department_id` | `int(10) unsigned` | YES | MUL | `NULL` | - |
+| `is_active` | `tinyint(1)` | NO | MUL | `1` | - |
 
 **Indexes**
 
-| Index | Unique | Columns |
-|---|---|---|
-| `idx_external_users_dept_name` | No | `department_id`, `external_name` |
-| `idx_external_users_name` | No | `external_name` |
-| `PRIMARY` | Yes | `external_id` |
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `ft_eu_name` | No | FULLTEXT | `external_name` |
+| `idx_external_users_active_name` | No | BTREE | `is_active`, `external_name` |
+| `idx_external_users_dept_name` | No | BTREE | `department_id`, `external_name` |
+| `idx_external_users_name` | No | BTREE | `external_name` |
+| `PRIMARY` | Yes | BTREE | `external_id` |
 
 **Foreign Keys**
 
@@ -117,12 +135,17 @@
 
 **Indexes**
 
-| Index | Unique | Columns |
-|---|---|---|
-| `idx_internal_users_active_name` | No | `is_active`, `name` |
-| `idx_internal_users_name` | No | `name` |
-| `internal_users_is_active_idx` | No | `is_active` |
-| `PRIMARY` | Yes | `user_id` |
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `ft_iu_name` | No | FULLTEXT | `name` |
+| `idx_internal_users_active_name` | No | BTREE | `is_active`, `name` |
+| `idx_internal_users_name` | No | BTREE | `name` |
+| `internal_users_is_active_idx` | No | BTREE | `is_active` |
+| `PRIMARY` | Yes | BTREE | `user_id` |
+
+**Foreign Keys**
+
+None
 
 ### `migrations`
 
@@ -134,9 +157,84 @@
 
 **Indexes**
 
-| Index | Unique | Columns |
-|---|---|---|
-| `PRIMARY` | Yes | `id` |
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `PRIMARY` | Yes | BTREE | `id` |
+
+**Foreign Keys**
+
+None
+
+### `performance_daily_inspector_aggregates`
+
+| Column | Type | Null | Key | Default | Extra |
+|---|---|---|---|---|---|
+| `date_key` | `date` | NO | PRI | `NULL` | - |
+| `month_key` | `varchar(7)` | NO | MUL | `NULL` | - |
+| `internal_id` | `int(10) unsigned` | NO | PRI | `NULL` | - |
+| `total_tests` | `bigint(20) unsigned` | NO | - | `0` | - |
+| `ok_count` | `bigint(20) unsigned` | NO | - | `0` | - |
+| `ng_count` | `bigint(20) unsigned` | NO | - | `0` | - |
+| `duration_total_sec` | `bigint(20) unsigned` | NO | - | `0` | - |
+| `duration_samples` | `bigint(20) unsigned` | NO | - | `0` | - |
+| `min_duration_sec` | `int(10) unsigned` | YES | - | `NULL` | - |
+| `max_duration_sec` | `int(10) unsigned` | YES | - | `NULL` | - |
+| `aggregated_at` | `timestamp` | YES | - | `NULL` | - |
+
+**Indexes**
+
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `idx_pdia_month_internal` | No | BTREE | `month_key`, `internal_id` |
+| `PRIMARY` | Yes | BTREE | `date_key`, `internal_id` |
+
+**Foreign Keys**
+
+None
+
+### `report_daily_aggregates`
+
+| Column | Type | Null | Key | Default | Extra |
+|---|---|---|---|---|---|
+| `date_key` | `date` | NO | PRI | `NULL` | - |
+| `month_key` | `varchar(7)` | NO | MUL | `NULL` | - |
+| `dmc` | `varchar(255)` | NO | PRI | `''` | - |
+| `total_rows` | `bigint(20) unsigned` | NO | - | `0` | - |
+| `ok_count` | `bigint(20) unsigned` | NO | - | `0` | - |
+| `ng_count` | `bigint(20) unsigned` | NO | - | `0` | - |
+| `aggregated_at` | `timestamp` | YES | - | `NULL` | - |
+
+**Indexes**
+
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `idx_rda_month_dmc` | No | BTREE | `month_key`, `dmc` |
+| `PRIMARY` | Yes | BTREE | `date_key`, `dmc` |
+
+**Foreign Keys**
+
+None
+
+### `report_monthly_aggregates`
+
+| Column | Type | Null | Key | Default | Extra |
+|---|---|---|---|---|---|
+| `month_key` | `varchar(7)` | NO | PRI | `NULL` | - |
+| `dmc` | `varchar(255)` | NO | PRI | `''` | - |
+| `total_rows` | `bigint(20) unsigned` | NO | - | `0` | - |
+| `ok_count` | `bigint(20) unsigned` | NO | - | `0` | - |
+| `ng_count` | `bigint(20) unsigned` | NO | - | `0` | - |
+| `aggregated_at` | `timestamp` | YES | - | `NULL` | - |
+
+**Indexes**
+
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `PRIMARY` | Yes | BTREE | `month_key`, `dmc` |
+
+**Foreign Keys**
+
+None
 
 ### `Test_Methods`
 
@@ -145,14 +243,17 @@
 | `method_id` | `int(10) unsigned` | NO | PRI | `NULL` | auto_increment |
 | `method_name` | `varchar(100)` | NO | MUL | `NULL` | - |
 | `equipment_id` | `int(10) unsigned` | YES | MUL | `NULL` | - |
+| `is_active` | `tinyint(1)` | NO | MUL | `1` | - |
 
 **Indexes**
 
-| Index | Unique | Columns |
-|---|---|---|
-| `idx_test_methods_name` | No | `method_name` |
-| `PRIMARY` | Yes | `method_id` |
-| `test_methods_equipment_id_foreign` | No | `equipment_id` |
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `ft_tm_name` | No | FULLTEXT | `method_name` |
+| `idx_test_methods_active_name` | No | BTREE | `is_active`, `method_name` |
+| `idx_test_methods_name` | No | BTREE | `method_name` |
+| `PRIMARY` | Yes | BTREE | `method_id` |
+| `test_methods_equipment_id_foreign` | No | BTREE | `equipment_id` |
 
 **Foreign Keys**
 
@@ -174,23 +275,26 @@
 | `max_value` | `varchar(255)` | YES | - | `NULL` | - |
 | `min_value` | `varchar(255)` | YES | - | `NULL` | - |
 | `judgement` | `varchar(255)` | YES | MUL | `NULL` | - |
-| `remark` | `varchar(255)` | YES | - | `NULL` | - |
+| `remark` | `varchar(255)` | YES | MUL | `NULL` | - |
 | `deleted_at` | `timestamp` | YES | MUL | `NULL` | - |
 
 **Indexes**
 
-| Index | Unique | Columns |
-|---|---|---|
-| `idx_judgement` | No | `judgement` |
-| `idx_perf_detail` | No | `internal_id`, `start_time`, `end_time` |
-| `idx_td_deleted_at` | No | `deleted_at` |
-| `idx_td_deleted_internal_time` | No | `deleted_at`, `internal_id`, `start_time`, `end_time` |
-| `idx_td_deleted_judge_start_detail` | No | `deleted_at`, `judgement`, `start_time`, `detail_id` |
-| `idx_td_deleted_start_detail` | No | `deleted_at`, `start_time`, `detail_id` |
-| `idx_td_deleted_tx_judgement` | No | `deleted_at`, `transaction_id`, `judgement` |
-| `PRIMARY` | Yes | `detail_id` |
-| `transaction_detail_method_id_foreign` | No | `method_id` |
-| `transaction_detail_transaction_id_foreign` | No | `transaction_id` |
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `ft_td_search` | No | FULLTEXT | `remark`, `max_value`, `min_value` |
+| `idx_judgement` | No | BTREE | `judgement` |
+| `idx_perf_detail` | No | BTREE | `internal_id`, `start_time`, `end_time` |
+| `idx_td_deleted_at` | No | BTREE | `deleted_at` |
+| `idx_td_deleted_end_detail` | No | BTREE | `deleted_at`, `end_time`, `detail_id` |
+| `idx_td_deleted_internal_time` | No | BTREE | `deleted_at`, `internal_id`, `start_time`, `end_time` |
+| `idx_td_deleted_judge_start_detail` | No | BTREE | `deleted_at`, `judgement`, `start_time`, `detail_id` |
+| `idx_td_deleted_start_detail` | No | BTREE | `deleted_at`, `start_time`, `detail_id` |
+| `idx_td_deleted_start_internal` | No | BTREE | `deleted_at`, `start_time`, `internal_id` |
+| `idx_td_deleted_tx_judgement` | No | BTREE | `deleted_at`, `transaction_id`, `judgement` |
+| `PRIMARY` | Yes | BTREE | `detail_id` |
+| `transaction_detail_method_id_foreign` | No | BTREE | `method_id` |
+| `transaction_detail_transaction_id_foreign` | No | BTREE | `transaction_id` |
 
 **Foreign Keys**
 
@@ -207,7 +311,7 @@
 | `transaction_id` | `int(10) unsigned` | NO | PRI | `NULL` | auto_increment |
 | `external_id` | `int(10) unsigned` | NO | MUL | `NULL` | - |
 | `internal_id` | `int(10) unsigned` | NO | MUL | `NULL` | - |
-| `detail` | `text` | YES | - | `NULL` | - |
+| `detail` | `text` | YES | MUL | `NULL` | - |
 | `dmc` | `varchar(255)` | YES | - | `NULL` | - |
 | `line` | `varchar(255)` | YES | - | `NULL` | - |
 | `receive_date` | `datetime` | NO | MUL | `current_timestamp()` | - |
@@ -216,15 +320,16 @@
 
 **Indexes**
 
-| Index | Unique | Columns |
-|---|---|---|
-| `idx_dates` | No | `receive_date`, `return_date` |
-| `idx_th_deleted_at` | No | `deleted_at` |
-| `idx_th_deleted_receive` | No | `deleted_at`, `receive_date` |
-| `idx_th_return_deleted_receive` | No | `return_date`, `deleted_at`, `receive_date` |
-| `PRIMARY` | Yes | `transaction_id` |
-| `transaction_header_external_id_foreign` | No | `external_id` |
-| `transaction_header_internal_id_foreign` | No | `internal_id` |
+| Index | Unique | Type | Columns |
+|---|---|---|---|
+| `ft_th_search` | No | FULLTEXT | `detail`, `dmc`, `line` |
+| `idx_dates` | No | BTREE | `receive_date`, `return_date` |
+| `idx_th_deleted_at` | No | BTREE | `deleted_at` |
+| `idx_th_deleted_receive` | No | BTREE | `deleted_at`, `receive_date` |
+| `idx_th_return_deleted_receive` | No | BTREE | `return_date`, `deleted_at`, `receive_date` |
+| `PRIMARY` | Yes | BTREE | `transaction_id` |
+| `transaction_header_external_id_foreign` | No | BTREE | `external_id` |
+| `transaction_header_internal_id_foreign` | No | BTREE | `internal_id` |
 
 **Foreign Keys**
 
