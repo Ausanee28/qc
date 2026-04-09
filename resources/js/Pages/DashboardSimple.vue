@@ -1469,17 +1469,17 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 }
 
 :global(.theme-shell[data-theme='dark'] .fc--accent) {
-    border-color: rgba(255, 255, 255, 0.07) !important;
-    background: rgba(255, 255, 255, 0.03) !important;
-    box-shadow: none !important;
+    border-color: rgba(251, 146, 60, 0.32) !important;
+    background: linear-gradient(180deg, rgba(251, 146, 60, 0.1), rgba(251, 146, 60, 0.05)) !important;
+    box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.08), 0 10px 22px rgba(249, 115, 22, 0.18) !important;
 }
 
 :global(.theme-shell[data-theme='dark'] .fc--accent .fc__label) {
-    color: rgba(255, 255, 255, 0.5) !important;
+    color: #fdba74 !important;
 }
 
 :global(.theme-shell[data-theme='dark'] .card--forecast:hover) {
-    border-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(251, 146, 60, 0.24) !important;
 }
 
 :global(.theme-shell[data-theme='light'] .lb-rank) {
