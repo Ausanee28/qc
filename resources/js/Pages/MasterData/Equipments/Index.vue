@@ -28,8 +28,8 @@ const statusLabels = {
     false: 'Inactive',
 };
 const statusBadge = {
-    true: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
-    false: 'bg-rose-100 text-rose-700 border border-rose-200',
+    true: 'status-pill status-pill--active',
+    false: 'status-pill status-pill--inactive',
 };
 
 const form = useForm({
@@ -247,7 +247,7 @@ const toggleEquipmentActive = (equipment) => {
             </form>
             <template #actions>
                 <button type="button" @click="closeModal" class="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-stone-300 hover:bg-white/5">Cancel</button>
-                <button type="button" @click="submit" :disabled="form.processing" class="btn px-4 py-2 text-sm disabled:opacity-50">
+                <button type="button" @click="submit" :disabled="form.processing" class="btn btn-save px-4 py-2 text-sm disabled:opacity-50">
                     {{ form.processing ? 'Saving...' : 'Save Equipment' }}
                 </button>
             </template>

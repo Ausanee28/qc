@@ -528,26 +528,21 @@ watch(
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
                                 <label class="form-lbl" style="margin-bottom:0">Open Job *</label>
                             </div>
-                            <input
+                            <select
                                 ref="jobSelectRef"
                                 v-model="form.transaction_id"
                                 required
                                 :disabled="!pendingJobsReady"
-                                :list="pendingJobsReady ? 'execute-test-pending-jobs' : undefined"
-                                placeholder="Type open job ID (e.g., 12345)"
-                                inputmode="numeric"
-                                pattern="[0-9]*"
                                 class="form-inp"
                                 style="padding:10px 12px"
-                            />
-                            <datalist id="execute-test-pending-jobs">
+                            >
+                                <option value="" disabled>{{ pendingJobsReady ? '-- Select Open Job --' : 'Loading open jobs...' }}</option>
                                 <option v-for="j in pendingJobOptions" :key="j.transaction_id" :value="String(j.transaction_id)">
-                                    {{ j.detail || 'No detail' }} {{ j.dmc ? `(${j.dmc})` : '' }}
+                                    #{{ j.transaction_id }} - {{ j.detail || 'No detail' }}{{ j.dmc ? ` (${j.dmc})` : '' }}
                                 </option>
-                            </datalist>
+                            </select>
                             <div class="mt-1 text-xs text-gray-500">
-                                Suggestions show latest open jobs window ({{ pendingJobsWindow }}).
-                                Type any open job ID even if it is not in the suggestions.
+                                Showing latest open jobs window ({{ pendingJobsWindow }}) for quick selection.
                             </div>
                             <div v-if="form.errors.transaction_id" class="mt-1 text-xs text-red-600">{{ form.errors.transaction_id }}</div>
                         </div>
