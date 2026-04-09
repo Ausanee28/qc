@@ -131,6 +131,37 @@ class CertificatesAndPerformanceTest extends TestCase
         $this->assertSame(600, (int) data_get($inspector, 'avg_sec', -1));
     }
 
+    public function test_performance_page_ignores_stale_aggregate_when_live_rows_are_empty(): void
+    {
+        $user = User::factory()->create(['role' => 'inspector']);
+
+        DB::table('performance_daily_inspector_aggregates')->insert([
+            'date_key' => now()->subDay()->toDateString(),
+            'month_key' => now()->subDay()->format('Y-m'),
+            'internal_id' => $user->user_id,
+            'total_tests' => 3,
+            'ok_count' => 2,
+            'ng_count' => 1,
+            'duration_total_sec' => 0,
+            'duration_samples' => 3,
+            'min_duration_sec' => 0,
+            'max_duration_sec' => 0,
+            'aggregated_at' => now()->subDay(),
+        ]);
+
+        Cache::forget('performance.inspectors.30d');
+        Cache::forget('performance.details.30d.recent50');
+
+        $response = $this->actingAs($user)->get(route('performance.index'));
+
+        $response->assertOk();
+
+        $page = $response->viewData('page');
+        $inspectors = collect(data_get($page, 'props.inspectors', []));
+
+        $this->assertCount(0, $inspectors);
+    }
+
     private function seedMinimalWorkflowData(int $internalUserId): int
     {
         $departmentId = DB::table('Departments')->insertGetId([

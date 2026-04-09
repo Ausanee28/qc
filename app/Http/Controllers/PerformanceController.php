@@ -149,6 +149,10 @@ class PerformanceController extends Controller
 
         $latestDetailDate = $latestDetailDateQuery->value('latest_detail_date');
 
+        if ($latestDetailDate === null) {
+            return false;
+        }
+
         if ($latestDetailDate !== null && (string) $latestAggregateDate < (string) $latestDetailDate) {
             return false;
         }
