@@ -264,11 +264,12 @@ class ReportController extends Controller
         return $this->buildBaseResultsQuery($dateFrom, $dateTo, $dmc, $transactionIds)
             ->join('External_Users as EU', 'TH.external_id', '=', 'EU.external_id')
             ->join('Test_Methods as TM', 'TD.method_id', '=', 'TM.method_id')
+            ->leftJoin('Equipments as EQ', 'TM.equipment_id', '=', 'EQ.equipment_id')
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
             ->select(
                 'TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date',
                 'EU.external_name as sender', 'TH.detail',
-                'TM.method_name', 'IU.name as inspector',
+                'EQ.equipment_name', 'TM.method_name', 'IU.name as inspector',
                 'TD.start_time', 'TD.end_time', 'TD.judgement', 'TD.max_value', 'TD.min_value', 'TD.remark'
             )
             ->orderByDesc('TH.receive_date');
@@ -415,7 +416,7 @@ class ReportController extends Controller
                 'Detail',
                 'Receive Date',
                 'Sender',
-                'Process',
+                'Equipment',
                 'Inspector',
                 'Start Time',
                 'End Time',
@@ -433,7 +434,7 @@ class ReportController extends Controller
                 $r->detail ?? '',
                 $this->formatExportDate($r->receive_date),
                 $r->sender ?? '',
-                $r->method_name ?? '',
+                $r->equipment_name ?? '',
                 $r->inspector ?? '',
                 $this->formatExportTime($r->start_time),
                 $this->formatExportTime($r->end_time),
