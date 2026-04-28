@@ -109,6 +109,12 @@ class ReceiveJobController extends Controller
                     ->orderBy('name')
                     ->get(['user_id', 'name']);
             }),
+            'returningOutsiders' => fn () => TransactionHeader::whereNotNull('sender_leader')
+                ->select('sender_leader')
+                ->distinct()
+                ->orderBy('sender_leader')
+                ->get(),
+            'otherExternalId' => fn () => ExternalUser::where('external_name', 'อื่นๆ (Other)')->value('external_id'),
             'jobs' => fn () => $this->resolveJobsPayload($jobsQuery, $filters, $supportsHeaderSoftDeletes, $currentPage),
             'filters' => $filters,
         ]);
@@ -297,6 +303,10 @@ class ReceiveJobController extends Controller
 
     private function validatePayload(Request $request): array
     {
+        $isOther = \App\Models\ExternalUser::where('external_id', $request->input('external_id'))
+            ->where('external_name', 'อื่นๆ (Other)')
+            ->exists();
+
         $validated = $request->validate([
             'external_id' => 'required|exists:External_Users,external_id',
             'internal_id' => 'required|exists:Internal_Users,user_id',
@@ -305,6 +315,7 @@ class ReceiveJobController extends Controller
             'line' => 'nullable|string',
             'shift' => 'nullable|in:Day Shift,Night Shift',
             'model' => 'nullable|string',
+            'sender_leader' => $isOther ? 'required|string|max:255' : 'nullable|string|max:255',
         ]);
 
         if (SchemaCapabilities::hasColumn('Internal_Users', 'is_active')) {
@@ -414,6 +425,9 @@ class ReceiveJobController extends Controller
                 'line' => $job->line,
                 'shift' => $job->shift,
                 'model' => $job->model,
+                'sender_department' => $job->sender_department,
+                'sender_leader' => $job->sender_leader,
+                'sender_messenger' => $job->sender_messenger,
                 'receive_date' => $this->formatDisplayDateTime($job->receive_date),
                 'return_date' => $this->formatDisplayDateTime($job->return_date),
                 'deleted_at' => $supportsHeaderSoftDeletes ? $this->formatDisplayDateTime($job->deleted_at) : null,
@@ -445,6 +459,9 @@ class ReceiveJobController extends Controller
             'line' => $job->line,
             'shift' => $job->shift,
             'model' => $job->model,
+            'sender_department' => $job->sender_department,
+            'sender_leader' => $job->sender_leader,
+            'sender_messenger' => $job->sender_messenger,
             'receive_date' => optional($job->receive_date)->format('Y-m-d H:i:s'),
             'return_date' => optional($job->return_date)->format('Y-m-d H:i:s'),
             'deleted_at' => TransactionHeader::supportsSoftDeletes()

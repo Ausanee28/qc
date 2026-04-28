@@ -110,7 +110,7 @@ const placementMode = (template) => (
                 <div class="template-grid">
                     <div>
                         <label class="template-label">Template name</label>
-                        <input v-model="uploadForm.label" type="text" class="form-inp template-input" placeholder="e.g. Monthly QA Form" />
+                        <input v-model="uploadForm.label" type="text" class="form-inp template-input" />
                         <div v-if="uploadForm.errors.label" class="template-error">{{ uploadForm.errors.label }}</div>
                     </div>
                     <div>
@@ -120,18 +120,18 @@ const placementMode = (template) => (
                     </div>
                     <div>
                         <label class="template-label">Sheet name (optional)</label>
-                        <input v-model="uploadForm.sheet_name" type="text" class="form-inp template-input" placeholder="Leave blank for auto" />
+                        <input v-model="uploadForm.sheet_name" type="text" class="form-inp template-input" />
                         <div v-if="uploadForm.errors.sheet_name" class="template-error">{{ uploadForm.errors.sheet_name }}</div>
                     </div>
                     <div>
                         <label class="template-label">Start cell (optional)</label>
-                        <input v-model="uploadForm.start_cell" type="text" class="form-inp template-input" placeholder="e.g. B8" />
+                        <input v-model="uploadForm.start_cell" type="text" class="form-inp template-input" />
                         <div class="template-hint">If filled, system writes data from this cell directly.</div>
                         <div v-if="uploadForm.errors.start_cell" class="template-error">{{ uploadForm.errors.start_cell }}</div>
                     </div>
                     <div class="template-span-2">
                         <label class="template-label">Marker text</label>
-                        <input v-model="uploadForm.marker" type="text" class="form-inp template-input" placeholder="{{DATA_TABLE}}" />
+                        <input v-model="uploadForm.marker" type="text" class="form-inp template-input" />
                         <div class="template-hint">Used when Start cell is empty. Put this marker in your template cell.</div>
                         <div v-if="uploadForm.errors.marker" class="template-error">{{ uploadForm.errors.marker }}</div>
                     </div>

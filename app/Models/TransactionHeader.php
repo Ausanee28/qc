@@ -22,7 +22,7 @@ class TransactionHeader extends Model
     protected $primaryKey = 'transaction_id';
     public $timestamps = false;
     protected $fillable = [
-        'external_id', 'internal_id', 'detail',
+        'external_id', 'internal_id', 'sender_department', 'sender_leader', 'sender_messenger', 'detail',
         'dmc', 'line', 'shift', 'model', 'receive_date', 'return_date'
     ];
 

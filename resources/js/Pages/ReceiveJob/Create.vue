@@ -1,9 +1,9 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, nextTick, reactive, ref } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 
-const props = defineProps({ externals: Array, internals: Array, jobs: Object, filters: Object });
+const props = defineProps({ externals: Array, internals: Array, jobs: Object, filters: Object, returningOutsiders: Array, otherExternalId: [String, Number] });
 const flash = usePage().props.flash || {};
 const currentUserRole = usePage().props.auth?.user?.role ?? '';
 const canDelete = currentUserRole === 'admin';
@@ -28,6 +28,8 @@ const form = useForm({
     line: '',
     shift: '',
     model: '',
+    model: '',
+    sender_leader: '',
 });
 
 const filterForm = reactive({
@@ -39,8 +41,36 @@ const filterForm = reactive({
     per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 
-const externalOptions = computed(() => props.externals ?? []);
+const senderMode = ref('internal'); // 'internal', 'returning_outsider', 'new_outsider'
+const selectedReturningOutsider = ref('');
+
+const externalOptions = computed(() => props.externals?.filter(e => e.external_id !== props.otherExternalId) ?? []);
 const internalOptions = computed(() => props.internals ?? []);
+const returningOutsidersOptions = computed(() => props.returningOutsiders ?? []);
+
+watch(senderMode, (newMode) => {
+    if (newMode === 'internal') {
+        form.external_id = '';
+        form.sender_leader = '';
+        selectedReturningOutsider.value = '';
+    } else if (newMode === 'returning_outsider') {
+        form.external_id = props.otherExternalId;
+        form.sender_leader = '';
+        selectedReturningOutsider.value = '';
+    } else if (newMode === 'new_outsider') {
+        form.external_id = props.otherExternalId;
+        form.sender_leader = '';
+        selectedReturningOutsider.value = '';
+    }
+});
+
+watch(selectedReturningOutsider, (newLeader) => {
+    if (senderMode.value === 'returning_outsider' && newLeader) {
+        form.sender_leader = newLeader;
+    }
+});
+
+// Removing watch on external_id for isOtherSender since we use senderMode now
 const lineOptions = [
     ...Array.from({ length: 11 }, (_, i) => `Line ${i + 1}`),
     'P4#1',
@@ -192,6 +222,21 @@ const editJob = (job) => {
     form.line = job.line || '';
     form.shift = job.shift || '';
     form.model = job.model || '';
+    form.sender_leader = job.sender_leader || '';
+
+    if (job.external_id == props.otherExternalId) {
+        // Find if they exist in returning outsiders
+        const isReturning = returningOutsidersOptions.value.some(o => o.sender_leader === job.sender_leader);
+        if (isReturning) {
+            senderMode.value = 'returning_outsider';
+            selectedReturningOutsider.value = job.sender_leader;
+        } else {
+            senderMode.value = 'new_outsider';
+        }
+    } else {
+        senderMode.value = 'internal';
+    }
+
     void scrollToEditForm();
 };
 
@@ -282,7 +327,25 @@ const toggleJobStatus = (job) => {
 
                 <div class="form-grow pt-6">
                     <div class="form-grid" style="margin-bottom:24px">
-                        <div>
+                        <div class="col-span-full border-b border-gray-100 pb-4 mb-4">
+                            <label class="form-lbl mb-3 block">ประเภทผู้ส่งงาน (Sender Type) *</label>
+                            <div class="flex flex-wrap gap-4">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" v-model="senderMode" value="internal" class="h-4 w-4 text-[var(--theme-accent-strong)] focus:ring-[var(--theme-accent-strong)] border-[var(--color-border-strong)] bg-[var(--color-surface-2)]">
+                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">พนักงานในแผนก</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" v-model="senderMode" value="returning_outsider" class="h-4 w-4 text-[var(--theme-accent-strong)] focus:ring-[var(--theme-accent-strong)] border-[var(--color-border-strong)] bg-[var(--color-surface-2)]">
+                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">พนักงานนอกแผนก (เคยมาส่งแล้ว)</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" v-model="senderMode" value="new_outsider" class="h-4 w-4 text-[var(--theme-accent-strong)] focus:ring-[var(--theme-accent-strong)] border-[var(--color-border-strong)] bg-[var(--color-surface-2)]">
+                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">พนักงานนอกแผนก (มาครั้งแรก)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div v-if="senderMode === 'internal'">
                             <label class="form-lbl">Sender (External) *</label>
                             <select ref="senderSelectRef" v-model="form.external_id" required :disabled="!externalOptionsReady" class="form-inp" style="padding:10px 12px">
                                 <option value="" disabled>{{ externalOptionsReady ? '-- Select Sender --' : 'Loading senders...' }}</option>
@@ -290,6 +353,23 @@ const toggleJobStatus = (job) => {
                             </select>
                             <div v-if="form.errors.external_id" class="mt-1 text-xs text-red-600">{{ form.errors.external_id }}</div>
                         </div>
+
+                        <div v-else-if="senderMode === 'returning_outsider'">
+                            <label class="form-lbl">Select Leader *</label>
+                            <select v-model="selectedReturningOutsider" required class="form-inp" style="padding:10px 12px">
+                                <option value="" disabled>-- Select Leader --</option>
+                                <option v-for="o in returningOutsidersOptions" :key="o.sender_leader" :value="o.sender_leader">
+                                    {{ o.sender_leader }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div v-if="senderMode === 'new_outsider'">
+                            <label class="form-lbl">Leader Name *</label>
+                            <input v-model="form.sender_leader" type="text" class="form-inp" required style="padding:10px 12px" placeholder="Enter leader name">
+                            <div v-if="form.errors.sender_leader" class="mt-1 text-xs text-red-600">{{ form.errors.sender_leader }}</div>
+                        </div>
+
                         <div>
                             <label class="form-lbl">Receiver (Internal) *</label>
                             <select v-model="form.internal_id" required :disabled="!internalOptionsReady" class="form-inp" style="padding:10px 12px">
@@ -298,9 +378,7 @@ const toggleJobStatus = (job) => {
                             </select>
                             <div v-if="form.errors.internal_id" class="mt-1 text-xs text-red-600">{{ form.errors.internal_id }}</div>
                         </div>
-                    </div>
 
-                    <div class="form-grid" style="margin-bottom:24px">
                         <div>
                             <label class="form-lbl">DMC Code</label>
                             <input v-model="form.dmc" type="text" class="form-inp" style="padding:10px 12px">
@@ -314,19 +392,17 @@ const toggleJobStatus = (job) => {
                             </select>
                             <div v-if="form.errors.line" class="mt-1 text-xs text-red-600">{{ form.errors.line }}</div>
                         </div>
-                    </div>
 
-                    <div class="form-grid" style="margin-bottom:24px">
                         <div>
                             <label class="form-lbl font-semibold text-gray-900 text-sm">Working Shift</label>
                             <div class="mt-3 flex flex-col gap-3">
                                 <label class="flex items-center gap-3 cursor-pointer">
-                                    <input type="radio" v-model="form.shift" value="Day Shift" class="form-radio h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300" />
-                                    <span class="text-sm font-medium text-gray-700">Day Shift</span>
+                                    <input type="radio" v-model="form.shift" value="Day Shift" class="h-4 w-4 text-[var(--theme-accent-strong)] focus:ring-[var(--theme-accent-strong)] border-[var(--color-border-strong)] bg-[var(--color-surface-2)]" />
+                                    <span class="text-sm font-medium text-[var(--theme-text)]">Day Shift</span>
                                 </label>
                                 <label class="flex items-center gap-3 cursor-pointer">
-                                    <input type="radio" v-model="form.shift" value="Night Shift" class="form-radio h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300" />
-                                    <span class="text-sm font-medium text-gray-700">Night Shift</span>
+                                    <input type="radio" v-model="form.shift" value="Night Shift" class="h-4 w-4 text-[var(--theme-accent-strong)] focus:ring-[var(--theme-accent-strong)] border-[var(--color-border-strong)] bg-[var(--color-surface-2)]" />
+                                    <span class="text-sm font-medium text-[var(--theme-text)]">Night Shift</span>
                                 </label>
                             </div>
                             <div v-if="form.errors.shift" class="mt-1 text-xs text-red-600">{{ form.errors.shift }}</div>
@@ -407,7 +483,13 @@ const toggleJobStatus = (job) => {
                                         <div class="mt-1 text-xs text-gray-500">{{ job.shift || 'No Shift' }} / {{ job.model || 'No Model' }}</div>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">
-                                        <div>{{ job.external_name || '-' }}</div>
+                                        <template v-if="job.external_id == otherExternalId">
+                                            <div class="font-medium text-gray-900">{{ job.sender_leader || 'Unknown Leader' }}</div>
+                                            <div class="text-[11px] text-gray-500 font-medium tracking-wide">OUTSIDE LEADER</div>
+                                        </template>
+                                        <template v-else>
+                                            <div class="font-medium text-gray-900">{{ job.external_name }}</div>
+                                        </template>
                                         <div class="mt-1 text-xs text-gray-500">Receiver: {{ job.internal_name || '-' }}</div>
                                         <div class="mt-1 text-xs text-gray-500">{{ job.details_count }} test result(s)</div>
                                     </td>
