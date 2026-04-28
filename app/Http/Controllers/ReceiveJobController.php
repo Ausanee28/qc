@@ -303,6 +303,8 @@ class ReceiveJobController extends Controller
             'detail' => 'nullable|string|max:255',
             'dmc' => 'nullable|string',
             'line' => 'nullable|string',
+            'shift' => 'nullable|in:Day Shift,Night Shift',
+            'model' => 'nullable|string',
         ]);
 
         if (SchemaCapabilities::hasColumn('Internal_Users', 'is_active')) {
@@ -410,6 +412,8 @@ class ReceiveJobController extends Controller
                 'detail' => $job->detail,
                 'dmc' => $job->dmc,
                 'line' => $job->line,
+                'shift' => $job->shift,
+                'model' => $job->model,
                 'receive_date' => $this->formatDisplayDateTime($job->receive_date),
                 'return_date' => $this->formatDisplayDateTime($job->return_date),
                 'deleted_at' => $supportsHeaderSoftDeletes ? $this->formatDisplayDateTime($job->deleted_at) : null,
@@ -439,6 +443,8 @@ class ReceiveJobController extends Controller
             'detail' => $job->detail,
             'dmc' => $job->dmc,
             'line' => $job->line,
+            'shift' => $job->shift,
+            'model' => $job->model,
             'receive_date' => optional($job->receive_date)->format('Y-m-d H:i:s'),
             'return_date' => optional($job->return_date)->format('Y-m-d H:i:s'),
             'deleted_at' => TransactionHeader::supportsSoftDeletes()

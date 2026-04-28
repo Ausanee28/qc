@@ -26,6 +26,8 @@ const form = useForm({
     detail: '',
     dmc: '',
     line: '',
+    shift: '',
+    model: '',
 });
 
 const filterForm = reactive({
@@ -188,6 +190,8 @@ const editJob = (job) => {
     form.detail = job.detail || '';
     form.dmc = job.dmc || '';
     form.line = job.line || '';
+    form.shift = job.shift || '';
+    form.model = job.model || '';
     void scrollToEditForm();
 };
 
@@ -312,6 +316,28 @@ const toggleJobStatus = (job) => {
                         </div>
                     </div>
 
+                    <div class="form-grid" style="margin-bottom:24px">
+                        <div>
+                            <label class="form-lbl font-semibold text-gray-900 text-sm">Working Shift</label>
+                            <div class="mt-3 flex flex-col gap-3">
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="radio" v-model="form.shift" value="Day Shift" class="form-radio h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300" />
+                                    <span class="text-sm font-medium text-gray-700">Day Shift</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="radio" v-model="form.shift" value="Night Shift" class="form-radio h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300" />
+                                    <span class="text-sm font-medium text-gray-700">Night Shift</span>
+                                </label>
+                            </div>
+                            <div v-if="form.errors.shift" class="mt-1 text-xs text-red-600">{{ form.errors.shift }}</div>
+                        </div>
+                        <div>
+                            <label class="form-lbl">Model</label>
+                            <input v-model="form.model" type="text" class="form-inp" style="padding:10px 12px">
+                            <div v-if="form.errors.model" class="mt-1 text-xs text-red-600">{{ form.errors.model }}</div>
+                        </div>
+                    </div>
+
                     <div>
                         <label class="form-lbl">Detail</label>
                         <textarea v-model="form.detail" class="form-inp" style="padding:10px 12px;min-height:80px;resize:vertical"></textarea>
@@ -378,6 +404,7 @@ const toggleJobStatus = (job) => {
                                         <div class="font-mono font-semibold text-gray-900">#{{ job.transaction_id }}</div>
                                         <div class="mt-1 text-xs text-gray-500">{{ job.receive_date }}</div>
                                         <div class="mt-1 text-xs text-gray-500">{{ job.dmc || 'No DMC' }} / {{ job.line || 'No line' }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ job.shift || 'No Shift' }} / {{ job.model || 'No Model' }}</div>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">
                                         <div>{{ job.external_name || '-' }}</div>

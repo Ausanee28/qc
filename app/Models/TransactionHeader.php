@@ -23,7 +23,7 @@ class TransactionHeader extends Model
     public $timestamps = false;
     protected $fillable = [
         'external_id', 'internal_id', 'detail',
-        'dmc', 'line', 'receive_date', 'return_date'
+        'dmc', 'line', 'shift', 'model', 'receive_date', 'return_date'
     ];
 
     protected $casts = [
