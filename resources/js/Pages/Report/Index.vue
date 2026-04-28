@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
@@ -397,15 +397,22 @@ const doExport = async () => {
                             {{ availableExportTemplates.find((template) => template.key === selectedTemplateKey)?.description || 'Default export template.' }}
                         </div>
                         <div class="modal-hint">{{ exportMode === 'selected' ? `${selectedIds.length} job(s) selected` : `All ${totalRows} result(s)` }}</div>
-                        <div class="modal-hint" v-if="supportsSavePicker">A save dialog will let you choose the folder and file path before saving the Excel file.</div>
+                        <div class="modal-hint">
+                            <span v-if="supportsSavePicker">A save dialog will let you choose the folder and file path before saving the Excel file.</span>
+                            <span v-else>To choose a specific folder, right-click the Download button and select <strong>Save link as...</strong></span>
+                        </div>
                         <div v-if="exportError" class="modal-error">{{ exportError }}</div>
                     </div>
                     <div class="modal-footer">
                         <button class="export-btn export-btn-outline" :disabled="exportBusy" @click="showExportModal = false">Cancel</button>
-                        <button class="export-btn export-btn-primary" :disabled="exportBusy" @click="doExport">
+                        <button v-if="supportsSavePicker" class="export-btn export-btn-primary" :disabled="exportBusy" @click="doExport">
                             <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            {{ exportBusy ? 'Preparing...' : (supportsSavePicker ? 'Choose Path & Save' : 'Download') }}
+                            {{ exportBusy ? 'Preparing...' : 'Choose Path & Save' }}
                         </button>
+                        <a v-else :href="buildExportUrl()" :download="normalizedExportFilename" class="export-btn export-btn-primary" style="text-decoration: none;" @click="showExportModal = false">
+                            <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            Download
+                        </a>
                     </div>
                 </div>
             </div>
