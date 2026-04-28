@@ -332,15 +332,15 @@ const toggleJobStatus = (job) => {
                             <div class="flex flex-wrap gap-4">
                                 <label class="inline-flex items-center cursor-pointer">
                                     <input type="radio" v-model="senderMode" value="internal" class="h-4 w-4 text-[var(--theme-accent-strong)] focus:ring-[var(--theme-accent-strong)] border-[var(--color-border-strong)] bg-[var(--color-surface-2)]">
-                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">พนักงานในแผนก</span>
+                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">QC Line</span>
                                 </label>
                                 <label class="inline-flex items-center cursor-pointer">
                                     <input type="radio" v-model="senderMode" value="returning_outsider" class="h-4 w-4 text-[var(--theme-accent-strong)] focus:ring-[var(--theme-accent-strong)] border-[var(--color-border-strong)] bg-[var(--color-surface-2)]">
-                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">พนักงานนอกแผนก (เคยมาส่งแล้ว)</span>
+                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">Leader (เคยมาส่งแล้ว)</span>
                                 </label>
                                 <label class="inline-flex items-center cursor-pointer">
                                     <input type="radio" v-model="senderMode" value="new_outsider" class="h-4 w-4 text-[var(--theme-accent-strong)] focus:ring-[var(--theme-accent-strong)] border-[var(--color-border-strong)] bg-[var(--color-surface-2)]">
-                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">พนักงานนอกแผนก (มาครั้งแรก)</span>
+                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">Leader (มาครั้งแรก)</span>
                                 </label>
                             </div>
                         </div>
