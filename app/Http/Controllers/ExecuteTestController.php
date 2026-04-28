@@ -428,11 +428,11 @@ class ExecuteTestController extends Controller
                 $search = $filters['search'];
                 $query->where(function ($subQuery) use ($search) {
                     $applyLikeSearch = static function ($likeQuery) use ($search): void {
-                        $likeQuery->where('detail_id', 'like', "%{$search}%")
-                            ->orWhere('transaction_id', 'like', "%{$search}%")
-                            ->orWhere('remark', 'like', "%{$search}%")
-                            ->orWhere('max_value', 'like', "%{$search}%")
-                            ->orWhere('min_value', 'like', "%{$search}%")
+                        $likeQuery->where('Transaction_Detail.detail_id', 'like', "%{$search}%")
+                            ->orWhere('Transaction_Detail.transaction_id', 'like', "%{$search}%")
+                            ->orWhere('Transaction_Detail.remark', 'like', "%{$search}%")
+                            ->orWhere('Transaction_Detail.max_value', 'like', "%{$search}%")
+                            ->orWhere('Transaction_Detail.min_value', 'like', "%{$search}%")
                             ->orWhere('TM.method_name', 'like', "%{$search}%")
                             ->orWhere('IU.name', 'like', "%{$search}%")
                             ->orWhere('TH.detail', 'like', "%{$search}%")
