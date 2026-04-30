@@ -495,7 +495,7 @@ const toggleJobStatus = (job) => {
                                             <div class="font-medium text-gray-900">{{ job.external_name }}</div>
                                         </template>
                                         <div class="mt-1 text-xs text-gray-500">Receiver: {{ job.internal_name || '-' }}</div>
-                                        <div class="mt-1 text-xs text-gray-500">{{ job.details_count }} test result(s)</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ job.details_count }} test results</div>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">{{ job.detail || '-' }}</td>
                                     <td class="px-6 py-4 text-sm">
