@@ -538,7 +538,7 @@ watch(
                             >
                                 <option value="" disabled>{{ pendingJobsReady ? '-- Select Open Job --' : 'Loading open jobs...' }}</option>
                                 <option v-for="j in pendingJobOptions" :key="j.transaction_id" :value="String(j.transaction_id)">
-                                    {{ j.detail || 'No detail' }}{{ j.cell ? ` (Cell ${j.cell})` : '' }} [{{ j.sender_name || 'Unknown Sender' }}]
+                                    {{ j.detail || 'No detail' }}{{ j.cell ? ` (Cell ${j.cell})` : '' }} [{{ j.sender_name || 'Unknown Sender' }}] {{ j.receive_time ? j.receive_time : '' }}
                                 </option>
                             </select>
                             <div class="mt-1 text-xs text-gray-500">
