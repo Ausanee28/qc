@@ -14,6 +14,7 @@ Stores the main information for a received job.
 | sender_leader | varchar(255) | YES | | null | |
 | detail | text | YES | MUL | null | |
 | dmc | varchar(255) | YES | | null | |
+| cell | varchar(255) | YES | | null | |
 | line | varchar(255) | YES | | null | |
 | shift | varchar(255) | YES | | null | |
 | model | varchar(255) | YES | | null | |

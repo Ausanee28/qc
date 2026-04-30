@@ -25,6 +25,7 @@ const form = useForm({
     internal_id: null,
     detail: '',
     dmc: '',
+    cell: '',
     line: '',
     shift: '',
     model: '',
@@ -79,7 +80,6 @@ const lineOptions = [
     'MTA 1',
     'MTA 2',
     'ITT',
-    'ES30',
 ];
 const externalOptionsReady = computed(() => Array.isArray(props.externals));
 
@@ -220,6 +220,7 @@ const editJob = (job) => {
     form.internal_id = job.internal_id;
     form.detail = job.detail || '';
     form.dmc = job.dmc || '';
+    form.cell = job.cell || '';
     form.line = job.line || '';
     form.shift = job.shift || '';
     form.model = job.model || '';
@@ -379,6 +380,11 @@ const toggleJobStatus = (job) => {
                             <div v-if="form.errors.dmc" class="mt-1 text-xs text-red-600">{{ form.errors.dmc }}</div>
                         </div>
                         <div>
+                            <label class="form-lbl">Cell</label>
+                            <input v-model="form.cell" type="text" class="form-inp" style="padding:10px 12px">
+                            <div v-if="form.errors.cell" class="mt-1 text-xs text-red-600">{{ form.errors.cell }}</div>
+                        </div>
+                        <div>
                             <label class="form-lbl">Line</label>
                             <select v-model="form.line" class="form-inp" style="padding:10px 12px">
                                 <option value="">-- Select Line --</option>
@@ -473,7 +479,11 @@ const toggleJobStatus = (job) => {
                                     <td class="px-6 py-4 text-sm text-gray-700">
                                         <div class="font-mono font-semibold text-gray-900">#{{ job.transaction_id }}</div>
                                         <div class="mt-1 text-xs text-gray-500">{{ job.receive_date }}</div>
-                                        <div class="mt-1 text-xs text-gray-500">{{ job.dmc || 'No DMC' }} / {{ job.line || 'No line' }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">
+                                            {{ job.dmc || 'No DMC' }}
+                                            <span v-if="job.cell"> / Cell: {{ job.cell }}</span>
+                                            <span v-if="job.line"> / {{ job.line }}</span>
+                                        </div>
                                         <div class="mt-1 text-xs text-gray-500">{{ job.shift || 'No Shift' }} / {{ job.model || 'No Model' }}</div>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">

@@ -58,10 +58,11 @@ class ExecuteTestController extends Controller
                 return $this->pendingJobsQuery('')
                     ->orderByDesc('receive_date')
                     ->limit(self::PENDING_JOBS_WINDOW)
-                    ->get(['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.line', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'EU.external_name'])
+                    ->get(['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.cell', 'Transaction_Header.line', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'EU.external_name'])
                     ->map(fn ($job) => [
                         'transaction_id' => $job->transaction_id,
                         'dmc' => $job->dmc,
+                        'cell' => $job->cell,
                         'line' => $job->line,
                         'detail' => $job->detail,
                         'sender_name' => $job->external_name === 'อื่นๆ (Other)' ? ($job->sender_leader ?: 'Unknown Leader') : $job->external_name,
@@ -105,12 +106,13 @@ class ExecuteTestController extends Controller
 
         $paginator = $this->pendingJobsQuery($search)
             ->orderByDesc('Transaction_Header.receive_date')
-            ->simplePaginate($perPage, ['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.line', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'EU.external_name'], 'page', $page);
+            ->simplePaginate($perPage, ['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.cell', 'Transaction_Header.line', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'EU.external_name'], 'page', $page);
 
         return response()->json([
             'items' => $paginator->getCollection()->map(fn ($job) => [
                 'transaction_id' => $job->transaction_id,
                 'dmc' => $job->dmc,
+                'cell' => $job->cell,
                 'line' => $job->line,
                 'detail' => $job->detail,
                 'sender_name' => $job->external_name === 'อื่นๆ (Other)' ? ($job->sender_leader ?: 'Unknown Leader') : $job->external_name,

@@ -64,6 +64,7 @@ class ReceiveJobController extends Controller
                     $applyLikeSearch = static function ($likeQuery) use ($search): void {
                         $likeQuery->where('detail', 'like', "%{$search}%")
                             ->orWhere('dmc', 'like', "%{$search}%")
+                            ->orWhere('cell', 'like', "%{$search}%")
                             ->orWhere('line', 'like', "%{$search}%")
                             ->orWhere('transaction_id', 'like', "%{$search}%")
                             ->orWhere('EU.external_name', 'like', "%{$search}%")
@@ -307,6 +308,7 @@ class ReceiveJobController extends Controller
             'internal_id' => 'nullable|exists:Internal_Users,user_id',
             'detail' => 'nullable|string|max:255',
             'dmc' => 'nullable|string',
+            'cell' => 'nullable|string|max:255',
             'line' => 'nullable|string',
             'shift' => 'nullable|in:Day Shift,Night Shift',
             'model' => 'nullable|string',
@@ -417,6 +419,7 @@ class ReceiveJobController extends Controller
                 'internal_id' => $job->internal_id,
                 'detail' => $job->detail,
                 'dmc' => $job->dmc,
+                'cell' => $job->cell,
                 'line' => $job->line,
                 'shift' => $job->shift,
                 'model' => $job->model,
@@ -451,6 +454,7 @@ class ReceiveJobController extends Controller
             'internal_id' => (int) $job->internal_id,
             'detail' => $job->detail,
             'dmc' => $job->dmc,
+            'cell' => $job->cell,
             'line' => $job->line,
             'shift' => $job->shift,
             'model' => $job->model,

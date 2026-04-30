@@ -142,7 +142,7 @@ class ReportController extends Controller
                     (new SimpleXlsxExporter())->store(
                         $rows,
                         $tempWorkbook,
-                        [14, 20, 36, 16, 24, 22, 22, 12, 12, 10, 12, 12, 42],
+                        [14, 14, 20, 20, 36, 16, 24, 22, 22, 12, 12, 10, 12, 12, 42],
                         'QC Report'
                     );
                 }
@@ -267,7 +267,7 @@ class ReportController extends Controller
             ->leftJoin('Equipments as EQ', 'TM.equipment_id', '=', 'EQ.equipment_id')
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
             ->select(
-                'TH.transaction_id', 'TH.dmc', 'TH.line', 'TH.receive_date',
+                'TH.transaction_id', 'TH.dmc', 'TH.cell', 'TH.model', 'TH.line', 'TH.receive_date',
                 'EU.external_name as sender', 'TH.detail',
                 'EQ.equipment_name', 'TM.method_name', 'IU.name as inspector',
                 'TD.start_time', 'TD.end_time', 'TD.judgement', 'TD.max_value', 'TD.min_value', 'TD.remark'
@@ -412,7 +412,9 @@ class ReportController extends Controller
         if ($includeHeader) {
             $rows[] = [
                 'Line',
+                'Cell',
                 'DMC',
+                'Model',
                 'Detail',
                 'Receive Date',
                 'Sender',
@@ -430,7 +432,9 @@ class ReportController extends Controller
         foreach ($this->streamResults($dateFrom, $dateTo, $dmc, $ids) as $r) {
             $rows[] = [
                 $r->line ?? '',
+                $r->cell ?? '',
                 $r->dmc ?? '',
+                $r->model ?? '',
                 $r->detail ?? '',
                 $this->formatExportDate($r->receive_date),
                 $r->sender ?? '',
