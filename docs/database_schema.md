@@ -10,7 +10,7 @@ Stores the main information for a received job.
 |---|---|---|---|---|---|
 | transaction_id | int(10) unsigned | NO | PRI | null | auto_increment |
 | external_id | int(10) unsigned | NO | MUL | null | |
-| internal_id | int(10) unsigned | NO | MUL | null | |
+| internal_id | int(10) unsigned | YES | MUL | null | |
 | sender_leader | varchar(255) | YES | | null | |
 | detail | text | YES | MUL | null | |
 | dmc | varchar(255) | YES | | null | |

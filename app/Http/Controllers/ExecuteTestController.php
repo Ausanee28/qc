@@ -58,12 +58,13 @@ class ExecuteTestController extends Controller
                 return $this->pendingJobsQuery('')
                     ->orderByDesc('receive_date')
                     ->limit(self::PENDING_JOBS_WINDOW)
-                    ->get(['transaction_id', 'dmc', 'line', 'detail'])
+                    ->get(['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.line', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'EU.external_name'])
                     ->map(fn ($job) => [
                         'transaction_id' => $job->transaction_id,
                         'dmc' => $job->dmc,
                         'line' => $job->line,
                         'detail' => $job->detail,
+                        'sender_name' => $job->external_name === 'อื่นๆ (Other)' ? ($job->sender_leader ?: 'Unknown Leader') : $job->external_name,
                     ]);
             }),
             'pendingJobsCount' => fn () => Cache::remember('execute_test.pending_jobs_count.active', now()->addSeconds(30), fn () => TransactionHeader::whereNull('return_date')->count()),
@@ -103,8 +104,8 @@ class ExecuteTestController extends Controller
         $perPage = (int) ($validated['per_page'] ?? self::PENDING_JOBS_PAGE_SIZE);
 
         $paginator = $this->pendingJobsQuery($search)
-            ->orderByDesc('receive_date')
-            ->simplePaginate($perPage, ['transaction_id', 'dmc', 'line', 'detail'], 'page', $page);
+            ->orderByDesc('Transaction_Header.receive_date')
+            ->simplePaginate($perPage, ['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.line', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'EU.external_name'], 'page', $page);
 
         return response()->json([
             'items' => $paginator->getCollection()->map(fn ($job) => [
@@ -112,6 +113,7 @@ class ExecuteTestController extends Controller
                 'dmc' => $job->dmc,
                 'line' => $job->line,
                 'detail' => $job->detail,
+                'sender_name' => $job->external_name === 'อื่นๆ (Other)' ? ($job->sender_leader ?: 'Unknown Leader') : $job->external_name,
             ])->values(),
             'meta' => [
                 'current_page' => $paginator->currentPage(),
@@ -347,14 +349,16 @@ class ExecuteTestController extends Controller
     private function pendingJobsQuery(string $search)
     {
         $query = TransactionHeader::query()
-            ->whereNull('return_date');
+            ->leftJoin('External_Users as EU', 'Transaction_Header.external_id', '=', 'EU.external_id')
+            ->select('Transaction_Header.*', 'EU.external_name')
+            ->whereNull('Transaction_Header.return_date');
 
         if ($search === '') {
             return $query;
         }
 
         if (ctype_digit($search)) {
-            return $query->where('transaction_id', (int) $search);
+            return $query->where('Transaction_Header.transaction_id', (int) $search);
         }
 
         if (SearchTerm::canUseFullText($search)) {
@@ -363,19 +367,23 @@ class ExecuteTestController extends Controller
             if ($term !== '') {
                 return $query->where(function ($subQuery) use ($term, $search) {
                     $subQuery
-                        ->whereRaw("MATCH(detail, dmc, line) AGAINST (? IN BOOLEAN MODE)", [$term])
-                        ->orWhere('dmc', 'like', "%{$search}%")
-                        ->orWhere('line', 'like', "%{$search}%")
-                        ->orWhere('detail', 'like', "%{$search}%");
+                        ->whereRaw("MATCH(Transaction_Header.detail, Transaction_Header.dmc, Transaction_Header.line) AGAINST (? IN BOOLEAN MODE)", [$term])
+                        ->orWhere('Transaction_Header.dmc', 'like', "%{$search}%")
+                        ->orWhere('Transaction_Header.line', 'like', "%{$search}%")
+                        ->orWhere('Transaction_Header.detail', 'like', "%{$search}%")
+                        ->orWhere('EU.external_name', 'like', "%{$search}%")
+                        ->orWhere('Transaction_Header.sender_leader', 'like', "%{$search}%");
                 });
             }
         }
 
         return $query->where(function ($subQuery) use ($search) {
             $subQuery
-                ->where('dmc', 'like', "%{$search}%")
-                ->orWhere('line', 'like', "%{$search}%")
-                ->orWhere('detail', 'like', "%{$search}%");
+                ->where('Transaction_Header.dmc', 'like', "%{$search}%")
+                ->orWhere('Transaction_Header.line', 'like', "%{$search}%")
+                ->orWhere('Transaction_Header.detail', 'like', "%{$search}%")
+                ->orWhere('EU.external_name', 'like', "%{$search}%")
+                ->orWhere('Transaction_Header.sender_leader', 'like', "%{$search}%");
         });
     }
 

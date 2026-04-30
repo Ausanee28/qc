@@ -103,12 +103,7 @@ class ReceiveJobController extends Controller
                     ->orderBy('external_name')
                     ->get(['external_id', 'external_name']);
             }),
-            'internals' => fn () => Cache::remember('receive_job.internals', now()->addMinutes(10), function () {
-                return User::query()
-                    ->when(SchemaCapabilities::hasColumn('Internal_Users', 'is_active'), fn ($query) => $query->where('is_active', true))
-                    ->orderBy('name')
-                    ->get(['user_id', 'name']);
-            }),
+
             'returningOutsiders' => fn () => TransactionHeader::whereNotNull('sender_leader')
                 ->select('sender_leader')
                 ->distinct()
@@ -309,7 +304,7 @@ class ReceiveJobController extends Controller
 
         $validated = $request->validate([
             'external_id' => 'required|exists:External_Users,external_id',
-            'internal_id' => 'required|exists:Internal_Users,user_id',
+            'internal_id' => 'nullable|exists:Internal_Users,user_id',
             'detail' => 'nullable|string|max:255',
             'dmc' => 'nullable|string',
             'line' => 'nullable|string',
@@ -318,7 +313,7 @@ class ReceiveJobController extends Controller
             'sender_leader' => $isOther ? 'required|string|max:255' : 'nullable|string|max:255',
         ]);
 
-        if (SchemaCapabilities::hasColumn('Internal_Users', 'is_active')) {
+        if (!empty($validated['internal_id']) && SchemaCapabilities::hasColumn('Internal_Users', 'is_active')) {
             $isActiveInspector = User::query()
                 ->where('user_id', (int) $validated['internal_id'])
                 ->where('is_active', true)

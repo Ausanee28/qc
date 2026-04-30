@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 
-const props = defineProps({ externals: Array, internals: Array, jobs: Object, filters: Object, returningOutsiders: Array, otherExternalId: [String, Number] });
+const props = defineProps({ externals: Array, jobs: Object, filters: Object, returningOutsiders: Array, otherExternalId: [String, Number] });
 const flash = usePage().props.flash || {};
 const currentUserRole = usePage().props.auth?.user?.role ?? '';
 const canDelete = currentUserRole === 'admin';
@@ -22,7 +22,7 @@ const defaultFilters = {
 const form = useForm({
     transaction_id: null,
     external_id: '',
-    internal_id: '',
+    internal_id: null,
     detail: '',
     dmc: '',
     line: '',
@@ -45,7 +45,7 @@ const senderMode = ref('internal'); // 'internal', 'returning_outsider', 'new_ou
 const selectedReturningOutsider = ref('');
 
 const externalOptions = computed(() => props.externals?.filter(e => e.external_id !== props.otherExternalId) ?? []);
-const internalOptions = computed(() => props.internals ?? []);
+
 const returningOutsidersOptions = computed(() => props.returningOutsiders ?? []);
 
 watch(senderMode, (newMode) => {
@@ -78,10 +78,11 @@ const lineOptions = [
     'P4#3',
     'MTA 1',
     'MTA 2',
+    'ITT',
     'ES30',
 ];
 const externalOptionsReady = computed(() => Array.isArray(props.externals));
-const internalOptionsReady = computed(() => Array.isArray(props.internals));
+
 const jobPaginator = computed(() => props.jobs ?? null);
 const jobRows = computed(() => jobPaginator.value?.data ?? []);
 const jobLinks = computed(() => jobPaginator.value?.links ?? []);
@@ -370,14 +371,7 @@ const toggleJobStatus = (job) => {
                             <div v-if="form.errors.sender_leader" class="mt-1 text-xs text-red-600">{{ form.errors.sender_leader }}</div>
                         </div>
 
-                        <div>
-                            <label class="form-lbl">Receiver (Internal) *</label>
-                            <select v-model="form.internal_id" required :disabled="!internalOptionsReady" class="form-inp" style="padding:10px 12px">
-                                <option value="" disabled>{{ internalOptionsReady ? '-- Select Receiver --' : 'Loading receivers...' }}</option>
-                                <option v-for="u in internalOptions" :key="u.user_id" :value="u.user_id">{{ u.name }}</option>
-                            </select>
-                            <div v-if="form.errors.internal_id" class="mt-1 text-xs text-red-600">{{ form.errors.internal_id }}</div>
-                        </div>
+
 
                         <div>
                             <label class="form-lbl">DMC Code</label>
