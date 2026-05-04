@@ -307,15 +307,19 @@ const doExport = async () => {
                                 <input type="checkbox" :checked="allVisibleSelected" @change="toggleSelectAll" class="row-check" />
                             </th>
                             <th>Line</th>
-                            <th>Date</th>
-                            <th>Sender</th>
+                            <th style="text-align:center">Cell</th>
                             <th style="text-align:center">DMC</th>
+                            <th style="text-align:center">Model</th>
                             <th>Detail</th>
-                            <th>Process</th>
+                            <th>Receive Date</th>
+                            <th>Sender</th>
+                            <th>Equipment</th>
                             <th>Inspector</th>
-                            <th>Start</th>
-                            <th>End</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
                             <th>Result</th>
+                            <th style="text-align:center">MAX</th>
+                            <th style="text-align:center">MIN</th>
                             <th>Remark</th>
                         </tr>
                     </thead>
@@ -325,10 +329,12 @@ const doExport = async () => {
                                 <input type="checkbox" :checked="isSelected(r.transaction_id)" @change="toggleRow(r.transaction_id)" class="row-check" />
                             </td>
                             <td>{{ r.line || '-' }}</td>
+                            <td style="text-align:center">{{ r.cell || '-' }}</td>
+                            <td style="font-weight:700;text-align:center">{{ r.dmc || '-' }}</td>
+                            <td style="text-align:center">{{ r.model || '-' }}</td>
+                            <td>{{ r.detail }}</td>
                             <td style="font-size:11px">{{ formatDate(r.receive_date) }}</td>
                             <td>{{ r.sender }}</td>
-                            <td style="font-weight:700;text-align:center">{{ r.dmc || '-' }}</td>
-                            <td>{{ r.detail }}</td>
                             <td>{{ r.method_name }}</td>
                             <td>{{ r.inspector }}</td>
                             <td style="font-size:11px">{{ r.start_time ? new Date(r.start_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '-' }}</td>
@@ -338,6 +344,8 @@ const doExport = async () => {
                                 <span v-else-if="r.judgement === 'NG'" class="pill pill-r">NG</span>
                                 <span v-else class="pill pill-y">{{ r.judgement }}</span>
                             </td>
+                            <td style="font-size:11px;text-align:center">{{ r.max_value ?? '-' }}</td>
+                            <td style="font-size:11px;text-align:center">{{ r.min_value ?? '-' }}</td>
                             <td style="font-size:11px;color:#78716c">{{ r.remark || '' }}</td>
                         </tr>
                     </tbody>
