@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
@@ -250,7 +250,7 @@ onUnmounted(() => {
                             <tr>
                                 <th>ID</th>
                                 <th>Inspector</th>
-                                <th>DMC</th>
+                                <th style="text-align:center">DMC</th>
                                 <th>Detail</th>
                                 <th>Duration</th>
                                 <th>Result</th>
@@ -260,7 +260,7 @@ onUnmounted(() => {
                             <tr v-for="detail in detailRows" :key="detail.detail_id">
                                 <td class="performance-history__id">#{{ detail.detail_id }}</td>
                                 <td>{{ detail.inspector }}</td>
-                                <td>{{ detail.dmc || '-' }}</td>
+                                <td style="text-align:center;font-weight:700">{{ detail.dmc || '-' }}</td>
                                 <td>{{ detail.detail }}</td>
                                 <td class="performance-history__duration">{{ fmt(detail.duration_sec) }}</td>
                                 <td>

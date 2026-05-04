@@ -309,7 +309,7 @@ const doExport = async () => {
                             <th>Line</th>
                             <th>Date</th>
                             <th>Sender</th>
-                            <th>DMC</th>
+                            <th style="text-align:center">DMC</th>
                             <th>Detail</th>
                             <th>Process</th>
                             <th>Inspector</th>
@@ -324,15 +324,15 @@ const doExport = async () => {
                             <td style="text-align:center">
                                 <input type="checkbox" :checked="isSelected(r.transaction_id)" @change="toggleRow(r.transaction_id)" class="row-check" />
                             </td>
-                            <td>{{ r.line || 'โ€”' }}</td>
+                            <td>{{ r.line || '-' }}</td>
                             <td style="font-size:11px">{{ formatDate(r.receive_date) }}</td>
                             <td>{{ r.sender }}</td>
-                            <td style="font-weight:700">{{ r.dmc || 'โ€”' }}</td>
+                            <td style="font-weight:700;text-align:center">{{ r.dmc || '-' }}</td>
                             <td>{{ r.detail }}</td>
                             <td>{{ r.method_name }}</td>
                             <td>{{ r.inspector }}</td>
-                            <td style="font-size:11px">{{ r.start_time ? new Date(r.start_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : 'โ€”' }}</td>
-                            <td style="font-size:11px">{{ r.end_time ? new Date(r.end_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : 'โ€”' }}</td>
+                            <td style="font-size:11px">{{ r.start_time ? new Date(r.start_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '-' }}</td>
+                            <td style="font-size:11px">{{ r.end_time ? new Date(r.end_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '-' }}</td>
                             <td>
                                 <span v-if="r.judgement === 'OK'" class="pill pill-g">OK</span>
                                 <span v-else-if="r.judgement === 'NG'" class="pill pill-r">NG</span>
