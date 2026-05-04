@@ -430,12 +430,12 @@ const chartTheme = computed(() => (
 
 /* โ”€โ”€ KPI cards โ”€โ”€ */
 const kpiCards = computed(() => ([
-    { label: 'OK %', value: pct(props.metrics.yieldRate), accent: true },
-    { label: 'NG %', value: pct(props.metrics.defectRate), accent: false, danger: true },
-    { label: 'Jobs', value: fmt(props.metrics.periodJobs) },
-    { label: 'Total Tests', value: fmt(props.metrics.totalTests) },
-    { label: 'Today Tests', value: fmt(props.metrics.todayCount), icon: true },
-    { label: 'Pending', value: fmt(props.metrics.pendingCount) },
+    { label: '% ผ่าน (OK)', value: pct(props.metrics.yieldRate), accent: true },
+    { label: '% เสีย (NG)', value: pct(props.metrics.defectRate), accent: false, danger: true },
+    { label: 'งานทั้งหมด', value: fmt(props.metrics.periodJobs) },
+    { label: 'จำนวนงานที่วัด', value: fmt(props.metrics.totalTests) },
+    { label: 'งานเข้าวันนี้', value: fmt(props.metrics.todayCount), icon: true },
+    { label: 'งานค้างตรวจสอบ', value: fmt(props.metrics.pendingCount) },
 ]));
 
 /* โ”€โ”€ Quality doughnut โ”€โ”€ */
@@ -687,24 +687,24 @@ const monthlyInsights = computed(() => {
 
     return [
         {
-            label: 'Latest Month',
+            label: 'เดือนล่าสุด',
             value: latest.label,
-            note: previous ? `vs ${previous.label}` : 'current period edge',
+            note: previous ? `เทียบกับเดือน ${previous.label}` : 'ไม่มีข้อมูลเดือนก่อนหน้า',
         },
         {
-            label: 'Latest Volume',
+            label: 'จำนวนงานเดือนนี้',
             value: fmt(latest.total),
-            note: `${fmt(totalHistory)} total in view`,
+            note: `จากทั้งหมด ${fmt(totalHistory)} งานในกราฟ`,
         },
         {
-            label: 'Latest Split',
+            label: 'สัดส่วน ผ่าน/เสีย',
             value: `${pct(latest.yield)} / ${pct(latest.ngRate)}`,
-            note: 'OK % / NG %',
+            note: '% ผ่าน / % เสีย',
         },
         {
-            label: 'OK Change',
+            label: 'แนวโน้ม % ผ่าน',
             value: `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts`,
-            note: previous ? `compared with ${previous.label}` : 'no prior month',
+            note: previous ? `เทียบกับเดือน ${previous.label}` : 'ไม่มีข้อมูลเดือนก่อนหน้า',
         },
     ];
 });
@@ -827,23 +827,23 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                         <div class="card__head">Forecast</div>
                         <div class="forecast-grid">
                             <div class="fc">
-                                <div class="fc__label">Next Month Tests</div>
+                                <div class="fc__label">คาดการณ์งานเดือนหน้า</div>
                                 <div class="fc__value">{{ fmt(forecast.nextTotal) }}</div>
                             </div>
                             <div class="fc fc--accent">
-                                <div class="fc__label">Next Month OK %</div>
+                                <div class="fc__label">คาดการณ์ % ผ่าน</div>
                                 <div class="fc__value">{{ pct(forecast.nextYield) }}</div>
                                 <div class="fc__delta" :class="forecast.delta >= 0 ? 'fc__delta--up' : 'fc__delta--down'">
                                     {{ forecast.delta >= 0 ? '+' : '' }}{{ forecast.delta.toFixed(1) }} pts
                                 </div>
                             </div>
                             <div class="fc">
-                                <div class="fc__label">Best Month</div>
+                                <div class="fc__label">เดือนที่ดีที่สุด (Best)</div>
                                 <div class="fc__value">{{ forecast.best.label }}</div>
                                 <div class="fc__sub">{{ pct(forecast.best.yield) }}</div>
                             </div>
                             <div class="fc">
-                                <div class="fc__label">Worst Month</div>
+                                <div class="fc__label">เดือนที่แย่ที่สุด (Worst)</div>
                                 <div class="fc__value">{{ forecast.worst.label }}</div>
                                 <div class="fc__sub">{{ pct(forecast.worst.yield) }}</div>
                             </div>
