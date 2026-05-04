@@ -435,7 +435,7 @@ const kpiCards = computed(() => ([
     { label: 'งานทั้งหมด', value: fmt(props.metrics.periodJobs) },
     { label: 'จำนวนงานที่วัด', value: fmt(props.metrics.totalTests) },
     { label: 'งานเข้าวันนี้', value: fmt(props.metrics.todayCount), icon: true },
-    { label: 'งานค้างตรวจสอบ', value: fmt(props.metrics.pendingCount) },
+    { label: 'งานค้างรอตรวจสอบ', value: fmt(props.metrics.pendingCount) },
 ]));
 
 /* โ”€โ”€ Quality doughnut โ”€โ”€ */
