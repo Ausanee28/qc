@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -160,6 +161,67 @@ class CertificatesAndPerformanceTest extends TestCase
         $inspectors = collect(data_get($page, 'props.inspectors', []));
 
         $this->assertCount(0, $inspectors);
+    }
+
+    public function test_performance_page_filters_by_specific_day_and_month(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-05-15 10:00:00'));
+
+        try {
+            $user = User::factory()->create(['role' => 'inspector']);
+            $jobId = $this->seedMinimalWorkflowData($user->user_id);
+            $methodId = DB::table('Transaction_Detail')
+                ->where('transaction_id', $jobId)
+                ->value('method_id');
+
+            DB::table('Transaction_Detail')->insert([
+                'transaction_id' => $jobId,
+                'method_id' => $methodId,
+                'internal_id' => $user->user_id,
+                'start_time' => now()->subMinutes(3),
+                'end_time' => now()->subMinute(),
+                'duration_sec' => 120,
+                'judgement' => 'NG',
+                'remark' => 'today sample',
+                'deleted_at' => null,
+            ]);
+
+            DB::table('Transaction_Detail')->insert([
+                'transaction_id' => $jobId,
+                'method_id' => $methodId,
+                'internal_id' => $user->user_id,
+                'start_time' => Carbon::parse('2026-04-20 09:00:00'),
+                'end_time' => Carbon::parse('2026-04-20 09:05:00'),
+                'duration_sec' => 300,
+                'judgement' => 'OK',
+                'remark' => 'previous month sample',
+                'deleted_at' => null,
+            ]);
+
+            $dayResponse = $this->actingAs($user)->get(route('performance.index', [
+                'mode' => 'day',
+                'date' => '2026-05-15',
+            ]));
+            $dayInspectors = collect(data_get($dayResponse->viewData('page'), 'props.inspectors', []));
+            $dayInspector = $dayInspectors->firstWhere('id', $user->user_id);
+
+            $dayResponse->assertOk();
+            $this->assertSame(1, (int) data_get($dayInspector, 'total_tests', 0));
+            $this->assertSame(120, (int) data_get($dayInspector, 'avg_sec', 0));
+
+            $monthResponse = $this->actingAs($user)->get(route('performance.index', [
+                'mode' => 'month',
+                'month' => '2026-05',
+            ]));
+            $monthInspectors = collect(data_get($monthResponse->viewData('page'), 'props.inspectors', []));
+            $monthInspector = $monthInspectors->firstWhere('id', $user->user_id);
+
+            $monthResponse->assertOk();
+            $this->assertSame(2, (int) data_get($monthInspector, 'total_tests', 0));
+            $this->assertSame('May 2026', data_get($monthResponse->viewData('page'), 'props.filters.label'));
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     private function seedMinimalWorkflowData(int $internalUserId): int

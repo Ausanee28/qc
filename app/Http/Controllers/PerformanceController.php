@@ -4,27 +4,34 @@ namespace App\Http\Controllers;
 
 use App\Support\ReportingConnection;
 use App\Support\SchemaCapabilities;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class PerformanceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $connection = ReportingConnection::connection();
         $hasDetailDeletedAt = SchemaCapabilities::hasColumn('Transaction_Detail', 'deleted_at');
         $hasHeaderDeletedAt = SchemaCapabilities::hasColumn('Transaction_Header', 'deleted_at');
         $hasInspectorAggregate = SchemaCapabilities::hasTable('performance_daily_inspector_aggregates');
-        $windowStart = now()->subDays(30);
+        $filters = $this->resolveFilters($request);
+        $windowStart = $filters['start'];
+        $windowEnd = $filters['end'];
         $windowStartDate = $windowStart->toDateString();
-        $windowEndDate = now()->toDateString();
+        $windowEndDate = $windowEnd->toDateString();
+        $inspectorsCacheKey = sprintf('performance.inspectors.%s.%s.%s', $filters['mode'], $windowStart->format('YmdHis'), $windowEnd->format('YmdHis'));
+        $detailsCacheKey = sprintf('performance.details.%s.%s.%s.recent50', $filters['mode'], $windowStart->format('YmdHis'), $windowEnd->format('YmdHis'));
 
         return Inertia::render('Performance/Index', [
-            'inspectors' => fn () => Cache::remember('performance.inspectors.30d', now()->addMinutes(3), function () use ($connection, $hasDetailDeletedAt, $windowStart, $hasInspectorAggregate, $windowStartDate, $windowEndDate) {
-                $fallbackQuery = $this->buildInspectorsQueryFromDetails($connection, $windowStart, $hasDetailDeletedAt);
+            'filters' => $filters['props'],
+            'inspectors' => fn () => Cache::remember($inspectorsCacheKey, now()->addMinutes(3), function () use ($connection, $hasDetailDeletedAt, $windowStart, $windowEnd, $hasInspectorAggregate, $windowStartDate, $windowEndDate) {
+                $fallbackQuery = $this->buildInspectorsQueryFromDetails($connection, $windowStart, $windowEnd, $hasDetailDeletedAt);
 
-                if ($hasInspectorAggregate && $this->hasFreshInspectorAggregate($connection, $windowStart, $windowStartDate, $windowEndDate, $hasDetailDeletedAt)) {
+                if ($hasInspectorAggregate && $this->hasFreshInspectorAggregate($connection, $windowStart, $windowEnd, $windowStartDate, $windowEndDate, $hasDetailDeletedAt)) {
                     $aggregateRows = $connection->table('performance_daily_inspector_aggregates as PIA')
                         ->join('Internal_Users as IU', 'PIA.internal_id', '=', 'IU.user_id')
                         ->whereBetween('PIA.date_key', [$windowStartDate, $windowEndDate])
@@ -49,11 +56,12 @@ class PerformanceController extends Controller
 
                 return $fallbackQuery->get();
             }),
-            'details' => fn () => Cache::remember('performance.details.30d.recent50', now()->addMinutes(3), function () use ($connection, $hasDetailDeletedAt, $hasHeaderDeletedAt, $windowStart) {
+            'details' => fn () => Cache::remember($detailsCacheKey, now()->addMinutes(3), function () use ($connection, $hasDetailDeletedAt, $hasHeaderDeletedAt, $windowStart, $windowEnd) {
                 $recentDetailIds = $connection->table('Transaction_Detail as TD')
                     ->whereNotNull('TD.start_time')
                     ->whereNotNull('TD.end_time')
                     ->where('TD.end_time', '>=', $windowStart)
+                    ->where('TD.end_time', '<=', $windowEnd)
                     ->when($hasDetailDeletedAt, fn ($query) => $query->whereNull('TD.deleted_at'))
                     ->orderByDesc('TD.end_time')
                     ->limit(50)
@@ -93,7 +101,100 @@ class PerformanceController extends Controller
         ]);
     }
 
-    private function buildInspectorsQueryFromDetails($connection, $windowStart, bool $hasDetailDeletedAt)
+    private function resolveFilters(Request $request): array
+    {
+        $mode = in_array($request->query('mode'), ['recent', 'day', 'month'], true)
+            ? $request->query('mode')
+            : 'recent';
+        $today = now();
+
+        if ($mode === 'day') {
+            $selected = $this->parseDate($request->query('date')) ?? $today->copy();
+            $start = $selected->copy()->startOfDay();
+            $end = $selected->copy()->endOfDay();
+            $date = $selected->toDateString();
+
+            return [
+                'mode' => $mode,
+                'start' => $start,
+                'end' => $end,
+                'props' => [
+                    'mode' => $mode,
+                    'date' => $date,
+                    'month' => $selected->format('Y-m'),
+                    'start_date' => $start->toDateString(),
+                    'end_date' => $end->toDateString(),
+                    'label' => $selected->format('d M Y'),
+                ],
+            ];
+        }
+
+        if ($mode === 'month') {
+            $selected = $this->parseMonth($request->query('month')) ?? $today->copy()->startOfMonth();
+            $start = $selected->copy()->startOfMonth();
+            $end = $selected->copy()->endOfMonth();
+            $month = $selected->format('Y-m');
+
+            return [
+                'mode' => $mode,
+                'start' => $start,
+                'end' => $end,
+                'props' => [
+                    'mode' => $mode,
+                    'date' => $today->toDateString(),
+                    'month' => $month,
+                    'start_date' => $start->toDateString(),
+                    'end_date' => $end->toDateString(),
+                    'label' => $selected->format('M Y'),
+                ],
+            ];
+        }
+
+        $start = $today->copy()->subDays(30)->startOfDay();
+        $end = $today->copy()->endOfDay();
+
+        return [
+            'mode' => 'recent',
+            'start' => $start,
+            'end' => $end,
+            'props' => [
+                'mode' => 'recent',
+                'date' => $today->toDateString(),
+                'month' => $today->format('Y-m'),
+                'start_date' => $start->toDateString(),
+                'end_date' => $end->toDateString(),
+                'label' => 'Last 30 days',
+            ],
+        ];
+    }
+
+    private function parseDate(?string $value): ?Carbon
+    {
+        if (!is_string($value) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', $value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function parseMonth(?string $value): ?Carbon
+    {
+        if (!is_string($value) || !preg_match('/^\d{4}-\d{2}$/', $value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', "{$value}-01");
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function buildInspectorsQueryFromDetails($connection, $windowStart, $windowEnd, bool $hasDetailDeletedAt)
     {
         $durationSecondsExpr = $this->durationSecondsExpression($connection, 'TD.start_time', 'TD.end_time');
         $validDurationSecondsExpr = "NULLIF({$durationSecondsExpr}, 0)";
@@ -103,6 +204,7 @@ class PerformanceController extends Controller
             ->whereNotNull('TD.start_time')
             ->whereNotNull('TD.end_time')
             ->where('TD.end_time', '>=', $windowStart)
+            ->where('TD.end_time', '<=', $windowEnd)
             ->select(
                 'IU.user_id as id',
                 'IU.name',
@@ -123,7 +225,7 @@ class PerformanceController extends Controller
         return $query;
     }
 
-    private function hasFreshInspectorAggregate($connection, $windowStart, string $windowStartDate, string $windowEndDate, bool $hasDetailDeletedAt): bool
+    private function hasFreshInspectorAggregate($connection, $windowStart, $windowEnd, string $windowStartDate, string $windowEndDate, bool $hasDetailDeletedAt): bool
     {
         $latestAggregateDate = $connection->table('performance_daily_inspector_aggregates')
             ->whereBetween('date_key', [$windowStartDate, $windowEndDate])
@@ -141,6 +243,7 @@ class PerformanceController extends Controller
             ->whereNotNull('TD.start_time')
             ->whereNotNull('TD.end_time')
             ->where('TD.end_time', '>=', $windowStart)
+            ->where('TD.end_time', '<=', $windowEnd)
             ->selectRaw("MAX({$endDateExpr}) as latest_detail_date");
 
         if ($hasDetailDeletedAt) {
@@ -167,6 +270,7 @@ class PerformanceController extends Controller
             ->whereNotNull('TD.start_time')
             ->whereNotNull('TD.end_time')
             ->where('TD.end_time', '>=', $windowStart)
+            ->where('TD.end_time', '<=', $windowEnd)
             ->whereRaw("{$durationSecondsExpr} > 0")
             ->selectRaw("MAX({$endDateExpr}) as latest_positive_detail_date");
 

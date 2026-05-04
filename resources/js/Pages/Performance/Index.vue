@@ -1,14 +1,61 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Bar } from '@/lib/performance-charts';
 
-const props = defineProps({ inspectors: Array, details: Array });
+const props = defineProps({ inspectors: Array, details: Array, filters: Object });
 
 const inspectorRows = computed(() => props.inspectors ?? []);
 const detailRows = computed(() => props.details ?? []);
 const currentTheme = ref('dark');
+const filterMode = ref(props.filters?.mode ?? 'recent');
+const selectedDate = ref(props.filters?.date ?? new Date().toISOString().slice(0, 10));
+const selectedMonth = ref(props.filters?.month ?? new Date().toISOString().slice(0, 7));
+const performanceReloadOnly = ['inspectors', 'details', 'filters', 'flash'];
+
+const periodLabel = computed(() => props.filters?.label ?? 'Last 30 days');
+
+const buildFilterPayload = () => {
+    if (filterMode.value === 'day') {
+        return {
+            mode: 'day',
+            date: selectedDate.value,
+        };
+    }
+
+    if (filterMode.value === 'month') {
+        return {
+            mode: 'month',
+            month: selectedMonth.value,
+        };
+    }
+
+    return { mode: 'recent' };
+};
+
+const applyFilters = () => {
+    router.get(route('performance.index'), buildFilterPayload(), {
+        only: performanceReloadOnly,
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
+
+const resetFilters = () => {
+    filterMode.value = 'recent';
+    applyFilters();
+};
+
+watch(
+    () => props.filters,
+    (filters) => {
+        filterMode.value = filters?.mode ?? 'recent';
+        selectedDate.value = filters?.date ?? selectedDate.value;
+        selectedMonth.value = filters?.month ?? selectedMonth.value;
+    },
+);
 
 const toSec = (value) => {
     if (value === null || value === undefined || value === '') {
@@ -167,13 +214,46 @@ onUnmounted(() => {
                 <h1 class="pg-title">Performance</h1>
                 <p class="pg-sub">Inspector test duration analysis (end time - start time)</p>
             </div>
+            <div class="performance-period-pill">{{ periodLabel }}</div>
         </div>
 
-        <div v-if="!inspectorRows.length" class="performance-empty">
-            No test data yet.
-        </div>
+        <div class="performance-page">
+            <section class="card performance-filter">
+                <div class="performance-filter__group">
+                    <select v-model="filterMode" class="performance-filter__control performance-filter__select">
+                        <option value="recent">Last 30 days</option>
+                        <option value="day">Specific day</option>
+                        <option value="month">Specific month</option>
+                    </select>
+                    <input
+                        v-if="filterMode === 'day'"
+                        v-model="selectedDate"
+                        type="date"
+                        class="performance-filter__control"
+                        @keyup.enter="applyFilters"
+                    >
+                    <input
+                        v-else-if="filterMode === 'month'"
+                        v-model="selectedMonth"
+                        type="month"
+                        class="performance-filter__control"
+                        @keyup.enter="applyFilters"
+                    >
+                    <div v-else class="performance-filter__range">
+                        {{ props.filters?.start_date }} to {{ props.filters?.end_date }}
+                    </div>
+                </div>
+                <div class="performance-filter__actions">
+                    <button class="performance-filter__button performance-filter__button--ghost" type="button" @click="resetFilters">Reset</button>
+                    <button class="performance-filter__button performance-filter__button--primary" type="button" @click="applyFilters">Apply</button>
+                </div>
+            </section>
 
-        <div v-else class="performance-page">
+            <div v-if="!inspectorRows.length" class="performance-empty">
+                No test data for {{ periodLabel }}.
+            </div>
+
+            <template v-else>
             <div class="perf-grid performance-page__top-grid">
                 <article v-for="insp in inspectorRows" :key="insp.id" class="card performance-card">
                     <div class="performance-card__head">
@@ -273,6 +353,7 @@ onUnmounted(() => {
                     </table>
                 </div>
             </section>
+            </template>
         </div>
     </AuthenticatedLayout>
 </template>
@@ -305,6 +386,99 @@ onUnmounted(() => {
     background: rgba(18, 18, 18, 0.92);
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.performance-page__header {
+    align-items: center;
+    gap: 1rem;
+}
+
+.performance-period-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(251, 146, 60, 0.1);
+    border: 1px solid rgba(251, 146, 60, 0.2);
+    color: #fdba74;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.performance-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    background: var(--perf-card-bg);
+    border-color: var(--perf-card-border);
+    box-shadow: var(--perf-card-shadow);
+    padding: 0.85rem;
+}
+
+.performance-filter__group,
+.performance-filter__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
+.performance-filter__group {
+    flex: 1;
+}
+
+.performance-filter__control,
+.performance-filter__range {
+    height: 2.5rem;
+    border-radius: 10px;
+    border: 1px solid var(--perf-subtle-border);
+    background: rgba(7, 7, 7, 0.42);
+    color: var(--perf-strong-text);
+    font-size: 0.82rem;
+}
+
+.performance-filter__control {
+    min-width: 11rem;
+    padding: 0 0.75rem;
+}
+
+.performance-filter__select {
+    min-width: 12rem;
+}
+
+.performance-filter__range {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.8rem;
+    color: var(--perf-soft-text);
+}
+
+.performance-filter__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.5rem;
+    padding: 0 0.9rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 0.78rem;
+    font-weight: 700;
+    transition: all 0.15s ease;
+}
+
+.performance-filter__button--primary {
+    background: linear-gradient(135deg, #fb923c, #ea580c);
+    color: #1c1917;
+    box-shadow: 0 14px 26px rgba(249, 115, 22, 0.2);
+}
+
+.performance-filter__button--ghost {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #f5f5f4;
 }
 
 .performance-page__top-grid {
@@ -497,6 +671,35 @@ onUnmounted(() => {
     box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
 }
 
+:global(.theme-shell[data-theme='light'] .performance-period-pill) {
+    background: rgba(219, 234, 254, 0.9);
+    border-color: rgba(29, 78, 216, 0.18);
+    color: #1d4ed8;
+}
+
+:global(.theme-shell[data-theme='light'] .performance-filter__control),
+:global(.theme-shell[data-theme='light'] .performance-filter__range) {
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+}
+
+:global(.theme-shell[data-theme='light'] .performance-filter__range) {
+    color: #475569;
+}
+
+:global(.theme-shell[data-theme='light'] .performance-filter__button--primary) {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    color: #ffffff;
+    box-shadow: 0 14px 26px rgba(29, 78, 216, 0.18);
+}
+
+:global(.theme-shell[data-theme='light'] .performance-filter__button--ghost) {
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+}
+
 :global(.theme-shell[data-theme='light'] .performance-stat__value),
 :global(.theme-shell[data-theme='light'] .performance-history__id),
 :global(.theme-shell[data-theme='light'] .performance-history__duration) {
@@ -544,6 +747,37 @@ onUnmounted(() => {
 @media (max-width: 1023px) {
     .performance-chart-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .performance-page__header,
+    .performance-filter {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .performance-period-pill {
+        align-self: flex-start;
+    }
+
+    .performance-filter__group,
+    .performance-filter__actions {
+        width: 100%;
+    }
+
+    .performance-filter__group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .performance-filter__control,
+    .performance-filter__range {
+        width: 100%;
+    }
+
+    .performance-filter__actions {
+        justify-content: flex-end;
     }
 }
 </style>
