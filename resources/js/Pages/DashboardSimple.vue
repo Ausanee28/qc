@@ -52,7 +52,17 @@ let usePollingFallback = true;
 const realtimeRefreshDelayMs = 250;
 const dashboardSyncIntervalActiveMs = 30000;
 const dashboardSyncIntervalHiddenMs = 90000;
-const currentPeriodLabel = computed(() => periodLabels[props.currentPeriod] || 'This Month');
+const currentPeriodLabel = computed(() => {
+    if (periodLabels[props.currentPeriod]) return periodLabels[props.currentPeriod];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(props.currentPeriod)) {
+        return new Date(props.currentPeriod).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    if (/^\d{4}-\d{2}$/.test(props.currentPeriod)) {
+        const [year, month] = props.currentPeriod.split('-');
+        return new Date(year, month - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    }
+    return 'This Month';
+});
 const dashboardInvalidateTags = ['dashboard', 'workflow', 'performance', 'report', 'certificates'];
 const Line = defineAsyncComponent({
     loader: () => import('@/lib/dashboard-charts').then((mod) => mod.Line),
@@ -727,10 +737,22 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                     <button
                         v-for="o in periodOptions" :key="o.value"
                         class="db-seg__btn"
-                        :class="{ 'db-seg__btn--active': selectedPeriod === o.value }"
+                        :class="{ 'db-seg__btn--active': ['today', 'month'].includes(selectedPeriod) ? selectedPeriod === o.value : false }"
                         :disabled="isChangingPeriod"
                         @click="selectedPeriod = o.value"
                     >{{ o.label }}</button>
+                    
+                    <div class="db-seg__divider"></div>
+                    
+                    <div class="db-seg__input-wrap" title="Select specific day">
+                        <svg class="db-seg__icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <input type="date" class="db-seg__input" :value="/^\d{4}-\d{2}-\d{2}$/.test(selectedPeriod) ? selectedPeriod : ''" @change="$event.target.value && (selectedPeriod = $event.target.value)" />
+                    </div>
+                    
+                    <div class="db-seg__input-wrap" title="Select specific month">
+                        <svg class="db-seg__icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <input type="month" class="db-seg__input" :value="/^\d{4}-\d{2}$/.test(selectedPeriod) ? selectedPeriod : ''" @change="$event.target.value && (selectedPeriod = $event.target.value)" />
+                    </div>
                 </div>
             </header>
 
@@ -986,6 +1008,42 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     box-shadow: 0 4px 14px rgba(249,115,22,0.3);
 }
 .db-seg__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.db-seg__divider {
+    width: 1px;
+    background: rgba(255,255,255,0.12);
+    margin: 0;
+}
+
+.db-seg__input-wrap {
+    position: relative;
+    width: 2.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #a8a29e;
+    cursor: pointer;
+    transition: color 160ms, background 160ms;
+}
+
+.db-seg__input-wrap:hover {
+    color: #f5f5f4;
+    background: rgba(255,255,255,0.06);
+}
+
+.db-seg__icon {
+    width: 1.1rem;
+    height: 1.1rem;
+    pointer-events: none;
+}
+
+.db-seg__input {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
 
 /* โ”€โ”€ KPI Strip โ”€โ”€ */
 .kpi-strip {
@@ -1413,6 +1471,19 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     color: #ffffff;
     background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
     box-shadow: 0 4px 14px rgba(29, 78, 216, 0.3);
+}
+
+:global(.theme-shell[data-theme='light'] .db-seg__divider) {
+    background: rgba(15, 23, 42, 0.12);
+}
+
+:global(.theme-shell[data-theme='light'] .db-seg__input-wrap) {
+    color: #64748b;
+}
+
+:global(.theme-shell[data-theme='light'] .db-seg__input-wrap:hover) {
+    color: #0f172a;
+    background: rgba(15, 23, 42, 0.06);
 }
 
 :global(.theme-shell[data-theme='light'] .kpi__label),

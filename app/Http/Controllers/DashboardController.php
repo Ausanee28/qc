@@ -61,6 +61,16 @@ class DashboardController extends Controller
 
     private function getDateRange(string $period): array
     {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $period)) {
+            $date = Carbon::parse($period);
+            return [$date->copy()->startOfDay(), $date->copy()->endOfDay()];
+        }
+        
+        if (preg_match('/^\d{4}-\d{2}$/', $period)) {
+            $date = Carbon::parse($period . '-01');
+            return [$date->copy()->startOfMonth(), $date->copy()->endOfMonth()];
+        }
+
         return match ($period) {
             'today' => [Carbon::today(), Carbon::today()->endOfDay()],
             'week' => [Carbon::now()->subDays(6)->startOfDay(), Carbon::now()->endOfDay()],
