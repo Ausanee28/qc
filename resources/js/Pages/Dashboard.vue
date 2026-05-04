@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -97,17 +97,11 @@ const dashboardPrimaryPayloadKeys = [...dashboardSummaryKeys, ...dashboardPrimar
 const periodOptions = [
     { value: 'today', label: 'Today' },
     { value: 'month', label: 'This Month' },
-    { value: 'week', label: 'Last 7 Days' },
-    { value: '30days', label: 'Last 30 Days' },
-    { value: 'quarter', label: 'This Quarter' },
 ];
 
 const periodLabels = {
     today: 'Today',
     month: 'This Month',
-    week: 'Last 7 Days',
-    '30days': 'Last 30 Days',
-    quarter: 'This Quarter',
 };
 
 const loadSecondaryDashboardPayload = ({ idle = false, force = false } = {}) => {
@@ -1111,12 +1105,15 @@ const lineOpts = computed(() => ({
                                 <span class="dash-chip__dot"></span>
                                 {{ isLoading ? 'Refreshing data' : 'Live overview' }}
                             </div>
-                            <label class="dash-chip dash-chip--select">
-                                <span class="text-stone-400">Window</span>
-                                <select v-model="selectedPeriod" class="dash-select">
-                                    <option v-for="option in periodOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                </select>
-                            </label>
+                            <div class="db-seg">
+                                <button
+                                    v-for="option in periodOptions" :key="option.value"
+                                    class="db-seg__btn"
+                                    :class="{ 'db-seg__btn--active': selectedPeriod === option.value }"
+                                    :disabled="isLoading"
+                                    @click="selectedPeriod = option.value"
+                                >{{ option.label }}</button>
+                            </div>
                         </div>
                     </div>
 
@@ -1687,18 +1684,41 @@ const lineOpts = computed(() => ({
     box-shadow: 0 0 0 6px rgba(251, 146, 60, 0.16);
 }
 
-.dash-select {
-    min-width: 0;
-    border: 0;
-    background: transparent;
-    color: #fafaf9;
-    font-weight: 600;
-    outline: none;
+.db-seg {
+    display: inline-flex;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    overflow: hidden;
 }
 
-.dash-select option {
-    color: #fafaf9;
-    background: #140f0d;
+.db-seg__btn {
+    padding: 0.55rem 1.1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #a8a29e;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 160ms, background 160ms;
+    position: relative;
+}
+
+.db-seg__btn:hover:not(.db-seg__btn--active) {
+    color: #f5f5f4;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.db-seg__btn--active {
+    color: #1c1917;
+    background: linear-gradient(135deg, #fb923c, #f97316);
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.3);
+}
+
+.db-seg__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .metric-glass {
@@ -2232,10 +2252,25 @@ const lineOpts = computed(() => ({
     box-shadow: 0 0 0 6px rgba(29, 78, 216, 0.12);
 }
 
-:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-select),
-:global(.theme-shell[data-theme='light'] .dashboard-shell .dash-select option) {
-    color: #18181b;
-    background: transparent;
+:global(.theme-shell[data-theme='light'] .dashboard-shell .db-seg) {
+    border-color: rgba(15, 23, 42, 0.2);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+:global(.theme-shell[data-theme='light'] .dashboard-shell .db-seg__btn) {
+    color: #64748b;
+}
+
+:global(.theme-shell[data-theme='light'] .dashboard-shell .db-seg__btn:hover:not(.db-seg__btn--active)) {
+    color: #0f172a;
+    background: rgba(15, 23, 42, 0.06);
+}
+
+:global(.theme-shell[data-theme='light'] .dashboard-shell .db-seg__btn--active) {
+    color: #ffffff;
+    background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+    box-shadow: 0 4px 14px rgba(29, 78, 216, 0.3);
 }
 
 :global(.theme-shell[data-theme='light'] .dashboard-shell .surface-card),

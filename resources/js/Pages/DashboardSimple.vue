@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue';
@@ -26,15 +26,11 @@ const props = defineProps({
 
 const periodOptions = [
     { value: 'today', label: 'Today' },
-    { value: 'week', label: 'Last 7 Days' },
     { value: 'month', label: 'This Month' },
-    { value: '30days', label: 'Last 30 Days' },
-    { value: 'quarter', label: 'This Quarter' },
 ];
 
 const periodLabels = {
-    today: 'Today', week: 'Last 7 Days', month: 'This Month',
-    '30days': 'Last 30 Days', quarter: 'This Quarter',
+    today: 'Today', month: 'This Month',
 };
 
 const selectedPeriod = ref(props.currentPeriod);
@@ -727,11 +723,15 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                         </div>
                     </div>
                 </div>
-                <label class="db-period">
-                    <select v-model="selectedPeriod" :disabled="isChangingPeriod">
-                        <option v-for="o in periodOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-                    </select>
-                </label>
+                <div class="db-seg">
+                    <button
+                        v-for="o in periodOptions" :key="o.value"
+                        class="db-seg__btn"
+                        :class="{ 'db-seg__btn--active': selectedPeriod === o.value }"
+                        :disabled="isChangingPeriod"
+                        @click="selectedPeriod = o.value"
+                    >{{ o.label }}</button>
+                </div>
             </header>
 
             <!-- โ•โ•โ• KPI STRIP โ•โ•โ• -->
@@ -960,20 +960,32 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     background: #3b82f6;
     box-shadow: 0 0 0 4px rgba(59,130,246,0.22);
 }
-.db-period select {
+.db-seg {
+    display: inline-flex;
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 12px;
     background: rgba(0,0,0,0.3);
-    color: #fafaf9;
-    font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.55rem 1rem;
-    outline: none;
-    cursor: pointer;
-    transition: border-color 160ms;
+    overflow: hidden;
 }
-.db-period select:hover { border-color: rgba(251,146,60,0.35); }
-.db-period select option { background: #1c1917; color: #fafaf9; }
+.db-seg__btn {
+    padding: 0.55rem 1.1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #a8a29e;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 160ms, background 160ms;
+    position: relative;
+}
+.db-seg__btn:hover:not(.db-seg__btn--active) { color: #f5f5f4; background: rgba(255,255,255,0.06); }
+.db-seg__btn--active {
+    color: #1c1917;
+    background: linear-gradient(135deg, #fb923c, #f97316);
+    box-shadow: 0 4px 14px rgba(249,115,22,0.3);
+}
+.db-seg__btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* โ”€โ”€ KPI Strip โ”€โ”€ */
 .kpi-strip {
@@ -1356,7 +1368,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     color: #1e40af;
 }
 
-:global(.theme-shell[data-theme='light'] .db-period select),
+:global(.theme-shell[data-theme='light'] .db-seg),
 :global(.theme-shell[data-theme='light'] .kpi),
 :global(.theme-shell[data-theme='light'] .kpi--accent),
 :global(.theme-shell[data-theme='light'] .kpi--danger),
@@ -1382,11 +1394,25 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     box-shadow: 0 18px 34px rgba(15, 23, 42, 0.12) !important;
 }
 
-:global(.theme-shell[data-theme='light'] .db-period select) {
-    color: #0f172a;
+:global(.theme-shell[data-theme='light'] .db-seg) {
     border-color: rgba(15, 23, 42, 0.2) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
-    background: #ffffff !important;
+}
+
+:global(.theme-shell[data-theme='light'] .db-seg__btn) {
+    color: #64748b;
+}
+
+:global(.theme-shell[data-theme='light'] .db-seg__btn:hover:not(.db-seg__btn--active)) {
+    color: #0f172a;
+    background: rgba(15, 23, 42, 0.06);
+}
+
+:global(.theme-shell[data-theme='light'] .db-seg__btn--active) {
+    color: #ffffff;
+    background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+    box-shadow: 0 4px 14px rgba(29, 78, 216, 0.3);
 }
 
 :global(.theme-shell[data-theme='light'] .kpi__label),
