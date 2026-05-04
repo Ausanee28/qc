@@ -268,7 +268,8 @@ class ReportController extends Controller
             ->join('Internal_Users as IU', 'TD.internal_id', '=', 'IU.user_id')
             ->select(
                 'TH.transaction_id', 'TH.dmc', 'TH.cell', 'TH.model', 'TH.line', 'TH.receive_date',
-                'EU.external_name as sender', 'TH.detail',
+                DB::raw("CASE WHEN EU.external_name = 'อื่นๆ (Other)' AND TH.sender_leader IS NOT NULL AND TH.sender_leader != '' THEN TH.sender_leader ELSE EU.external_name END as sender"),
+                'TH.detail',
                 'EQ.equipment_name', 'TM.method_name', 'IU.name as inspector',
                 'TD.start_time', 'TD.end_time', 'TD.judgement', 'TD.max_value', 'TD.min_value', 'TD.remark'
             )

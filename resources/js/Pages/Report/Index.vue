@@ -299,8 +299,8 @@ const doExport = async () => {
             </div>
 
             <section class="card card-fill">
-                    <div class="tbl" style="margin-bottom:0">
-                        <table v-if="rows.length">
+                    <div class="tbl" style="margin-bottom:0;overflow-x:auto">
+                        <table v-if="rows.length" style="min-width:1400px; white-space: nowrap;">
                     <thead>
                         <tr>
                             <th style="width:36px;text-align:center">
@@ -315,9 +315,9 @@ const doExport = async () => {
                             <th>Sender</th>
                             <th>Equipment</th>
                             <th>Inspector</th>
-                            <th>Start Time</th>
-                            <th>End Time</th>
-                            <th>Result</th>
+                            <th style="text-align:center">Start Time</th>
+                            <th style="text-align:center">End Time</th>
+                            <th style="text-align:center">Result</th>
                             <th style="text-align:center">MAX</th>
                             <th style="text-align:center">MIN</th>
                             <th>Remark</th>
@@ -337,9 +337,9 @@ const doExport = async () => {
                             <td>{{ r.sender }}</td>
                             <td>{{ r.method_name }}</td>
                             <td>{{ r.inspector }}</td>
-                            <td style="font-size:11px">{{ r.start_time ? new Date(r.start_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '-' }}</td>
-                            <td style="font-size:11px">{{ r.end_time ? new Date(r.end_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '-' }}</td>
-                            <td>
+                            <td style="font-size:11px;text-align:center">{{ r.start_time ? new Date(r.start_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '-' }}</td>
+                            <td style="font-size:11px;text-align:center">{{ r.end_time ? new Date(r.end_time).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '-' }}</td>
+                            <td style="text-align:center">
                                 <span v-if="r.judgement === 'OK'" class="pill pill-g">OK</span>
                                 <span v-else-if="r.judgement === 'NG'" class="pill pill-r">NG</span>
                                 <span v-else class="pill pill-y">{{ r.judgement }}</span>
