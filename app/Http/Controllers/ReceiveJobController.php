@@ -411,7 +411,7 @@ class ReceiveJobController extends Controller
     {
         return (clone $jobsQuery)
             ->orderByDesc('Transaction_Header.receive_date')
-            ->simplePaginate($filters['per_page'])
+            ->paginate($filters['per_page'])
             ->withQueryString()
             ->through(fn (TransactionHeader $job) => [
                 'transaction_id' => $job->transaction_id,

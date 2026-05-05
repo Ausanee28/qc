@@ -111,8 +111,8 @@ const canDeleteResult = (result) => canDelete && !result.is_deleted;
 const canRestoreResult = (result) => canDelete && result.is_deleted;
 
 const pagerButtonClass = (link) => link.active
-    ? 'border-gray-900 bg-gray-900 text-white'
-    : 'border-gray-300 text-gray-700 hover:bg-gray-50';
+    ? 'workflow-pager-btn--active'
+    : 'workflow-pager-btn--idle';
 
 const filterPayload = () => ({
     search: filterForm.search,
@@ -815,6 +815,9 @@ watch(
                             Showing {{ resultPaginator?.from ?? 0 }} to {{ resultPaginator?.to ?? 0 }}
                             <span v-if="typeof resultPaginator?.total === 'number'">of {{ resultPaginator.total }}</span>
                             results
+                            <span class="ml-2 text-xs text-gray-500">
+                                Page {{ resultPaginator?.current_page ?? 1 }} of {{ resultPaginator?.last_page ?? 1 }}
+                            </span>
                         </div>
                         <div class="flex flex-wrap justify-end gap-2">
                             <button
@@ -823,7 +826,7 @@ watch(
                                 type="button"
                                 :disabled="!link.url"
                                 @click="visitPage(link.url)"
-                                class="rounded-md border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                                class="workflow-pager-btn"
                                 :class="pagerButtonClass(link)"
                                 v-html="link.label"
                             />

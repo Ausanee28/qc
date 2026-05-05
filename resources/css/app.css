@@ -611,6 +611,44 @@ tr:hover td {
         0 0 0 4px var(--color-focus-ring);
 }
 
+.workflow-pager-btn {
+    min-width: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--theme-line);
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.workflow-pager-btn--idle {
+    background: var(--color-surface-2);
+    color: var(--theme-text);
+}
+
+.workflow-pager-btn--idle:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-accent-soft) 68%, var(--color-surface-2) 32%);
+    border-color: var(--theme-line-strong);
+    color: var(--theme-text);
+}
+
+.workflow-pager-btn--active {
+    background: linear-gradient(135deg, var(--color-accent-main), var(--color-accent-strong));
+    border-color: color-mix(in srgb, var(--color-accent-main) 72%, transparent);
+    color: var(--color-accent-contrast);
+    box-shadow: var(--color-shadow-2);
+}
+
+.workflow-pager-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.56;
+}
+
 .form-lbl {
     color: var(--theme-text-muted);
 }
@@ -1570,7 +1608,6 @@ html[data-theme='light'] .theme-guest textarea::placeholder {
 .theme-shell[data-theme='light'] .report-toolbar,
 .theme-shell[data-theme='light'] .report-shell,
 .theme-shell[data-theme='light'] .report-shell__row,
-.theme-shell[data-theme='light'] .pager-btn,
 .theme-shell[data-theme='light'] .export-btn-outline,
 .theme-shell[data-theme='light'] .modal-card,
 .theme-shell[data-theme='light'] .modal-input,

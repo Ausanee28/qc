@@ -362,8 +362,8 @@ const doExport = async () => {
                                 :key="index"
                                 :disabled="!link.url"
                                 @click="visitPage(link.url)"
-                                class="pager-btn"
-                                :class="{ 'pager-btn-active': link.active }"
+                                class="workflow-pager-btn"
+                                :class="link.active ? 'workflow-pager-btn--active' : 'workflow-pager-btn--idle'"
                                 v-html="link.label"
                             />
                         </div>
@@ -659,11 +659,11 @@ const doExport = async () => {
     flex-wrap: wrap;
     margin-top: 18px;
     padding-top: 18px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--theme-line);
 }
 
 .report-pagination__summary {
-    color: #a8a29e;
+    color: var(--theme-text-muted);
     font-size: 12px;
 }
 
@@ -672,62 +672,6 @@ const doExport = async () => {
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: 8px;
-}
-
-.pager-btn {
-    min-width: 40px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.03);
-    color: #e7e5e4;
-    font-size: 12px;
-    transition: all 0.15s ease;
-}
-
-.pager-btn:hover:not(:disabled) {
-    background: rgba(251, 146, 60, 0.08);
-    border-color: rgba(251, 146, 60, 0.18);
-}
-
-.pager-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.pager-btn-active {
-    background: linear-gradient(135deg, #fb923c, #ea580c);
-    color: #1c1917;
-    border-color: transparent;
-}
-
-:global(.theme-shell[data-theme='light'] .report-pagination__summary) {
-    color: #57534e;
-}
-
-:global(.theme-shell[data-theme='light'] .pager-btn) {
-    background: rgba(255, 255, 255, 0.94);
-    border-color: rgba(68, 64, 60, 0.14);
-    color: #57534e;
-    box-shadow: 0 8px 20px rgba(24, 24, 27, 0.04);
-}
-
-:global(.theme-shell[data-theme='light'] .pager-btn:hover:not(:disabled)) {
-    background: rgba(24, 24, 27, 0.04);
-    border-color: rgba(68, 64, 60, 0.18);
-    color: #18181b;
-}
-
-:global(.theme-shell[data-theme='light'] .pager-btn:disabled) {
-    opacity: 0.62;
-    color: #a8a29e;
-    background: rgba(255, 255, 255, 0.84);
-}
-
-:global(.theme-shell[data-theme='light'] .pager-btn-active) {
-    color: #ffffff;
-    background: linear-gradient(135deg, #1d4ed8, #1e40af);
-    box-shadow: 0 12px 24px rgba(29, 78, 216, 0.22);
 }
 
 .row-check {

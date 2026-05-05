@@ -508,7 +508,7 @@ class ExecuteTestController extends Controller
             ->when($filters['date_from'] !== '', fn ($query) => $query->where('start_time', '>=', Carbon::parse($filters['date_from'])->startOfDay()))
             ->when($filters['date_to'] !== '', fn ($query) => $query->where('start_time', '<=', Carbon::parse($filters['date_to'])->endOfDay()))
             ->orderByDesc('Transaction_Detail.detail_id')
-            ->simplePaginate($filters['per_page'])
+            ->paginate($filters['per_page'])
             ->withQueryString()
             ->through(fn (TransactionDetail $detail) => [
                 'detail_id' => $detail->detail_id,

@@ -108,8 +108,8 @@ const canDeleteJob = (job) => !job.is_deleted && canDelete && !(job.details_coun
 const canToggleJobStatus = (job) => !job.is_deleted && (job.is_closed || job.details_count > 0);
 
 const pagerButtonClass = (link) => link.active
-    ? 'border-gray-900 bg-gray-900 text-white'
-    : 'border-gray-300 text-gray-700 hover:bg-gray-50';
+    ? 'workflow-pager-btn--active'
+    : 'workflow-pager-btn--idle';
 
 const filterPayload = () => ({
     search: filterForm.search,
@@ -534,6 +534,9 @@ const toggleJobStatus = (job) => {
                             Showing {{ jobPaginator?.from ?? 0 }} to {{ jobPaginator?.to ?? 0 }}
                             <span v-if="typeof jobPaginator?.total === 'number'">of {{ jobPaginator.total }}</span>
                             jobs
+                            <span class="ml-2 text-xs text-gray-500">
+                                Page {{ jobPaginator?.current_page ?? 1 }} of {{ jobPaginator?.last_page ?? 1 }}
+                            </span>
                         </div>
                         <div class="flex flex-wrap justify-end gap-2">
                             <button
@@ -542,7 +545,7 @@ const toggleJobStatus = (job) => {
                                 type="button"
                                 :disabled="!link.url"
                                 @click="visitPage(link.url)"
-                                class="rounded-md border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                                class="workflow-pager-btn"
                                 :class="pagerButtonClass(link)"
                                 v-html="link.label"
                             />
