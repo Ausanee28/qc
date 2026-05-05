@@ -26,7 +26,7 @@ class DashboardCache
 
     public static function pageKey(string $period): string
     {
-        return "dashboard.page.{$period}";
+        return "dashboard.page.{$period}." . now()->toDateString();
     }
 
     public static function simpleDailyKey(string $period): string

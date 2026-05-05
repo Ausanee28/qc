@@ -447,6 +447,8 @@ const qualityChartData = computed(() => ({
         borderWidth: 0, hoverOffset: 6,
     }],
 }));
+const qualityTotalLabel = computed(() => currentPeriodLabel.value);
+const qualityTotal = computed(() => Number(props.metrics.okCount || 0) + Number(props.metrics.ngCount || 0));
 
 const doughnutOpts = computed(() => ({
     responsive: true, maintainAspectRatio: false, cutout: '72%',
@@ -789,8 +791,8 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                         </div>
                         <div class="doughnut-legend__item">
                             <span class="dot dot--today"></span>
-                            <span>Today</span>
-                            <strong>{{ fmt(metrics.todayOK + metrics.todayNG) }}</strong>
+                            <span>{{ qualityTotalLabel }}</span>
+                            <strong>{{ fmt(qualityTotal) }}</strong>
                         </div>
                     </div>
                 </article>
