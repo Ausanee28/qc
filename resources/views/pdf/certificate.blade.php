@@ -31,7 +31,7 @@
             <td class="info-label">Document No.</td>
             <td class="info-value">QC-{{ str_pad($job->transaction_id, 5, '0', STR_PAD_LEFT) }}</td>
             <td class="info-label">Date Issued</td>
-            <td class="info-value">{{ now()->format('d/m/Y') }}</td>
+            <td class="info-value">{{ now()->format('d-m-Y') }}</td>
         </tr>
         <tr>
             <td class="info-label">Detail</td>
@@ -43,7 +43,7 @@
             <td class="info-label">Line</td>
             <td class="info-value">{{ $job->line ?: '-' }}</td>
             <td class="info-label">Receive Date</td>
-            <td class="info-value">{{ \Carbon\Carbon::parse($job->receive_date)->format('d/m/Y H:i') }}</td>
+            <td class="info-value">{{ \Carbon\Carbon::parse($job->receive_date)->format('d-m-Y H:i') }}</td>
         </tr>
         <tr>
             <td class="info-label">Sender</td>
@@ -82,8 +82,8 @@
                     <td>{{ $i + 1 }}</td>
                     <td>{{ $d->method_name }}</td>
                     <td>{{ $d->inspector }}</td>
-                    <td>{{ $d->start_time ? \Carbon\Carbon::parse($d->start_time)->format('d/m/Y H:i') : '-' }}</td>
-                    <td>{{ $d->end_time ? \Carbon\Carbon::parse($d->end_time)->format('d/m/Y H:i') : '-' }}</td>
+                    <td>{{ $d->start_time ? \Carbon\Carbon::parse($d->start_time)->format('d-m-Y H:i') : '-' }}</td>
+                    <td>{{ $d->end_time ? \Carbon\Carbon::parse($d->end_time)->format('d-m-Y H:i') : '-' }}</td>
                     <td style="text-align:center;">
                         @php $jColor = $d->judgement === 'OK' ? '#059669' : '#dc2626'; $jBg = $d->judgement === 'OK' ? '#ecfdf5' : '#fef2f2'; @endphp
                         <span style="background:{{ $jBg }};color:{{ $jColor }};padding:3px 12px;border-radius:20px;font-weight:700;font-size:11px;">{{ $d->judgement }}</span>
@@ -109,7 +109,7 @@
     </div>
 
     <div class="footer">
-        QC Lab Tracking System &bull; Generated on {{ now()->format('d/m/Y H:i') }} &bull; This is a computer-generated document.
+        QC Lab Tracking System &bull; Generated on {{ now()->format('d-m-Y H:i') }} &bull; This is a computer-generated document.
     </div>
 </body>
 </html>

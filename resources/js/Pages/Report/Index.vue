@@ -1,7 +1,9 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import DateInput from '@/Components/DateInput.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import { formatDisplayDateTime, monthStartIsoDate, todayIsoDate } from '@/lib/date-format';
 
 const props = defineProps({ results: Object, summary: Object, filters: Object, exportTemplates: Array });
 const page = usePage();
@@ -36,19 +38,14 @@ const visitPage = (url) => {
 };
 
 const resetFilters = () => {
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    dateFrom.value = monthStart.toISOString().slice(0, 10);
-    dateTo.value = now.toISOString().slice(0, 10);
+    dateFrom.value = monthStartIsoDate();
+    dateTo.value = todayIsoDate();
     dmcSearch.value = '';
     perPage.value = '25';
     search();
 };
 
-const formatDate = (value) => value
-    ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    : '-';
+const formatDate = (value) => formatDisplayDateTime(value);
 
 const formatTime = (value) => value
     ? new Date(value).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -252,8 +249,8 @@ const doExport = async () => {
             <section class="card card-fill report-toolbar">
                 <div class="report-toolbar__bar">
                     <input v-model="dmcSearch" @keyup.enter="search" type="text" placeholder="Search DMC..." class="form-inp report-filter-input report-filter-input-search">
-                    <input v-model="dateFrom" type="date" class="form-inp report-filter-input">
-                    <input v-model="dateTo" type="date" class="form-inp report-filter-input">
+                    <DateInput v-model="dateFrom" field-class="form-inp report-filter-input" aria-label="Select from date" />
+                    <DateInput v-model="dateTo" field-class="form-inp report-filter-input" aria-label="Select to date" />
                     <select v-model="perPage" class="form-inp report-filter-input report-filter-input-select">
                         <option value="25">25 / page</option>
                         <option value="50">50 / page</option>

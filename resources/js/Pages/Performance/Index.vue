@@ -1,8 +1,10 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import DateInput from '@/Components/DateInput.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Bar } from '@/lib/performance-charts';
+import { formatDisplayDate } from '@/lib/date-format';
 
 const props = defineProps({ inspectors: Array, details: Array, filters: Object });
 
@@ -14,7 +16,14 @@ const selectedDate = ref(props.filters?.date ?? new Date().toISOString().slice(0
 const selectedMonth = ref(props.filters?.month ?? new Date().toISOString().slice(0, 7));
 const performanceReloadOnly = ['inspectors', 'details', 'filters', 'flash'];
 
-const periodLabel = computed(() => props.filters?.label ?? 'Last 30 days');
+const periodLabel = computed(() => {
+    if (props.filters?.mode === 'day') {
+        return formatDisplayDate(props.filters?.date);
+    }
+
+    return props.filters?.label ?? 'Last 30 days';
+});
+const periodRangeLabel = computed(() => `${formatDisplayDate(props.filters?.start_date)} to ${formatDisplayDate(props.filters?.end_date)}`);
 
 const buildFilterPayload = () => {
     if (filterMode.value === 'day') {
@@ -225,13 +234,12 @@ onUnmounted(() => {
                         <option value="day">Specific day</option>
                         <option value="month">Specific month</option>
                     </select>
-                    <input
+                    <DateInput
                         v-if="filterMode === 'day'"
                         v-model="selectedDate"
-                        type="date"
-                        class="performance-filter__control"
-                        @keyup.enter="applyFilters"
-                    >
+                        field-class="performance-filter__control"
+                        aria-label="Select performance date"
+                    />
                     <input
                         v-else-if="filterMode === 'month'"
                         v-model="selectedMonth"
@@ -240,7 +248,7 @@ onUnmounted(() => {
                         @keyup.enter="applyFilters"
                     >
                     <div v-else class="performance-filter__range">
-                        {{ props.filters?.start_date }} to {{ props.filters?.end_date }}
+                        {{ periodRangeLabel }}
                     </div>
                 </div>
                 <div class="performance-filter__actions">

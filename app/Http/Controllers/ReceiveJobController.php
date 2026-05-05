@@ -443,7 +443,7 @@ class ReceiveJobController extends Controller
             return null;
         }
 
-        return $value->copy()->timezone(self::DISPLAY_TIMEZONE)->format('Y-m-d H:i');
+        return $value->copy()->timezone(self::DISPLAY_TIMEZONE)->format('d-m-Y H:i');
     }
 
     private function headerAuditPayload(TransactionHeader $job): array

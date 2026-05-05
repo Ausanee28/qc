@@ -394,7 +394,7 @@ class ReportController extends Controller
             return '';
         }
 
-        return Carbon::parse($value)->format('Y-m-d');
+        return Carbon::parse($value)->format('d-m-Y');
     }
 
     private function formatExportTime(mixed $value): string

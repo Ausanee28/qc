@@ -41,13 +41,6 @@ const navGroupsConfig = [
     },
 ];
 
-const dateFormatter = new Intl.DateTimeFormat('en-GB', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-});
-
 const showMobileMenu = ref(false);
 const page = usePage();
 const { currentTheme, isLightTheme, toggleTheme } = useTheme();
@@ -72,6 +65,12 @@ const groupedNav = computed(() => {
 
 const user = computed(() => page.props.auth?.user ?? { name: '', role: '' });
 const csrfToken = computed(() => page.props.csrf_token ?? '');
+const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+});
 const currentDate = dateFormatter.format(new Date());
 const isActiveRoute = (routeName) => route().current(routeName);
 const logout = () => {

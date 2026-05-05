@@ -1,8 +1,10 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import DateInput from '@/Components/DateInput.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue';
 import { getEcho } from '@/lib/realtime';
+import { formatDisplayDate } from '@/lib/date-format';
 
 const dashboardReloadOnly = ['currentPeriod', 'metrics', 'weeklyData', 'fourWeekData', 'dailyData', 'monthlyData', 'inspectorData', 'flash'];
 
@@ -55,7 +57,7 @@ const dashboardSyncIntervalHiddenMs = 90000;
 const currentPeriodLabel = computed(() => {
     if (periodLabels[props.currentPeriod]) return periodLabels[props.currentPeriod];
     if (/^\d{4}-\d{2}-\d{2}$/.test(props.currentPeriod)) {
-        return new Date(props.currentPeriod).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        return formatDisplayDate(props.currentPeriod);
     }
     if (/^\d{4}-\d{2}$/.test(props.currentPeriod)) {
         const [year, month] = props.currentPeriod.split('-');
@@ -746,10 +748,13 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                     
                     <div class="db-seg__divider"></div>
                     
-                    <div class="db-seg__input-wrap" title="Select specific day">
-                        <svg class="db-seg__icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        <input type="date" class="db-seg__input" :value="/^\d{4}-\d{2}-\d{2}$/.test(selectedPeriod) ? selectedPeriod : ''" @change="$event.target.value && (selectedPeriod = $event.target.value)" @click="$event.target.showPicker && $event.target.showPicker()" />
-                    </div>
+                    <DateInput
+                        :model-value="/^\d{4}-\d{2}-\d{2}$/.test(selectedPeriod) ? selectedPeriod : ''"
+                        field-class="db-seg__input-wrap"
+                        aria-label="Select specific day"
+                        :show-display="false"
+                        @update:model-value="$event && (selectedPeriod = $event)"
+                    />
                     
                     <div class="db-seg__input-wrap" title="Select specific month">
                         <svg class="db-seg__icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>

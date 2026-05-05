@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import DateInput from '@/Components/DateInput.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 
@@ -445,8 +446,16 @@ const toggleJobStatus = (job) => {
                             <option value="closed">Closed</option>
                             <option value="deleted">Deleted</option>
                         </select>
-                        <input v-model="filterForm.date_from" type="date" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
-                        <input v-model="filterForm.date_to" type="date" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                        <DateInput
+                            v-model="filterForm.date_from"
+                            field-class="date-input-field--strong-placeholder rounded-xl border border-gray-300 px-4 py-2 text-sm text-gray-900 focus-within:border-gray-900 focus-within:outline-none focus-within:ring-2 focus-within:ring-gray-900/10"
+                            aria-label="Select from date"
+                        />
+                        <DateInput
+                            v-model="filterForm.date_to"
+                            field-class="date-input-field--strong-placeholder rounded-xl border border-gray-300 px-4 py-2 text-sm text-gray-900 focus-within:border-gray-900 focus-within:outline-none focus-within:ring-2 focus-within:ring-gray-900/10"
+                            aria-label="Select to date"
+                        />
                         <select v-model="filterForm.per_page" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                             <option value="10">10 / page</option>
                             <option value="20">20 / page</option>

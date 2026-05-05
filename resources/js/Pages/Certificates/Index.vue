@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import { formatDisplayDate } from '@/lib/date-format';
 
 const props = defineProps({ jobs: Object });
 const certificateReloadOnly = ['jobs', 'filters', 'flash'];
@@ -17,7 +18,7 @@ const visitPage = (url) => {
     });
 };
 
-const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+const formatDate = (d) => formatDisplayDate(d);
 const jobRows = computed(() => props.jobs?.data ?? []);
 </script>
 
