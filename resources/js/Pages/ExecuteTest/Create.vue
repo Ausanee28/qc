@@ -86,6 +86,7 @@ const filterForm = reactive({
 });
 
 const pendingJobOptions = computed(() => pendingJobsState.value ?? []);
+const formatPendingJobDateTime = (job) => [job.receive_date, job.receive_time].filter(Boolean).join(' | ');
 const pendingJobsReady = computed(() => Array.isArray(props.pendingJobs));
 const pendingJobsWindow = computed(() => Number(props.pendingJobsWindow ?? pendingJobOptions.value.length ?? 0));
 const openJobCount = computed(() => Number(openJobCountState.value ?? pendingJobOptions.value.length ?? 0));
@@ -560,7 +561,7 @@ watch(
                             >
                                 <option value="" disabled>{{ pendingJobsReady ? '-- Select Open Job --' : 'Loading open jobs...' }}</option>
                                 <option v-for="j in pendingJobOptions" :key="j.transaction_id" :value="String(j.transaction_id)">
-                                    {{ j.detail || 'No detail' }}{{ j.cell ? ` (Cell ${j.cell})` : '' }} [{{ j.sender_name || 'Unknown Sender' }}] {{ j.receive_time ? j.receive_time : '' }}
+                                    {{ j.detail || 'No detail' }}{{ j.cell ? ` (Cell ${j.cell})` : '' }} [{{ j.sender_name || 'Unknown Sender' }}] {{ formatPendingJobDateTime(j) }}
                                 </option>
                             </select>
                             <div class="mt-1 text-xs text-gray-500">

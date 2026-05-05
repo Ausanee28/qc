@@ -65,6 +65,7 @@ class ExecuteTestController extends Controller
                         'cell' => $job->cell,
                         'line' => $job->line,
                         'detail' => $job->detail,
+                        'receive_date' => optional($job->receive_date)->format('d-m-Y') ?? '',
                         'receive_time' => optional($job->receive_date)->format('H:i') ?? '',
                         'sender_name' => $job->external_name === 'อื่นๆ (Other)' ? ($job->sender_leader ?: 'Unknown Leader') : $job->external_name,
                     ]);
@@ -116,6 +117,7 @@ class ExecuteTestController extends Controller
                 'cell' => $job->cell,
                 'line' => $job->line,
                 'detail' => $job->detail,
+                'receive_date' => optional($job->receive_date)->format('d-m-Y') ?? '',
                 'receive_time' => optional($job->receive_date)->format('H:i') ?? '',
                 'sender_name' => $job->external_name === 'อื่นๆ (Other)' ? ($job->sender_leader ?: 'Unknown Leader') : $job->external_name,
             ])->values(),
