@@ -61,13 +61,27 @@ const form = useForm({
     remark: '',
 });
 
+const isoToDisplayDate = (value) => {
+    if (!value) return '';
+    if (/^\d{2}-\d{2}-\d{4}$/.test(value)) return value;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
+};
+
+const displayToIsoDate = (value) => {
+    if (!value) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value);
+    return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
+};
+
 const filterForm = reactive({
     ...defaultFilters,
     search: props.filters?.search ?? defaultFilters.search,
     judgement: props.filters?.judgement ?? defaultFilters.judgement,
     record_state: props.filters?.record_state ?? defaultFilters.record_state,
-    date_from: props.filters?.date_from ?? defaultFilters.date_from,
-    date_to: props.filters?.date_to ?? defaultFilters.date_to,
+    date_from: isoToDisplayDate(props.filters?.date_from ?? defaultFilters.date_from),
+    date_to: isoToDisplayDate(props.filters?.date_to ?? defaultFilters.date_to),
     per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 
@@ -103,8 +117,8 @@ const filterPayload = () => ({
     search: filterForm.search,
     judgement: filterForm.judgement,
     record_state: filterForm.record_state,
-    date_from: filterForm.date_from,
-    date_to: filterForm.date_to,
+    date_from: displayToIsoDate(filterForm.date_from),
+    date_to: displayToIsoDate(filterForm.date_to),
     per_page: filterForm.per_page,
 });
 
@@ -210,9 +224,9 @@ const editResult = (result) => {
     form.transaction_id = result.transaction_id;
     form.method_id = result.method_id;
     form.internal_id = result.internal_id;
-    form.start_date = result.start_date || '';
+    form.start_date = isoToDisplayDate(result.start_date);
     form.start_time = result.start_time || '';
-    form.end_date = result.end_date || '';
+    form.end_date = isoToDisplayDate(result.end_date);
     form.end_time = result.end_time || '';
     form.max_value = result.max_value || '';
     form.min_value = result.min_value || '';
@@ -252,10 +266,18 @@ const restoreResult = (result) => {
 
 const toTwoDigits = (value) => String(value).padStart(2, '0');
 
+const setStartDateFromPicker = (event) => {
+    form.start_date = isoToDisplayDate(event.target.value);
+};
+
+const setEndDateFromPicker = (event) => {
+    form.end_date = isoToDisplayDate(event.target.value);
+};
+
 const nowParts = () => {
     const now = new Date();
     return {
-        date: `${now.getFullYear()}-${toTwoDigits(now.getMonth() + 1)}-${toTwoDigits(now.getDate())}`,
+        date: `${toTwoDigits(now.getDate())}-${toTwoDigits(now.getMonth() + 1)}-${now.getFullYear()}`,
         time: `${toTwoDigits(now.getHours())}:${toTwoDigits(now.getMinutes())}`,
     };
 };
@@ -592,9 +614,22 @@ watch(
                                     <button type="button" @click="setNowForBoth" class="rounded-md border border-white/10 px-2 py-1 text-xs text-stone-200 hover:bg-orange-500/10">Now + End</button>
                                 </div>
                             </div>
-                            <div style="display:flex;gap:8px;margin-top:4px">
-                                <input v-model="form.start_date" type="date" class="form-inp" required>
-                                <input v-model="form.start_time" type="time" class="form-inp" required>
+                            <div class="datetime-input-row">
+                                <div class="date-picker-field">
+                                    <input
+                                        v-model="form.start_date"
+                                        type="text"
+                                        class="form-inp date-picker-field__input"
+                                        placeholder="DD-MM-YYYY"
+                                        tabindex="-1"
+                                        required
+                                    >
+                                    <span class="date-picker-field__button" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M5 11h14M7 21h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" /></svg>
+                                    </span>
+                                    <input type="date" class="date-picker-field__native" :value="displayToIsoDate(form.start_date)" aria-label="Select start date" @change="setStartDateFromPicker">
+                                </div>
+                                <input v-model="form.start_time" type="time" class="form-inp datetime-input-row__time" required>
                             </div>
                             <div v-if="form.errors.start_date || form.errors.start_time" class="mt-1 text-xs text-red-600">{{ form.errors.start_date || form.errors.start_time }}</div>
                         </div>
@@ -606,9 +641,21 @@ watch(
                                     <button type="button" @click="copyStartToEnd" class="rounded-md border border-white/10 px-2 py-1 text-xs text-stone-200 hover:bg-orange-500/10">Use Start</button>
                                 </div>
                             </div>
-                            <div style="display:flex;gap:8px;margin-top:4px">
-                                <input v-model="form.end_date" type="date" class="form-inp">
-                                <input v-model="form.end_time" type="time" class="form-inp">
+                            <div class="datetime-input-row">
+                                <div class="date-picker-field">
+                                    <input
+                                        v-model="form.end_date"
+                                        type="text"
+                                        class="form-inp date-picker-field__input"
+                                        placeholder="DD-MM-YYYY"
+                                        tabindex="-1"
+                                    >
+                                    <span class="date-picker-field__button" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M5 11h14M7 21h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" /></svg>
+                                    </span>
+                                    <input type="date" class="date-picker-field__native" :value="displayToIsoDate(form.end_date)" aria-label="Select end date" @change="setEndDateFromPicker">
+                                </div>
+                                <input v-model="form.end_time" type="time" class="form-inp datetime-input-row__time">
                             </div>
                             <div v-if="form.errors.end_date || form.errors.end_time" class="mt-1 text-xs text-red-600">{{ form.errors.end_date || form.errors.end_time }}</div>
                         </div>
@@ -671,8 +718,32 @@ watch(
                             <option value="deleted">Deleted records</option>
                             <option value="all">All records</option>
                         </select>
-                        <input v-model="filterForm.date_from" type="date" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
-                        <input v-model="filterForm.date_to" type="date" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                        <div class="date-picker-field filter-date-field">
+                            <input
+                                v-model="filterForm.date_from"
+                                type="text"
+                                class="form-inp date-picker-field__input filter-date-field__input"
+                                placeholder="DD-MM-YYYY"
+                                tabindex="-1"
+                            >
+                            <span class="date-picker-field__button" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M5 11h14M7 21h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" /></svg>
+                            </span>
+                            <input type="date" class="date-picker-field__native" :value="displayToIsoDate(filterForm.date_from)" aria-label="Select from date" @change="filterForm.date_from = isoToDisplayDate($event.target.value)">
+                        </div>
+                        <div class="date-picker-field filter-date-field">
+                            <input
+                                v-model="filterForm.date_to"
+                                type="text"
+                                class="form-inp date-picker-field__input filter-date-field__input"
+                                placeholder="DD-MM-YYYY"
+                                tabindex="-1"
+                            >
+                            <span class="date-picker-field__button" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M5 11h14M7 21h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" /></svg>
+                            </span>
+                            <input type="date" class="date-picker-field__native" :value="displayToIsoDate(filterForm.date_to)" aria-label="Select to date" @change="filterForm.date_to = isoToDisplayDate($event.target.value)">
+                        </div>
                         <select v-model="filterForm.per_page" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                             <option value="10">10 / page</option>
                             <option value="20">20 / page</option>
@@ -761,3 +832,122 @@ watch(
         </div>
     </AuthenticatedLayout>
 </template>
+
+<style scoped>
+.datetime-input-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(132px, 0.88fr);
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.date-picker-field {
+    position: relative;
+    min-width: 0;
+    border-radius: 14px;
+    background: var(--date-field-bg, #ffffff);
+}
+
+.date-picker-field__input {
+    position: relative;
+    width: 100%;
+    background-color: var(--date-field-bg, #ffffff) !important;
+    background-image: none !important;
+    border-color: var(--date-field-border, #c9cfd8) !important;
+    color: var(--date-field-text, #111827) !important;
+    padding-right: 42px;
+    cursor: pointer;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.date-picker-field__input::placeholder {
+    color: var(--date-field-placeholder, #111827) !important;
+}
+
+:global(.theme-shell) .date-picker-field__input {
+    background: var(--date-field-bg, #ffffff) !important;
+    background-color: var(--date-field-bg, #ffffff) !important;
+    color: var(--date-field-text, #111827) !important;
+}
+
+.date-picker-field__button {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    display: inline-flex;
+    height: 22px;
+    width: 22px;
+    align-items: center;
+    justify-content: center;
+    color: var(--date-field-icon, #111827);
+    pointer-events: none;
+    transform: translateY(-50%);
+    z-index: 2;
+}
+
+:global(.theme-shell[data-theme='light']) .date-picker-field {
+    --date-field-bg: #ffffff;
+    --date-field-border: #c9cfd8;
+    --date-field-text: #111827;
+    --date-field-placeholder: #111827;
+    --date-field-icon: #111827;
+}
+
+:global(.theme-shell[data-theme='dark']) .date-picker-field {
+    --date-field-bg: rgba(0, 0, 0, 0.22);
+    --date-field-border: rgba(255, 255, 255, 0.09);
+    --date-field-text: var(--theme-text);
+    --date-field-placeholder: #d6d3d1;
+    --date-field-icon: #f5f5f4;
+}
+
+.date-picker-field__button svg {
+    height: 16px;
+    width: 16px;
+}
+
+.date-picker-field__native {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: transparent;
+    cursor: pointer;
+    opacity: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    z-index: 3;
+}
+
+.date-picker-field__native::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.filter-date-field {
+    min-height: 40px;
+}
+
+.filter-date-field__input {
+    height: 40px;
+    padding: 8px 42px 8px 16px;
+    font-size: 0.875rem;
+}
+
+.datetime-input-row__time {
+    min-width: 0;
+}
+
+@media (max-width: 640px) {
+    .datetime-input-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>

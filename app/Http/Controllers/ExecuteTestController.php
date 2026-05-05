@@ -283,10 +283,10 @@ class ExecuteTestController extends Controller
             'method_id' => 'required|exists:Test_Methods,method_id',
             'internal_id' => 'required|exists:Internal_Users,user_id',
             'judgement' => 'required|in:' . \App\Models\TransactionDetail::JUDGEMENT_OK . ',' . \App\Models\TransactionDetail::JUDGEMENT_NG,
-            'start_date' => 'required|date',
-            'start_time' => 'required',
-            'end_date' => 'nullable|date',
-            'end_time' => 'nullable',
+            'start_date' => 'required|date_format:Y-m-d,d-m-Y',
+            'start_time' => 'required|date_format:H:i',
+            'end_date' => 'nullable|date_format:Y-m-d,d-m-Y|required_with:end_time',
+            'end_time' => 'nullable|date_format:H:i|required_with:end_date',
             'max_value' => 'nullable|string|max:255',
             'min_value' => 'nullable|string|max:255',
             'remark' => 'nullable|string|max:255',
@@ -318,20 +318,47 @@ class ExecuteTestController extends Controller
 
     private function normalizeTimes(array $validated): array
     {
-        $startDt = $validated['start_date'] . ' ' . $validated['start_time'] . ':00';
+        $startDt = $this->parseFormDateTime($validated['start_date'], $validated['start_time']);
         $endDt = ($validated['end_date'] ?? null) && ($validated['end_time'] ?? null)
-            ? $validated['end_date'] . ' ' . $validated['end_time'] . ':00'
+            ? $this->parseFormDateTime($validated['end_date'], $validated['end_time'])
             : null;
 
-        if ($endDt && strtotime($endDt) < strtotime($startDt)) {
+        if ($endDt && $endDt->lt($startDt)) {
             throw ValidationException::withMessages([
                 'end_time' => 'End time must be after start time.',
             ]);
         }
 
-        $durationSec = $endDt ? strtotime($endDt) - strtotime($startDt) : null;
+        $durationSec = $endDt ? $startDt->diffInSeconds($endDt) : null;
 
-        return [$startDt, $endDt, $durationSec];
+        return [
+            $startDt->format('Y-m-d H:i:s'),
+            $endDt?->format('Y-m-d H:i:s'),
+            $durationSec,
+        ];
+    }
+
+    private function parseFormDateTime(string $date, string $time): Carbon
+    {
+        $format = preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)
+            ? 'Y-m-d H:i'
+            : 'd-m-Y H:i';
+
+        try {
+            $dateTime = Carbon::createFromFormat($format, "{$date} {$time}");
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'start_date' => 'Date must use DD-MM-YYYY.',
+            ]);
+        }
+
+        if ($dateTime !== false && $dateTime->format($format) === "{$date} {$time}") {
+            return $dateTime;
+        }
+
+        throw ValidationException::withMessages([
+            'start_date' => 'Date must use DD-MM-YYYY.',
+        ]);
     }
 
     private function normalizeOptionalText(?string $value): ?string
@@ -490,11 +517,11 @@ class ExecuteTestController extends Controller
                 'max_value' => $detail->max_value,
                 'min_value' => $detail->min_value,
                 'remark' => $detail->remark,
-                'start_date' => optional($detail->start_time)->format('Y-m-d'),
+                'start_date' => optional($detail->start_time)->format('d-m-Y'),
                 'start_time' => optional($detail->start_time)->format('H:i'),
-                'end_date' => optional($detail->end_time)->format('Y-m-d'),
+                'end_date' => optional($detail->end_time)->format('d-m-Y'),
                 'end_time' => optional($detail->end_time)->format('H:i'),
-                'deleted_at' => $supportsDetailSoftDeletes ? optional($detail->deleted_at)->format('Y-m-d H:i') : null,
+                'deleted_at' => $supportsDetailSoftDeletes ? optional($detail->deleted_at)->format('d-m-Y H:i') : null,
                 'job_label' => '#' . $detail->transaction_id . ' - ' . ($detail->job_detail ?: 'No detail'),
                 'method_name' => $detail->joined_method_name,
                 'inspector_name' => $detail->joined_inspector_name,

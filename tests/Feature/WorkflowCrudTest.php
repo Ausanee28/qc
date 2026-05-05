@@ -161,9 +161,9 @@ class WorkflowCrudTest extends TestCase
             'transaction_id' => $job->transaction_id,
             'method_id' => $method->method_id,
             'internal_id' => $user->user_id,
-            'start_date' => now()->format('Y-m-d'),
+            'start_date' => now()->format('d-m-Y'),
             'start_time' => '08:00',
-            'end_date' => now()->format('Y-m-d'),
+            'end_date' => now()->format('d-m-Y'),
             'end_time' => '09:00',
             'judgement' => TransactionDetail::JUDGEMENT_OK,
             'remark' => 'Initial pass',
@@ -174,14 +174,15 @@ class WorkflowCrudTest extends TestCase
         $createResponse->assertRedirect(route('execute-test.create'));
         $this->assertNotNull($detail);
         $this->assertSame('Initial pass', $detail->remark);
+        $this->assertSame(3600, (int) $detail->duration_sec);
 
         $updateResponse = $this->actingAs($user)->put(route('execute-test.update', $detail->detail_id), [
             'transaction_id' => $job->transaction_id,
             'method_id' => $method->method_id,
             'internal_id' => $user->user_id,
-            'start_date' => now()->format('Y-m-d'),
+            'start_date' => now()->format('d-m-Y'),
             'start_time' => '08:15',
-            'end_date' => now()->format('Y-m-d'),
+            'end_date' => now()->format('d-m-Y'),
             'end_time' => '09:30',
             'judgement' => TransactionDetail::JUDGEMENT_NG,
             'remark' => 'Updated result',
@@ -189,6 +190,7 @@ class WorkflowCrudTest extends TestCase
 
         $updateResponse->assertRedirect(route('execute-test.create'));
         $this->assertSame(TransactionDetail::JUDGEMENT_NG, $detail->fresh()->judgement);
+        $this->assertSame(4500, (int) $detail->fresh()->duration_sec);
 
         $deleteResponse = $this->actingAs($user)->delete(route('execute-test.destroy', $detail->detail_id));
 
@@ -196,6 +198,52 @@ class WorkflowCrudTest extends TestCase
         $this->assertSoftDeleted('Transaction_Detail', [
             'detail_id' => $detail->detail_id,
         ]);
+    }
+
+    public function test_execute_test_duration_handles_overnight_iso_dates_and_rejects_localized_dates(): void
+    {
+        [$user, $externalUser] = $this->workflowActors();
+
+        $job = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $user->user_id,
+            'detail' => 'Overnight test item',
+            'dmc' => 'DMC-101',
+            'line' => 'Line 3',
+            'receive_date' => '2026-05-04 20:00:00',
+        ]);
+
+        $method = TestMethod::first();
+
+        $createResponse = $this->actingAs($user)->post(route('execute-test.store'), [
+            'transaction_id' => $job->transaction_id,
+            'method_id' => $method->method_id,
+            'internal_id' => $user->user_id,
+            'start_date' => '04-05-2026',
+            'start_time' => '21:53',
+            'end_date' => '05-05-2026',
+            'end_time' => '04:53',
+            'judgement' => TransactionDetail::JUDGEMENT_OK,
+        ]);
+
+        $createResponse->assertRedirect(route('execute-test.create'));
+        $this->assertSame(25200, (int) TransactionDetail::latest('detail_id')->first()->duration_sec);
+
+        $badDateResponse = $this->actingAs($user)
+            ->from(route('execute-test.create'))
+            ->post(route('execute-test.store'), [
+                'transaction_id' => $job->transaction_id,
+                'method_id' => $method->method_id,
+                'internal_id' => $user->user_id,
+                'start_date' => '04/05/2026',
+                'start_time' => '21:53',
+                'end_date' => '05/05/2026',
+                'end_time' => '04:53',
+                'judgement' => TransactionDetail::JUDGEMENT_OK,
+            ]);
+
+        $badDateResponse->assertRedirect(route('execute-test.create'));
+        $badDateResponse->assertSessionHasErrors(['start_date', 'end_date']);
     }
 
     public function test_admin_can_restore_deleted_job_and_related_details(): void
