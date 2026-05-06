@@ -91,6 +91,10 @@ class UserController extends Controller
         Cache::forget('receive_job.internals');
         Cache::forget('execute_test.inspectors');
         Cache::forget('execute_test.results.default.active.per_page_20');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_display');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display.with_date');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display.with_date.start_time_sort');
         Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
         $this->refreshDashboardRealtime();
 
@@ -135,6 +139,10 @@ class UserController extends Controller
         Cache::forget('receive_job.internals');
         Cache::forget('execute_test.inspectors');
         Cache::forget('execute_test.results.default.active.per_page_20');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_display');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display.with_date');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display.with_date.start_time_sort');
         Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
         $this->refreshDashboardRealtime();
 
@@ -181,6 +189,10 @@ class UserController extends Controller
         Cache::forget('receive_job.internals');
         Cache::forget('execute_test.inspectors');
         Cache::forget('execute_test.results.default.active.per_page_20');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_display');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display.with_date');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display.with_date.start_time_sort');
         Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
         $this->refreshDashboardRealtime();
 
@@ -221,6 +233,10 @@ class UserController extends Controller
         Cache::forget('receive_job.internals');
         Cache::forget('execute_test.inspectors');
         Cache::forget('execute_test.results.default.active.per_page_20');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_display');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display.with_date');
+        Cache::forget('execute_test.results.default.active.per_page_20.job_result_display.with_date.start_time_sort');
         Cache::forget(self::DEFAULT_USERS_CACHE_KEY);
         $this->refreshDashboardRealtime();
 

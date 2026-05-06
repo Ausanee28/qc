@@ -248,7 +248,7 @@ const deleteJob = (job) => {
         return;
     }
 
-    if (confirm(`Delete job #${job.transaction_id}?`)) {
+    if (confirm(`Delete ${job.job_display_label || `job #${job.transaction_id}`}?`)) {
         form.delete(route('receive-job.destroy', job.transaction_id), {
             only: workflowReloadOnly,
             invalidateCacheTags: workflowInvalidateTags,
@@ -263,7 +263,7 @@ const restoreJob = (job) => {
         return;
     }
 
-    if (confirm(`Restore job #${job.transaction_id}?`)) {
+    if (confirm(`Restore ${job.job_display_label || `job #${job.transaction_id}`}?`)) {
         form.patch(route('receive-job.restore', job.transaction_id), {
             only: workflowReloadOnly,
             invalidateCacheTags: workflowInvalidateTags,
@@ -486,8 +486,8 @@ const toggleJobStatus = (job) => {
                                 </tr>
                                 <tr v-for="job in jobRows" :key="job.transaction_id" class="align-top">
                                     <td class="px-6 py-4 text-sm text-gray-700">
-                                        <div class="font-mono font-semibold text-gray-900">#{{ job.transaction_id }}</div>
-                                        <div class="mt-1 text-xs text-gray-500">{{ job.receive_date }}</div>
+                                        <div class="font-semibold text-gray-900">{{ job.job_display_label || 'Job ---' }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ job.receive_display || job.receive_date }}</div>
                                         <div class="mt-1 text-xs text-gray-500">
                                             {{ job.dmc || 'No DMC' }}
                                             <span v-if="job.cell"> / Cell: {{ job.cell }}</span>

@@ -864,20 +864,25 @@ Artisan::command('qc:warm', function (DashboardMetricsService $metricsService) {
         ->get(['external_id', 'external_name']));
     Cache::remember('receive_job.internals', now()->addMinutes(10), fn () => \App\Models\User::orderBy('name')->get(['user_id', 'name']));
     ReceiveJobController::warmDefaultHistoryCache();
-    Cache::remember('execute_test.methods', now()->addMinutes(10), fn () => \App\Models\TestMethod::query()
+    Cache::remember('execute_test.methods.with_equipment', now()->addMinutes(10), fn () => \App\Models\TestMethod::query()
+        ->select(['method_id', 'method_name', 'equipment_id'])
+        ->with(['equipment:equipment_id,equipment_name'])
         ->when(\App\Support\SchemaCapabilities::hasColumn('Test_Methods', 'is_active'), fn ($query) => $query->where('is_active', true))
         ->orderBy('method_name')
         ->get());
     Cache::remember('execute_test.inspectors', now()->addMinutes(10), fn () => \App\Models\User::orderBy('name')->get(['user_id', 'name']));
-    Cache::remember('execute_test.pending_jobs.active.with_model_shift', now()->addSeconds(30), function () {
-        return \App\Models\TransactionHeader::query()
+    Cache::remember('execute_test.pending_jobs.active.with_model_shift.job_display', now()->addSeconds(30), function () {
+        $jobs = \App\Models\TransactionHeader::query()
             ->leftJoin('External_Users as EU', 'Transaction_Header.external_id', '=', 'EU.external_id')
             ->whereNull('Transaction_Header.return_date')
             ->orderByDesc('Transaction_Header.receive_date')
             ->limit(500)
-            ->get(['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.cell', 'Transaction_Header.line', 'Transaction_Header.shift', 'Transaction_Header.model', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'Transaction_Header.receive_date', 'EU.external_name'])
-            ->map(fn ($job) => [
+            ->get(['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.cell', 'Transaction_Header.line', 'Transaction_Header.shift', 'Transaction_Header.model', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'Transaction_Header.receive_date', 'EU.external_name']);
+        $jobDisplayLabels = \App\Support\JobDisplay::labelsForHeaders($jobs);
+
+        return $jobs->map(fn ($job) => [
                 'transaction_id' => $job->transaction_id,
+                'job_display_label' => $jobDisplayLabels[(int) $job->transaction_id] ?? 'Job ---',
                 'dmc' => $job->dmc,
                 'cell' => $job->cell,
                 'line' => $job->line,
@@ -885,6 +890,7 @@ Artisan::command('qc:warm', function (DashboardMetricsService $metricsService) {
                 'model' => $job->model,
                 'detail' => $job->detail,
                 'receive_date' => optional($job->receive_date)->format('d-m-Y') ?? '',
+                'receive_display' => \App\Support\JobDisplay::shortDateTime($job->receive_date),
                 'receive_time' => optional($job->receive_date)->format('H:i') ?? '',
                 'sender_name' => $job->external_name === 'อื่นๆ (Other)' ? ($job->sender_leader ?: 'Unknown Leader') : $job->external_name,
             ]);

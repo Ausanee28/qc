@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Support\PendingJobsVersion;
 use App\Support\DashboardCache;
 use App\Support\AuditLogger;
+use App\Support\JobDisplay;
+use App\Support\ResultDisplay;
 use App\Support\SearchTerm;
 use App\Support\SchemaCapabilities;
 use Illuminate\Support\Facades\Cache;
@@ -22,8 +24,9 @@ use Inertia\Inertia;
 
 class ExecuteTestController extends Controller
 {
-    private const DEFAULT_RESULTS_CACHE_KEY = 'execute_test.results.default.active.per_page_20';
-    private const PENDING_JOBS_CACHE_KEY = 'execute_test.pending_jobs.active.with_model_shift';
+    private const DEFAULT_RESULTS_CACHE_KEY = 'execute_test.results.default.active.per_page_20.job_result_display.with_date.start_time_sort';
+    private const METHODS_CACHE_KEY = 'execute_test.methods.with_equipment';
+    private const PENDING_JOBS_CACHE_KEY = 'execute_test.pending_jobs.active.with_model_shift.job_display';
     private const RESULT_ACTION_ROLES = ['admin', 'inspector'];
     private const PENDING_JOBS_WINDOW = 500;
     private const PENDING_JOBS_PAGE_SIZE = 50;
@@ -57,12 +60,15 @@ class ExecuteTestController extends Controller
 
         return Inertia::render('ExecuteTest/Create', [
             'pendingJobs' => fn () => Cache::remember(self::PENDING_JOBS_CACHE_KEY, now()->addSeconds(30), function () {
-                return $this->pendingJobsQuery('')
+                $jobs = $this->pendingJobsQuery('')
                     ->orderByDesc('receive_date')
                     ->limit(self::PENDING_JOBS_WINDOW)
-                    ->get(['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.cell', 'Transaction_Header.line', 'Transaction_Header.shift', 'Transaction_Header.model', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'Transaction_Header.receive_date', 'EU.external_name'])
-                    ->map(fn ($job) => [
+                    ->get(['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.cell', 'Transaction_Header.line', 'Transaction_Header.shift', 'Transaction_Header.model', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'Transaction_Header.receive_date', 'EU.external_name']);
+                $jobDisplayLabels = JobDisplay::labelsForHeaders($jobs);
+
+                return $jobs->map(fn ($job) => [
                         'transaction_id' => $job->transaction_id,
+                        'job_display_label' => $jobDisplayLabels[(int) $job->transaction_id] ?? 'Job ---',
                         'dmc' => $job->dmc,
                         'cell' => $job->cell,
                         'line' => $job->line,
@@ -70,6 +76,7 @@ class ExecuteTestController extends Controller
                         'model' => $job->model,
                         'detail' => $job->detail,
                         'receive_date' => optional($job->receive_date)->format('d-m-Y') ?? '',
+                        'receive_display' => JobDisplay::shortDateTime($job->receive_date),
                         'receive_time' => optional($job->receive_date)->format('H:i') ?? '',
                         'sender_name' => $job->external_name === 'อื่นๆ (Other)' ? ($job->sender_leader ?: 'Unknown Leader') : $job->external_name,
                     ]);
@@ -78,7 +85,9 @@ class ExecuteTestController extends Controller
             'pendingJobsWindow' => self::PENDING_JOBS_WINDOW,
             'pendingJobsPageSize' => self::PENDING_JOBS_PAGE_SIZE,
             'pendingJobsVersion' => fn () => $this->pendingJobsVersionToken(),
-            'methods' => fn () => Cache::remember('execute_test.methods', now()->addMinutes(10), fn () => TestMethod::query()
+            'methods' => fn () => Cache::remember(self::METHODS_CACHE_KEY, now()->addMinutes(10), fn () => TestMethod::query()
+                ->select(['method_id', 'method_name', 'equipment_id'])
+                ->with(['equipment:equipment_id,equipment_name'])
                 ->when(SchemaCapabilities::hasColumn('Test_Methods', 'is_active'), fn ($query) => $query->where('is_active', true))
                 ->orderBy('method_name')
                 ->get()),
@@ -113,10 +122,12 @@ class ExecuteTestController extends Controller
         $paginator = $this->pendingJobsQuery($search)
             ->orderByDesc('Transaction_Header.receive_date')
             ->simplePaginate($perPage, ['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.cell', 'Transaction_Header.line', 'Transaction_Header.shift', 'Transaction_Header.model', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'Transaction_Header.receive_date', 'EU.external_name'], 'page', $page);
+        $jobDisplayLabels = JobDisplay::labelsForHeaders($paginator->getCollection());
 
         return response()->json([
             'items' => $paginator->getCollection()->map(fn ($job) => [
                 'transaction_id' => $job->transaction_id,
+                'job_display_label' => $jobDisplayLabels[(int) $job->transaction_id] ?? 'Job ---',
                 'dmc' => $job->dmc,
                 'cell' => $job->cell,
                 'line' => $job->line,
@@ -124,6 +135,7 @@ class ExecuteTestController extends Controller
                 'model' => $job->model,
                 'detail' => $job->detail,
                 'receive_date' => optional($job->receive_date)->format('d-m-Y') ?? '',
+                'receive_display' => JobDisplay::shortDateTime($job->receive_date),
                 'receive_time' => optional($job->receive_date)->format('H:i') ?? '',
                 'sender_name' => $job->external_name === 'อื่นๆ (Other)' ? ($job->sender_leader ?: 'Unknown Leader') : $job->external_name,
             ])->values(),
@@ -179,9 +191,13 @@ class ExecuteTestController extends Controller
         $this->forgetPerformanceCaches();
         DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
+        $jobDisplayLabel = JobDisplay::labelsForTransactionIds([$validated['transaction_id']])[(int) $validated['transaction_id']] ?? 'Job ---';
+        $resultDisplayLabel = $detail
+            ? (ResultDisplay::labelsForDetailIds([$detail->detail_id])[(int) $detail->detail_id] ?? 'Result ---')
+            : 'Result ---';
 
         return redirect()->route('execute-test.create')
-            ->with('success', "Test result recorded for Job #{$validated['transaction_id']}!");
+            ->with('success', "{$resultDisplayLabel} recorded for {$jobDisplayLabel}!");
     }
 
     public function update(Request $request, int $id)
@@ -215,9 +231,11 @@ class ExecuteTestController extends Controller
         $this->forgetPerformanceCaches();
         DashboardCache::flush();
         DashboardDataChanged::dispatchSafely();
+        $resultDisplayLabel = ResultDisplay::labelsForDetailIds([$detail->detail_id])[(int) $detail->detail_id] ?? 'Result ---';
+        $jobDisplayLabel = JobDisplay::labelsForTransactionIds([$detail->transaction_id])[(int) $detail->transaction_id] ?? 'Job ---';
 
         return redirect()->route('execute-test.create')
-            ->with('success', "Test result #{$detail->detail_id} updated successfully!");
+            ->with('success', "{$resultDisplayLabel} / {$jobDisplayLabel} updated successfully!");
     }
 
     public function destroy(int $id)
@@ -228,6 +246,8 @@ class ExecuteTestController extends Controller
 
         $detail = TransactionDetail::findOrFail($id);
         $beforeData = $this->detailAuditPayload($detail);
+        $resultDisplayLabel = ResultDisplay::labelsForDetails([$detail])[(int) $detail->detail_id] ?? 'Result ---';
+        $jobDisplayLabel = JobDisplay::labelsForTransactionIds([$detail->transaction_id])[(int) $detail->transaction_id] ?? 'Job ---';
         $detail->delete();
 
         $afterData = null;
@@ -249,7 +269,7 @@ class ExecuteTestController extends Controller
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('execute-test.create')
-            ->with('success', "Test result #{$id} deleted successfully!");
+            ->with('success', "{$resultDisplayLabel} / {$jobDisplayLabel} deleted successfully!");
     }
 
     public function restore(int $id)
@@ -265,6 +285,8 @@ class ExecuteTestController extends Controller
 
         $detail = TransactionDetail::onlyTrashed()->findOrFail($id);
         $beforeData = $this->detailAuditPayload($detail);
+        $resultDisplayLabel = ResultDisplay::labelsForDetails([$detail])[(int) $detail->detail_id] ?? 'Result ---';
+        $jobDisplayLabel = JobDisplay::labelsForTransactionIds([$detail->transaction_id])[(int) $detail->transaction_id] ?? 'Job ---';
         $detail->restore();
 
         $restoredDetail = TransactionDetail::withTrashed()->find($id);
@@ -281,7 +303,7 @@ class ExecuteTestController extends Controller
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('execute-test.create')
-            ->with('success', "Test result #{$id} restored successfully!");
+            ->with('success', "{$resultDisplayLabel} / {$jobDisplayLabel} restored successfully!");
     }
 
     private function validatePayload(Request $request): array
@@ -468,15 +490,17 @@ class ExecuteTestController extends Controller
 
     private function buildResultsPayload(array $filters, bool $supportsDetailSoftDeletes)
     {
-        return TransactionDetail::query()
+        $paginator = TransactionDetail::query()
             ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
             ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())
             ->leftJoin('Transaction_Header as TH', 'Transaction_Detail.transaction_id', '=', 'TH.transaction_id')
             ->leftJoin('Test_Methods as TM', 'Transaction_Detail.method_id', '=', 'TM.method_id')
+            ->leftJoin('Equipments as EQ', 'TM.equipment_id', '=', 'EQ.equipment_id')
             ->leftJoin('Internal_Users as IU', 'Transaction_Detail.internal_id', '=', 'IU.user_id')
             ->select('Transaction_Detail.*')
             ->selectRaw('TH.detail as job_detail')
             ->selectRaw('TM.method_name as joined_method_name')
+            ->selectRaw('EQ.equipment_name as joined_equipment_name')
             ->selectRaw('IU.name as joined_inspector_name')
             ->when($filters['search'] !== '', function ($query) use ($filters) {
                 $search = $filters['search'];
@@ -488,6 +512,7 @@ class ExecuteTestController extends Controller
                             ->orWhere('Transaction_Detail.max_value', 'like', "%{$search}%")
                             ->orWhere('Transaction_Detail.min_value', 'like', "%{$search}%")
                             ->orWhere('TM.method_name', 'like', "%{$search}%")
+                            ->orWhere('EQ.equipment_name', 'like', "%{$search}%")
                             ->orWhere('IU.name', 'like', "%{$search}%")
                             ->orWhere('TH.detail', 'like', "%{$search}%")
                             ->orWhere('TH.dmc', 'like', "%{$search}%")
@@ -500,6 +525,7 @@ class ExecuteTestController extends Controller
                             $subQuery
                                 ->whereRaw("MATCH(Transaction_Detail.remark, Transaction_Detail.max_value, Transaction_Detail.min_value) AGAINST (? IN BOOLEAN MODE)", [$term])
                                 ->orWhereRaw("MATCH(TM.method_name) AGAINST (? IN BOOLEAN MODE)", [$term])
+                                ->orWhere('EQ.equipment_name', 'like', "%{$search}%")
                                 ->orWhereRaw("MATCH(IU.name) AGAINST (? IN BOOLEAN MODE)", [$term])
                                 ->orWhereRaw("MATCH(TH.detail, TH.dmc, TH.line) AGAINST (? IN BOOLEAN MODE)", [$term]);
 
@@ -520,12 +546,21 @@ class ExecuteTestController extends Controller
             )
             ->when($filters['date_from'] !== '', fn ($query) => $query->where('start_time', '>=', Carbon::parse($filters['date_from'])->startOfDay()))
             ->when($filters['date_to'] !== '', fn ($query) => $query->where('start_time', '<=', Carbon::parse($filters['date_to'])->endOfDay()))
+            ->orderByDesc('Transaction_Detail.start_time')
             ->orderByDesc('Transaction_Detail.detail_id')
             ->paginate($filters['per_page'])
-            ->withQueryString()
-            ->through(fn (TransactionDetail $detail) => [
+            ->withQueryString();
+
+        $jobDisplayLabels = JobDisplay::labelsForTransactionIds(
+            $paginator->getCollection()->pluck('transaction_id')
+        );
+        $resultDisplayLabels = ResultDisplay::labelsForDetails($paginator->getCollection());
+
+        return $paginator->through(fn (TransactionDetail $detail) => [
                 'detail_id' => $detail->detail_id,
+                'result_display_label' => $resultDisplayLabels[(int) $detail->detail_id] ?? 'Result ---',
                 'transaction_id' => $detail->transaction_id,
+                'job_display_label' => $jobDisplayLabels[(int) $detail->transaction_id] ?? 'Job ---',
                 'method_id' => $detail->method_id,
                 'internal_id' => $detail->internal_id,
                 'judgement' => $detail->judgement,
@@ -533,12 +568,14 @@ class ExecuteTestController extends Controller
                 'min_value' => $detail->min_value,
                 'remark' => $detail->remark,
                 'start_date' => optional($detail->start_time)->format('d-m-Y'),
+                'start_date_short' => optional($detail->start_time)->format('d-m-y'),
                 'start_time' => optional($detail->start_time)->format('H:i'),
                 'end_date' => optional($detail->end_time)->format('d-m-Y'),
                 'end_time' => optional($detail->end_time)->format('H:i'),
                 'deleted_at' => $supportsDetailSoftDeletes ? optional($detail->deleted_at)->format('d-m-Y H:i') : null,
-                'job_label' => '#' . $detail->transaction_id . ' - ' . ($detail->job_detail ?: 'No detail'),
+                'job_label' => $detail->job_detail ?: 'No detail',
                 'method_name' => $detail->joined_method_name,
+                'equipment_name' => $detail->joined_equipment_name,
                 'inspector_name' => $detail->joined_inspector_name,
                 'is_deleted' => $supportsDetailSoftDeletes && $detail->trashed(),
             ]);

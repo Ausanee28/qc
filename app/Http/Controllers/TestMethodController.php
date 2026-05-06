@@ -187,6 +187,7 @@ class TestMethodController extends Controller
     private function clearTestMethodCaches(): void
     {
         Cache::forget('execute_test.methods');
+        Cache::forget('execute_test.methods.with_equipment');
         Cache::forget(self::DEFAULT_TEST_METHODS_CACHE_KEY);
     }
 

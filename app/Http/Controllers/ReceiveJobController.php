@@ -9,6 +9,7 @@ use App\Models\TransactionDetail;
 use App\Support\PendingJobsVersion;
 use App\Support\DashboardCache;
 use App\Support\AuditLogger;
+use App\Support\JobDisplay;
 use App\Support\SearchTerm;
 use App\Support\SchemaCapabilities;
 use App\Models\User;
@@ -21,10 +22,10 @@ use Inertia\Inertia;
 class ReceiveJobController extends Controller
 {
     private const DISPLAY_TIMEZONE = 'Asia/Bangkok';
-    private const EXECUTE_TEST_PENDING_JOBS_CACHE_KEY = 'execute_test.pending_jobs.active.with_model_shift';
+    private const EXECUTE_TEST_PENDING_JOBS_CACHE_KEY = 'execute_test.pending_jobs.active.with_model_shift.job_display';
     private const EXECUTE_TEST_PENDING_JOBS_COUNT_CACHE_KEY = 'execute_test.pending_jobs_count.active';
     private const JOB_ACTION_ROLES = ['admin', 'inspector'];
-    public const RECEIVE_JOB_DEFAULT_HISTORY_CACHE_KEY = 'receive_job.jobs.default.per_page_20';
+    public const RECEIVE_JOB_DEFAULT_HISTORY_CACHE_KEY = 'receive_job.jobs.default.per_page_20.job_display';
 
     public function create(Request $request)
     {
@@ -141,7 +142,7 @@ class ReceiveJobController extends Controller
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')
-            ->with('success', "Job #{$job->transaction_id} created successfully!");
+            ->with('success', "{$this->jobDisplayLabel($job)} created successfully!");
     }
 
     public function update(Request $request, int $id)
@@ -171,7 +172,7 @@ class ReceiveJobController extends Controller
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')
-            ->with('success', "Job #{$job->transaction_id} updated successfully!");
+            ->with('success', "{$this->jobDisplayLabel($job)} updated successfully!");
     }
 
     public function destroy(int $id)
@@ -186,6 +187,8 @@ class ReceiveJobController extends Controller
         if ($job->details_count > 0 && $job->return_date === null) {
             return redirect()->back()->with('error', 'Cannot delete a job that already has test results.');
         }
+
+        $jobDisplayLabel = $this->jobDisplayLabel($job);
 
         DB::transaction(function () use ($job) {
             if ($job->details_count > 0) {
@@ -215,7 +218,7 @@ class ReceiveJobController extends Controller
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')
-            ->with('success', "Job #{$id} deleted successfully!");
+            ->with('success', "{$jobDisplayLabel} deleted successfully!");
     }
 
     public function restore(int $id)
@@ -257,7 +260,7 @@ class ReceiveJobController extends Controller
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')
-            ->with('success', "Job #{$job->transaction_id} restored successfully!");
+            ->with('success', "{$this->jobDisplayLabel($job)} restored successfully!");
     }
 
     public function close(int $id)
@@ -278,7 +281,7 @@ class ReceiveJobController extends Controller
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')
-            ->with('success', "Job #{$job->transaction_id} closed successfully!");
+            ->with('success', "{$this->jobDisplayLabel($job)} closed successfully!");
     }
 
     public function reopen(int $id)
@@ -295,7 +298,7 @@ class ReceiveJobController extends Controller
         DashboardDataChanged::dispatchSafely();
 
         return redirect()->route('receive-job.create')
-            ->with('success', "Job #{$job->transaction_id} reopened successfully!");
+            ->with('success', "{$this->jobDisplayLabel($job)} reopened successfully!");
     }
 
     private function validatePayload(Request $request): array
@@ -415,12 +418,16 @@ class ReceiveJobController extends Controller
 
     private function buildJobsPayload($jobsQuery, array $filters, bool $supportsHeaderSoftDeletes)
     {
-        return (clone $jobsQuery)
+        $paginator = (clone $jobsQuery)
             ->orderByDesc('Transaction_Header.receive_date')
             ->paginate($filters['per_page'])
-            ->withQueryString()
-            ->through(fn (TransactionHeader $job) => [
+            ->withQueryString();
+
+        $jobDisplayLabels = JobDisplay::labelsForHeaders($paginator->getCollection());
+
+        return $paginator->through(fn (TransactionHeader $job) => [
                 'transaction_id' => $job->transaction_id,
+                'job_display_label' => $jobDisplayLabels[(int) $job->transaction_id] ?? 'Job ---',
                 'external_id' => $job->external_id,
                 'internal_id' => $job->internal_id,
                 'detail' => $job->detail,
@@ -433,6 +440,7 @@ class ReceiveJobController extends Controller
                 'sender_leader' => $job->sender_leader,
                 'sender_messenger' => $job->sender_messenger,
                 'receive_date' => $this->formatDisplayDateTime($job->receive_date),
+                'receive_display' => JobDisplay::shortDateTime($job->receive_date),
                 'return_date' => $this->formatDisplayDateTime($job->return_date),
                 'deleted_at' => $supportsHeaderSoftDeletes ? $this->formatDisplayDateTime($job->deleted_at) : null,
                 'details_count' => $job->details_count,
@@ -450,6 +458,11 @@ class ReceiveJobController extends Controller
         }
 
         return $value->copy()->timezone(self::DISPLAY_TIMEZONE)->format('d-m-Y H:i');
+    }
+
+    private function jobDisplayLabel(TransactionHeader $job): string
+    {
+        return JobDisplay::labelsForHeaders([$job])[(int) $job->transaction_id] ?? 'Job ---';
     }
 
     private function headerAuditPayload(TransactionHeader $job): array

@@ -98,7 +98,7 @@ const pendingJobShiftCounts = computed(() => pendingShiftOptions.reduce((counts,
     counts[option.value] = allPendingJobOptions.value.filter((job) => (job.shift || '') === option.value).length;
     return counts;
 }, {}));
-const formatPendingJobDateTime = (job) => [job.receive_date, job.receive_time].filter(Boolean).join(' | ');
+const formatPendingJobDateTime = (job) => job.receive_display || [job.receive_date, job.receive_time].filter(Boolean).join(' | ');
 const formatPendingJobMeta = (job) => [
     job.cell ? `Cell ${job.cell}` : '',
     job.line || '',
@@ -125,6 +125,12 @@ const methodOptions = computed(() => props.methods ?? []);
 const inspectorOptions = computed(() => props.inspectors ?? []);
 const methodOptionsReady = computed(() => Array.isArray(props.methods));
 const inspectorOptionsReady = computed(() => Array.isArray(props.inspectors));
+const equipmentNameForMethod = (method) => method?.equipment?.equipment_name ?? method?.equipment_name ?? '';
+const methodOptionLabel = (method) => {
+    const equipmentName = equipmentNameForMethod(method);
+
+    return equipmentName ? `${method.method_name} - ${equipmentName}` : method.method_name;
+};
 const resultPaginator = computed(() => props.results ?? null);
 const resultRows = computed(() => resultPaginator.value?.data ?? []);
 const resultLinks = computed(() => resultPaginator.value?.links ?? []);
@@ -272,7 +278,7 @@ const deleteResult = (result) => {
         return;
     }
 
-    if (confirm(`Delete test result #${result.detail_id}?`)) {
+    if (confirm(`Delete ${result.result_display_label || 'Result ---'} / ${result.job_display_label || 'Job ---'}?`)) {
         form.delete(route('execute-test.destroy', result.detail_id), {
             only: workflowMutationReloadOnly,
             invalidateCacheTags: workflowInvalidateTags,
@@ -287,7 +293,7 @@ const restoreResult = (result) => {
         return;
     }
 
-    if (confirm(`Restore test result #${result.detail_id}?`)) {
+    if (confirm(`Restore ${result.result_display_label || 'Result ---'} / ${result.job_display_label || 'Job ---'}?`)) {
         form.patch(route('execute-test.restore', result.detail_id), {
             only: workflowMutationReloadOnly,
             invalidateCacheTags: workflowInvalidateTags,
@@ -614,7 +620,7 @@ watch(pendingJobOptions, (jobs) => {
                             >
                                 <option value="" disabled>{{ pendingJobsReady ? `-- Select ${shiftLabel(pendingJobShiftFilter)} Open Job --` : 'Loading open jobs...' }}</option>
                                 <option v-for="j in pendingJobOptions" :key="j.transaction_id" :value="String(j.transaction_id)">
-                                    {{ j.detail || 'No detail' }}{{ formatPendingJobMeta(j) ? ` (${formatPendingJobMeta(j)})` : '' }} [{{ j.sender_name || 'Unknown Sender' }}] {{ formatPendingJobDateTime(j) }}
+                                    {{ j.job_display_label || 'Job ---' }} - {{ j.detail || 'No detail' }}{{ formatPendingJobMeta(j) ? ` (${formatPendingJobMeta(j)})` : '' }} [{{ j.sender_name || 'Unknown Sender' }}] {{ formatPendingJobDateTime(j) }}
                                 </option>
                             </select>
                             <div class="mt-1 text-xs text-gray-500">
@@ -627,7 +633,7 @@ watch(pendingJobOptions, (jobs) => {
                             <label class="form-lbl">Inspection Process *</label>
                             <select v-model="form.method_id" required :disabled="!methodOptionsReady" class="form-inp" style="padding:10px 12px">
                                 <option value="" disabled>{{ methodOptionsReady ? 'Select method...' : 'Loading methods...' }}</option>
-                                <option v-for="m in methodOptions" :key="m.method_id" :value="m.method_id">{{ m.method_name }}</option>
+                                <option v-for="m in methodOptions" :key="m.method_id" :value="m.method_id">{{ methodOptionLabel(m) }}</option>
                             </select>
                             <div v-if="form.errors.method_id" class="mt-1 text-xs text-red-600">{{ form.errors.method_id }}</div>
                         </div>
@@ -762,7 +768,7 @@ watch(pendingJobOptions, (jobs) => {
                     </div>
 
                     <form @submit.prevent="applyFilters" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-                        <input v-model="filterForm.search" type="text" placeholder="Search job, method, inspector..." class="lg:col-span-2 rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                        <input v-model="filterForm.search" type="text" placeholder="Search job, method, equipment, inspector..." class="lg:col-span-2 rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
                         <select v-model="filterForm.judgement" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                             <option value="all">All judgement</option>
                             <option value="OK">OK</option>
@@ -830,13 +836,15 @@ watch(pendingJobOptions, (jobs) => {
                                 </tr>
                                 <tr v-for="result in resultRows" :key="result.detail_id" class="align-top">
                                     <td class="px-6 py-4 text-sm text-gray-700">
-                                        <div class="font-mono font-semibold text-gray-900">#{{ result.detail_id }}</div>
-                                        <div class="mt-1 text-xs text-gray-500">Job #{{ result.transaction_id }}</div>
+                                        <div class="font-semibold text-gray-900">{{ result.result_display_label || 'Result ---' }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ result.job_display_label || 'Job ---' }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ result.start_date_short || result.start_date || '-' }}</div>
                                         <div v-if="result.deleted_at" class="mt-1 text-xs text-gray-500">Deleted: {{ result.deleted_at }}</div>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">{{ result.job_label }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-700">
                                         <div>{{ result.method_name || '-' }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ result.equipment_name || '-' }}</div>
                                         <div class="mt-1 text-xs text-gray-500">{{ result.inspector_name || '-' }}</div>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">
