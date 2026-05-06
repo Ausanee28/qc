@@ -21,7 +21,7 @@ use Inertia\Inertia;
 class ReceiveJobController extends Controller
 {
     private const DISPLAY_TIMEZONE = 'Asia/Bangkok';
-    private const EXECUTE_TEST_PENDING_JOBS_CACHE_KEY = 'execute_test.pending_jobs.active';
+    private const EXECUTE_TEST_PENDING_JOBS_CACHE_KEY = 'execute_test.pending_jobs.active.with_model_shift';
     private const EXECUTE_TEST_PENDING_JOBS_COUNT_CACHE_KEY = 'execute_test.pending_jobs_count.active';
     public const RECEIVE_JOB_DEFAULT_HISTORY_CACHE_KEY = 'receive_job.jobs.default.per_page_20';
 

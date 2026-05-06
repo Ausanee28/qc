@@ -28,6 +28,7 @@ const pendingJobsSyncIntervalHiddenMs = 90000;
 const currentPendingJobsVersion = ref(props.pendingJobsVersion ?? '');
 const openJobCountState = ref(Number(props.pendingJobsCount ?? 0));
 const pendingJobsState = ref(Array.isArray(props.pendingJobs) ? props.pendingJobs : []);
+const pendingJobShiftFilter = ref('Day Shift');
 const defaultFilters = {
     search: '',
     judgement: 'all',
@@ -85,11 +86,41 @@ const filterForm = reactive({
     per_page: String(props.filters?.per_page ?? defaultFilters.per_page),
 });
 
-const pendingJobOptions = computed(() => pendingJobsState.value ?? []);
+const pendingShiftOptions = [
+    { value: 'Day Shift', label: 'Day Shift' },
+    { value: 'Night Shift', label: 'Night Shift' },
+];
+const allPendingJobOptions = computed(() => pendingJobsState.value ?? []);
+const shiftLabel = (shift) => pendingShiftOptions.find((option) => option.value === shift)?.label ?? shift;
+const isPendingJobInShift = (job) => (job.shift || '') === pendingJobShiftFilter.value;
+const pendingJobOptions = computed(() => allPendingJobOptions.value.filter(isPendingJobInShift));
+const pendingJobShiftCounts = computed(() => pendingShiftOptions.reduce((counts, option) => {
+    counts[option.value] = allPendingJobOptions.value.filter((job) => (job.shift || '') === option.value).length;
+    return counts;
+}, {}));
 const formatPendingJobDateTime = (job) => [job.receive_date, job.receive_time].filter(Boolean).join(' | ');
+const formatPendingJobMeta = (job) => [
+    job.cell ? `Cell ${job.cell}` : '',
+    job.line || '',
+    job.model || '',
+].filter(Boolean).join(' / ');
 const pendingJobsReady = computed(() => Array.isArray(props.pendingJobs));
-const pendingJobsWindow = computed(() => Number(props.pendingJobsWindow ?? pendingJobOptions.value.length ?? 0));
-const openJobCount = computed(() => Number(openJobCountState.value ?? pendingJobOptions.value.length ?? 0));
+const pendingJobsWindow = computed(() => Number(props.pendingJobsWindow ?? allPendingJobOptions.value.length ?? 0));
+const openJobCount = computed(() => Number(openJobCountState.value ?? allPendingJobOptions.value.length ?? 0));
+const selectedShiftOpenJobCount = computed(() => pendingJobOptions.value.length);
+const pendingShiftButtonClass = (shift) => [
+    'inline-flex min-w-[104px] items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition',
+    pendingJobShiftFilter.value === shift
+        ? 'border-gray-900 bg-gray-900 text-white'
+        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
+].join(' ');
+const selectPendingJobShift = (shift) => {
+    pendingJobShiftFilter.value = shift;
+
+    if (form.transaction_id && !pendingJobOptions.value.some((job) => String(job.transaction_id) === String(form.transaction_id))) {
+        form.transaction_id = '';
+    }
+};
 const methodOptions = computed(() => props.methods ?? []);
 const inspectorOptions = computed(() => props.inspectors ?? []);
 const methodOptionsReady = computed(() => Array.isArray(props.methods));
@@ -501,6 +532,16 @@ watch(
     },
     { immediate: true }
 );
+
+watch(pendingJobOptions, (jobs) => {
+    if (isEditing.value || !form.transaction_id) {
+        return;
+    }
+
+    if (!jobs.some((job) => String(job.transaction_id) === String(form.transaction_id))) {
+        form.transaction_id = '';
+    }
+});
 </script>
 
 <template>
@@ -551,6 +592,18 @@ watch(
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
                                 <label class="form-lbl" style="margin-bottom:0">Open Job *</label>
                             </div>
+                            <div class="mb-2 flex flex-wrap gap-2">
+                                <button
+                                    v-for="option in pendingShiftOptions"
+                                    :key="option.value"
+                                    type="button"
+                                    :class="pendingShiftButtonClass(option.value)"
+                                    @click="selectPendingJobShift(option.value)"
+                                >
+                                    <span>{{ option.label }}</span>
+                                    <span class="rounded-full px-2 py-0.5 text-xs opacity-80">{{ pendingJobShiftCounts[option.value] ?? 0 }}</span>
+                                </button>
+                            </div>
                             <select
                                 ref="jobSelectRef"
                                 v-model="form.transaction_id"
@@ -559,13 +612,13 @@ watch(
                                 class="form-inp"
                                 style="padding:10px 12px"
                             >
-                                <option value="" disabled>{{ pendingJobsReady ? '-- Select Open Job --' : 'Loading open jobs...' }}</option>
+                                <option value="" disabled>{{ pendingJobsReady ? `-- Select ${shiftLabel(pendingJobShiftFilter)} Open Job --` : 'Loading open jobs...' }}</option>
                                 <option v-for="j in pendingJobOptions" :key="j.transaction_id" :value="String(j.transaction_id)">
-                                    {{ j.detail || 'No detail' }}{{ j.cell ? ` (Cell ${j.cell})` : '' }} [{{ j.sender_name || 'Unknown Sender' }}] {{ formatPendingJobDateTime(j) }}
+                                    {{ j.detail || 'No detail' }}{{ formatPendingJobMeta(j) ? ` (${formatPendingJobMeta(j)})` : '' }} [{{ j.sender_name || 'Unknown Sender' }}] {{ formatPendingJobDateTime(j) }}
                                 </option>
                             </select>
                             <div class="mt-1 text-xs text-gray-500">
-                                Showing latest open jobs window ({{ pendingJobsWindow }}) for quick selection.
+                                Showing {{ selectedShiftOpenJobCount }} {{ shiftLabel(pendingJobShiftFilter) }} job{{ selectedShiftOpenJobCount === 1 ? '' : 's' }} from latest open jobs window ({{ pendingJobsWindow }}).
                             </div>
                             <div v-if="form.errors.transaction_id" class="mt-1 text-xs text-red-600">{{ form.errors.transaction_id }}</div>
                         </div>

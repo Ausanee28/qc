@@ -23,6 +23,7 @@ use Inertia\Inertia;
 class ExecuteTestController extends Controller
 {
     private const DEFAULT_RESULTS_CACHE_KEY = 'execute_test.results.default.active.per_page_20';
+    private const PENDING_JOBS_CACHE_KEY = 'execute_test.pending_jobs.active.with_model_shift';
     private const PENDING_JOBS_WINDOW = 500;
     private const PENDING_JOBS_PAGE_SIZE = 50;
 
@@ -54,16 +55,18 @@ class ExecuteTestController extends Controller
         }
 
         return Inertia::render('ExecuteTest/Create', [
-            'pendingJobs' => fn () => Cache::remember('execute_test.pending_jobs.active', now()->addSeconds(30), function () {
+            'pendingJobs' => fn () => Cache::remember(self::PENDING_JOBS_CACHE_KEY, now()->addSeconds(30), function () {
                 return $this->pendingJobsQuery('')
                     ->orderByDesc('receive_date')
                     ->limit(self::PENDING_JOBS_WINDOW)
-                    ->get(['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.cell', 'Transaction_Header.line', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'Transaction_Header.receive_date', 'EU.external_name'])
+                    ->get(['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.cell', 'Transaction_Header.line', 'Transaction_Header.shift', 'Transaction_Header.model', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'Transaction_Header.receive_date', 'EU.external_name'])
                     ->map(fn ($job) => [
                         'transaction_id' => $job->transaction_id,
                         'dmc' => $job->dmc,
                         'cell' => $job->cell,
                         'line' => $job->line,
+                        'shift' => $job->shift,
+                        'model' => $job->model,
                         'detail' => $job->detail,
                         'receive_date' => optional($job->receive_date)->format('d-m-Y') ?? '',
                         'receive_time' => optional($job->receive_date)->format('H:i') ?? '',
@@ -108,7 +111,7 @@ class ExecuteTestController extends Controller
 
         $paginator = $this->pendingJobsQuery($search)
             ->orderByDesc('Transaction_Header.receive_date')
-            ->simplePaginate($perPage, ['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.cell', 'Transaction_Header.line', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'Transaction_Header.receive_date', 'EU.external_name'], 'page', $page);
+            ->simplePaginate($perPage, ['Transaction_Header.transaction_id', 'Transaction_Header.dmc', 'Transaction_Header.cell', 'Transaction_Header.line', 'Transaction_Header.shift', 'Transaction_Header.model', 'Transaction_Header.detail', 'Transaction_Header.sender_leader', 'Transaction_Header.receive_date', 'EU.external_name'], 'page', $page);
 
         return response()->json([
             'items' => $paginator->getCollection()->map(fn ($job) => [
@@ -116,6 +119,8 @@ class ExecuteTestController extends Controller
                 'dmc' => $job->dmc,
                 'cell' => $job->cell,
                 'line' => $job->line,
+                'shift' => $job->shift,
+                'model' => $job->model,
                 'detail' => $job->detail,
                 'receive_date' => optional($job->receive_date)->format('d-m-Y') ?? '',
                 'receive_time' => optional($job->receive_date)->format('H:i') ?? '',
@@ -403,6 +408,7 @@ class ExecuteTestController extends Controller
                         ->whereRaw("MATCH(Transaction_Header.detail, Transaction_Header.dmc, Transaction_Header.line) AGAINST (? IN BOOLEAN MODE)", [$term])
                         ->orWhere('Transaction_Header.dmc', 'like', "%{$search}%")
                         ->orWhere('Transaction_Header.line', 'like', "%{$search}%")
+                        ->orWhere('Transaction_Header.model', 'like', "%{$search}%")
                         ->orWhere('Transaction_Header.detail', 'like', "%{$search}%")
                         ->orWhere('EU.external_name', 'like', "%{$search}%")
                         ->orWhere('Transaction_Header.sender_leader', 'like', "%{$search}%");
@@ -414,6 +420,7 @@ class ExecuteTestController extends Controller
             $subQuery
                 ->where('Transaction_Header.dmc', 'like', "%{$search}%")
                 ->orWhere('Transaction_Header.line', 'like', "%{$search}%")
+                ->orWhere('Transaction_Header.model', 'like', "%{$search}%")
                 ->orWhere('Transaction_Header.detail', 'like', "%{$search}%")
                 ->orWhere('EU.external_name', 'like', "%{$search}%")
                 ->orWhere('Transaction_Header.sender_leader', 'like', "%{$search}%");
@@ -422,7 +429,7 @@ class ExecuteTestController extends Controller
 
     private function forgetPerformanceCaches(): void
     {
-        Cache::forget('execute_test.pending_jobs.active');
+        Cache::forget(self::PENDING_JOBS_CACHE_KEY);
         Cache::forget('execute_test.pending_jobs_count.active');
         Cache::forget('performance.inspectors.30d');
         Cache::forget('performance.details.30d.recent50');
