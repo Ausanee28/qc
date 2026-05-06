@@ -242,7 +242,6 @@ class CertificatesAndPerformanceTest extends TestCase
 
         $methodId = DB::table('Test_Methods')->insertGetId([
             'method_name' => 'Method A',
-            'tool_name' => 'Tool A',
             'equipment_id' => $equipmentId,
         ]);
 

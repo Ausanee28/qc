@@ -131,7 +131,7 @@ const submit = () => {
 }
 
 .login-block {
-    opacity: 0;
+    opacity: 1;
     animation: login-rise 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
@@ -337,6 +337,12 @@ const submit = () => {
     .login-kicker::after {
         animation: none !important;
         transition: none !important;
+    }
+
+    .login-block,
+    .login-submit {
+        opacity: 1 !important;
+        transform: none !important;
     }
 
     .login-submit::after {

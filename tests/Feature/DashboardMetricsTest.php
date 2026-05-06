@@ -69,7 +69,6 @@ class DashboardMetricsTest extends TestCase
 
         return DB::table('Test_Methods')->insertGetId([
             'method_name' => 'Visual Inspection',
-            'tool_name' => 'Scope',
             'equipment_id' => $equipmentId,
             'is_active' => true,
         ]);

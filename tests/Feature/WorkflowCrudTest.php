@@ -390,7 +390,6 @@ class WorkflowCrudTest extends TestCase
 
         TestMethod::create([
             'method_name' => 'Visual Inspection',
-            'tool_name' => 'Scope',
             'equipment_id' => $equipment->equipment_id,
         ]);
 

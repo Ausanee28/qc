@@ -26,8 +26,6 @@ class QcSeeder extends Seeder
                 'user_password' => $password,
                 'employee_id' => 'EMP001',
                 'name' => 'Admin User',
-                'email' => 'admin@local.test',
-                'email_verified_at' => now(),
                 'role' => 'admin',
             ],
             [
@@ -35,8 +33,6 @@ class QcSeeder extends Seeder
                 'user_password' => $password,
                 'employee_id' => 'EMP002',
                 'name' => 'Somchai Tester',
-                'email' => 'inspector1@local.test',
-                'email_verified_at' => now(),
                 'role' => 'inspector',
             ],
             [
@@ -44,8 +40,6 @@ class QcSeeder extends Seeder
                 'user_password' => $password,
                 'employee_id' => 'EMP003',
                 'name' => 'Nattaya Inspector',
-                'email' => 'inspector2@local.test',
-                'email_verified_at' => now(),
                 'role' => 'inspector',
             ],
         ]);
@@ -66,13 +60,15 @@ class QcSeeder extends Seeder
             ['equipment_name' => 'Surface Roughness Tester'],
         ]);
 
+        $equipmentIds = DB::table('Equipments')->pluck('equipment_id', 'equipment_name');
+
         // Test Methods
         DB::table('Test_Methods')->insert([
-            ['method_name' => 'Dimensional Check', 'tool_name' => 'Caliper'],
-            ['method_name' => 'Surface Inspection', 'tool_name' => 'Visual'],
-            ['method_name' => 'Hardness Test', 'tool_name' => 'Rockwell Hardness Tester'],
-            ['method_name' => 'Roughness Measurement', 'tool_name' => 'Surface Roughness Tester'],
-            ['method_name' => 'CMM Measurement', 'tool_name' => 'CMM Machine'],
+            ['method_name' => 'Dimensional Check', 'equipment_id' => $equipmentIds['Caliper'] ?? null],
+            ['method_name' => 'Surface Inspection', 'equipment_id' => null],
+            ['method_name' => 'Hardness Test', 'equipment_id' => $equipmentIds['Hardness Tester'] ?? null],
+            ['method_name' => 'Roughness Measurement', 'equipment_id' => $equipmentIds['Surface Roughness Tester'] ?? null],
+            ['method_name' => 'CMM Measurement', 'equipment_id' => $equipmentIds['CMM Machine'] ?? null],
         ]);
     }
 }
