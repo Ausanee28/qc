@@ -339,11 +339,11 @@ const toggleJobStatus = (job) => {
                                 </label>
                                 <label class="inline-flex items-center cursor-pointer">
                                     <input type="radio" v-model="senderMode" value="returning_outsider" class="h-4 w-4 text-[var(--theme-accent-strong)] focus:ring-[var(--theme-accent-strong)] border-[var(--color-border-strong)] bg-[var(--color-surface-2)]">
-                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">Leader (เคยมาส่งแล้ว)</span>
+                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">Leader (Select Leader)</span>
                                 </label>
                                 <label class="inline-flex items-center cursor-pointer">
                                     <input type="radio" v-model="senderMode" value="new_outsider" class="h-4 w-4 text-[var(--theme-accent-strong)] focus:ring-[var(--theme-accent-strong)] border-[var(--color-border-strong)] bg-[var(--color-surface-2)]">
-                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">Leader (มาครั้งแรก)</span>
+                                    <span class="ml-2 text-sm text-[var(--theme-text)] font-medium">Leader (ลงทะเบียนชื่อ Leader)</span>
                                 </label>
                             </div>
                         </div>
