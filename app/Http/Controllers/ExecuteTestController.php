@@ -24,6 +24,7 @@ class ExecuteTestController extends Controller
 {
     private const DEFAULT_RESULTS_CACHE_KEY = 'execute_test.results.default.active.per_page_20';
     private const PENDING_JOBS_CACHE_KEY = 'execute_test.pending_jobs.active.with_model_shift';
+    private const RESULT_ACTION_ROLES = ['admin', 'inspector'];
     private const PENDING_JOBS_WINDOW = 500;
     private const PENDING_JOBS_PAGE_SIZE = 50;
 
@@ -221,7 +222,7 @@ class ExecuteTestController extends Controller
 
     public function destroy(int $id)
     {
-        if (auth()->user()?->role !== 'admin') {
+        if (!$this->canUseResultActions()) {
             return response('Forbidden.', 403);
         }
 
@@ -253,7 +254,7 @@ class ExecuteTestController extends Controller
 
     public function restore(int $id)
     {
-        if (auth()->user()?->role !== 'admin') {
+        if (!$this->canUseResultActions()) {
             return response('Forbidden.', 403);
         }
 
@@ -382,6 +383,11 @@ class ExecuteTestController extends Controller
     private function pendingJobsVersionToken(): string
     {
         return PendingJobsVersion::current();
+    }
+
+    private function canUseResultActions(): bool
+    {
+        return in_array(strtolower((string) auth()->user()?->role), self::RESULT_ACTION_ROLES, true);
     }
 
     private function pendingJobsQuery(string $search)

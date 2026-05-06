@@ -23,6 +23,7 @@ class ReceiveJobController extends Controller
     private const DISPLAY_TIMEZONE = 'Asia/Bangkok';
     private const EXECUTE_TEST_PENDING_JOBS_CACHE_KEY = 'execute_test.pending_jobs.active.with_model_shift';
     private const EXECUTE_TEST_PENDING_JOBS_COUNT_CACHE_KEY = 'execute_test.pending_jobs_count.active';
+    private const JOB_ACTION_ROLES = ['admin', 'inspector'];
     public const RECEIVE_JOB_DEFAULT_HISTORY_CACHE_KEY = 'receive_job.jobs.default.per_page_20';
 
     public function create(Request $request)
@@ -175,7 +176,7 @@ class ReceiveJobController extends Controller
 
     public function destroy(int $id)
     {
-        if (auth()->user()?->role !== 'admin') {
+        if (!$this->canUseJobActions()) {
             return response('Forbidden.', 403);
         }
 
@@ -219,7 +220,7 @@ class ReceiveJobController extends Controller
 
     public function restore(int $id)
     {
-        if (auth()->user()?->role !== 'admin') {
+        if (!$this->canUseJobActions()) {
             return response('Forbidden.', 403);
         }
 
@@ -342,6 +343,11 @@ class ReceiveJobController extends Controller
         }
 
         return $validated;
+    }
+
+    private function canUseJobActions(): bool
+    {
+        return in_array(strtolower((string) auth()->user()?->role), self::JOB_ACTION_ROLES, true);
     }
 
     private function forgetExecuteTestPendingJobsCaches(): void

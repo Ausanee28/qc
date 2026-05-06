@@ -16,7 +16,7 @@ const props = defineProps({
 });
 const flash = usePage().props.flash || {};
 const currentUserRole = usePage().props.auth?.user?.role ?? '';
-const canDelete = currentUserRole === 'admin';
+const canDelete = ['admin', 'inspector'].includes(String(currentUserRole).toLowerCase());
 const submitted = ref(false);
 const isEditing = ref(false);
 const editFormRef = ref(null);
@@ -623,6 +623,7 @@ watch(pendingJobOptions, (jobs) => {
                             <div v-if="form.errors.transaction_id" class="mt-1 text-xs text-red-600">{{ form.errors.transaction_id }}</div>
                         </div>
                         <div>
+                            <div class="h-[46px]" aria-hidden="true"></div>
                             <label class="form-lbl">Inspection Process *</label>
                             <select v-model="form.method_id" required :disabled="!methodOptionsReady" class="form-inp" style="padding:10px 12px">
                                 <option value="" disabled>{{ methodOptionsReady ? 'Select method...' : 'Loading methods...' }}</option>
@@ -854,8 +855,8 @@ watch(pendingJobOptions, (jobs) => {
                                     <td class="px-6 py-4 text-right text-sm">
                                         <div class="flex flex-wrap justify-end gap-2">
                                             <button :disabled="!canEditResult(result)" @click="editResult(result)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
-                                            <button :disabled="!canDeleteResult(result)" @click="deleteResult(result)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can delete' : ''">Delete</button>
-                                            <button :disabled="!canRestoreResult(result)" @click="restoreResult(result)" class="rounded-lg border border-orange-200 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
+                                            <button :disabled="!canDeleteResult(result)" @click="deleteResult(result)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin or inspector can delete' : ''">Delete</button>
+                                            <button :disabled="!canRestoreResult(result)" @click="restoreResult(result)" class="rounded-lg border border-orange-200 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin or inspector can restore' : ''">Restore</button>
                                         </div>
                                     </td>
                                 </tr>

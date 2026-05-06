@@ -7,7 +7,7 @@ import { computed, nextTick, reactive, ref, watch } from 'vue';
 const props = defineProps({ externals: Array, jobs: Object, filters: Object, returningOutsiders: Array, otherExternalId: [String, Number] });
 const flash = usePage().props.flash || {};
 const currentUserRole = usePage().props.auth?.user?.role ?? '';
-const canDelete = currentUserRole === 'admin';
+const canDelete = ['admin', 'inspector'].includes(String(currentUserRole).toLowerCase());
 const submitted = ref(false);
 const isEditing = ref(false);
 const editFormRef = ref(null);
@@ -517,11 +517,11 @@ const toggleJobStatus = (job) => {
                                     <td class="px-6 py-4 text-right text-sm">
                                         <div class="flex flex-wrap justify-end gap-2">
                                             <button :disabled="!canEditJob(job)" @click="editJob(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Edit</button>
-                                            <button :disabled="!canDeleteJob(job)" @click="deleteJob(job)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can delete' : ''">Delete</button>
+                                            <button :disabled="!canDeleteJob(job)" @click="deleteJob(job)" class="rounded-lg border border-rose-200 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin or inspector can delete' : ''">Delete</button>
                                             <button :disabled="!canToggleJobStatus(job)" @click="toggleJobStatus(job)" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40" :title="!job.is_closed && job.details_count === 0 ? 'Need at least 1 test result before closing' : ''">
                                                 {{ job.is_closed ? 'Reopen' : 'Close' }}
                                             </button>
-                                            <button :disabled="!job.is_deleted || !canDelete" @click="restoreJob(job)" class="rounded-lg border border-orange-200 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin can restore' : ''">Restore</button>
+                                            <button :disabled="!job.is_deleted || !canDelete" @click="restoreJob(job)" class="rounded-lg border border-orange-200 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40" :title="!canDelete ? 'Only admin or inspector can restore' : ''">Restore</button>
                                         </div>
                                     </td>
                                 </tr>
