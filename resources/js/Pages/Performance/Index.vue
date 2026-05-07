@@ -100,7 +100,7 @@ const fmt = (sec) => {
     return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
 };
 
-const fmtMin = (sec) => {
+const fmtDurationCompact = (sec) => {
     const n = toSec(sec);
     if (n === null || n < 0) return '-';
 
@@ -108,7 +108,28 @@ const fmtMin = (sec) => {
         return `${Math.round(n)}s`;
     }
 
-    return `${Math.round(n / 60)}m`;
+    const totalMinutes = Math.round(n / 60);
+    if (totalMinutes < 60) {
+        return `${totalMinutes}m`;
+    }
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return minutes > 0 ? `${hours}hr ${minutes}m` : `${hours}hr`;
+};
+
+const fmtChartMinutes = (value) => {
+    const minutes = Number(value);
+    if (!Number.isFinite(minutes) || minutes < 0) {
+        return `${value}`;
+    }
+
+    return fmtDurationCompact(minutes * 60);
+};
+
+const fmtMin = (sec) => {
+    return fmtDurationCompact(sec);
 };
 
 const toMinutesForChart = (sec) => {
@@ -135,12 +156,7 @@ const perfOpts = computed(() => {
                 ticks: {
                     color: isLight ? '#0f172a' : '#a8a29e',
                     font: { size: 10 },
-                    callback: (v) => {
-                        const minutes = Number(v);
-                        if (!Number.isFinite(minutes)) return `${v}`;
-                        if (minutes < 1) return `${Math.round(minutes * 60)}s`;
-                        return `${minutes}m`;
-                    },
+                    callback: fmtChartMinutes,
                 },
             },
             y: {
