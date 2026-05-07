@@ -54,7 +54,7 @@ class DashboardController extends Controller
             'inspectorData' => Inertia::defer(fn () => DashboardCache::store()->remember(
                 DashboardCache::simpleInspectorsKey($period),
                 now()->addMinutes(10),
-                fn () => $this->metricsService->getInspectorData(5, $from, $to)->toArray()
+                fn () => $this->metricsService->getInspectorData(null, $from, $to)->toArray()
             ), 'dashboard-secondary'),
         ]);
     }

@@ -462,7 +462,7 @@ class DashboardMetricsService
             });
     }
 
-    public function getInspectorData(int $limit = 5, ?Carbon $from = null, ?Carbon $to = null): \Illuminate\Support\Collection
+    public function getInspectorData(?int $limit = null, ?Carbon $from = null, ?Carbon $to = null): \Illuminate\Support\Collection
     {
         $query = $this->detailQuery()
             ->join('Internal_Users', 'Transaction_Detail.internal_id', '=', 'Internal_Users.user_id');
@@ -473,7 +473,7 @@ class DashboardMetricsService
             $this->applyHeaderNotDeleted($query, 'Transaction_Header.deleted_at');
         }
 
-        return $query->select(
+        $query = $query->select(
                 'Internal_Users.name',
                 DB::raw('COUNT(*) as total'),
                 DB::raw("SUM(CASE WHEN Transaction_Detail.judgement = '" . TransactionDetail::JUDGEMENT_OK . "' THEN 1 ELSE 0 END) as ok"),
@@ -481,16 +481,25 @@ class DashboardMetricsService
             )
             ->whereNotNull('Transaction_Detail.internal_id')
             ->groupBy('Transaction_Detail.internal_id', 'Internal_Users.name')
-            ->orderByDesc('total')
-            ->limit($limit)
-            ->get()
+            ->orderByDesc('total');
+
+        if ($limit !== null && $limit > 0) {
+            $query->limit($limit);
+        }
+
+        return $query->get()
             ->map(function ($row) {
+                $total = (int) ($row->total ?? 0);
+                $ok = (int) ($row->ok ?? 0);
+                $ng = (int) ($row->ng ?? 0);
+
                 return [
                     'name' => $row->name,
-                    'total' => $row->total,
-                    'ok' => $row->ok,
-                    'ng' => $row->ng,
-                    'yield' => $row->total > 0 ? round($row->ok / $row->total * 100, 1) : 0,
+                    'total' => $total,
+                    'ok' => $ok,
+                    'ng' => $ng,
+                    'yield' => $total > 0 ? round($ok / $total * 100, 1) : 0,
+                    'defectRate' => $total > 0 ? round($ng / $total * 100, 1) : 0,
                 ];
             });
     }

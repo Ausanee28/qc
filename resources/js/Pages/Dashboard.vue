@@ -361,6 +361,14 @@ onBeforeUnmount(() => {
 const formatNumber = (value) => Number(value || 0).toLocaleString();
 const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`;
 const formatDecimal = (value) => Number(value || 0).toFixed(1);
+const inspectorDefectRate = (inspector) => {
+    if (inspector?.defectRate !== undefined && inspector?.defectRate !== null) {
+        return Number(inspector.defectRate || 0);
+    }
+
+    const total = Number(inspector?.total || 0);
+    return total > 0 ? Number(inspector?.ng || 0) / total * 100 : 0;
+};
 const monthShortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const formatReadableDateLabel = (rawLabel) => {
     const text = String(rawLabel ?? '').trim();
@@ -632,7 +640,7 @@ const healthSummary = computed(() => {
     };
 });
 
-const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
+const topInspectors = computed(() => props.inspectorData || []);
 const activeInspectorCount = computed(() => (props.inspectorData || []).filter((inspector) => Number(inspector?.total || 0) > 0).length);
 const testsPerActiveInspector = computed(() => {
     if (!activeInspectorCount.value) {
@@ -1381,12 +1389,17 @@ const lineOpts = computed(() => ({
 
                 <section class="grid gap-6 xl:grid-cols-[minmax(0,0.96fr)_minmax(0,1.04fr)] reveal-section">
                     <article class="surface-card p-5 sm:p-6">
-                        <div class="flex items-start justify-between gap-3"><div><div class="dash-kicker">Team Activity</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Inspector leaderboard</h2><p class="mt-3 text-sm leading-7 text-stone-300/80">Compare throughput and pass rate across the team.</p></div><div class="mini-badge">Top 5</div></div>
+                        <div class="flex items-start justify-between gap-3"><div><div class="dash-kicker">Team Activity</div><h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-50">Inspector leaderboard</h2><p class="mt-3 text-sm leading-7 text-stone-300/80">Compare throughput and pass rate across the team.</p></div><div class="mini-badge">All</div></div>
                         <div class="mt-5 space-y-3">
                             <div v-for="(inspector, index) in topInspectors" :key="`${inspector.name}-${index}`" class="leaderboard-row">
                                 <div class="leaderboard-row__rank">{{ index + 1 }}</div>
                                 <div class="min-w-0 flex-1"><div class="text-base font-semibold tracking-tight text-stone-50">{{ inspector.name }}</div><div class="mt-1 text-sm text-stone-400">{{ formatNumber(inspector.total) }} tests, {{ formatNumber(inspector.ok) }} OK, {{ formatNumber(inspector.ng) }} NG</div></div>
-                                <div class="text-right"><div class="text-xl font-semibold tracking-tight text-orange-200">{{ formatPercent(inspector.yield) }}</div><div class="text-xs text-stone-500">pass yield</div></div>
+                                <div class="text-right">
+                                    <div class="text-xl font-semibold tracking-tight text-emerald-300">{{ formatPercent(inspector.yield) }}</div>
+                                    <div class="text-xs text-stone-500">OK %</div>
+                                    <div class="mt-1 text-base font-semibold tracking-tight text-rose-300">{{ formatPercent(inspectorDefectRate(inspector)) }}</div>
+                                    <div class="text-xs text-stone-500">NG %</div>
+                                </div>
                             </div>
                             <div v-if="!inspectorData || !inspectorData.length" class="rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-8 text-center text-sm text-stone-400">Inspector ranking will appear once enough results are recorded.</div>
                         </div>

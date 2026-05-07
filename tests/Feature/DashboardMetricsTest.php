@@ -61,6 +61,59 @@ class DashboardMetricsTest extends TestCase
         }
     }
 
+    public function test_inspector_data_returns_all_active_inspectors_for_period_by_default(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-05-05 10:00:00'));
+
+        try {
+            $users = User::factory()->count(6)->create();
+            $methodId = $this->seedMethod();
+
+            foreach ($users as $index => $user) {
+                $jobId = $this->seedJob($user->user_id, now());
+
+                DB::table('Transaction_Detail')->insert([
+                    'transaction_id' => $jobId,
+                    'method_id' => $methodId,
+                    'internal_id' => $user->user_id,
+                    'start_time' => now()->subHour(),
+                    'end_time' => now(),
+                    'duration_sec' => 3600,
+                    'judgement' => 'OK',
+                    'deleted_at' => null,
+                ]);
+
+                if ($index === 0) {
+                    DB::table('Transaction_Detail')->insert([
+                        'transaction_id' => $jobId,
+                        'method_id' => $methodId,
+                        'internal_id' => $user->user_id,
+                        'start_time' => now()->subMinutes(30),
+                        'end_time' => now(),
+                        'duration_sec' => 1800,
+                        'judgement' => 'NG',
+                        'deleted_at' => null,
+                    ]);
+                }
+            }
+
+            $service = app(DashboardMetricsService::class);
+            $inspectorData = $service->getInspectorData(null, now()->startOfDay(), now()->endOfDay());
+            $limitedInspectorData = $service->getInspectorData(5, now()->startOfDay(), now()->endOfDay());
+
+            $this->assertCount(6, $inspectorData);
+            $this->assertCount(5, $limitedInspectorData);
+            $this->assertEqualsCanonicalizing(
+                $users->pluck('name')->all(),
+                $inspectorData->pluck('name')->all()
+            );
+            $this->assertSame(50.0, $inspectorData->firstWhere('name', $users->first()->name)['defectRate']);
+            $this->assertSame(50.0, $inspectorData->firstWhere('name', $users->first()->name)['yield']);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     private function seedMethod(): int
     {
         $equipmentId = DB::table('Equipments')->insertGetId([
