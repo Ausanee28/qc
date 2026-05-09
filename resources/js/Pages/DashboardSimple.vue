@@ -362,6 +362,16 @@ onUnmounted(() => {
 
 const fmt = (v) => Number(v || 0).toLocaleString();
 const pct = (v) => `${Number(v || 0).toFixed(1)}%`;
+const clampPercent = (value) => Math.min(100, Math.max(0, Number(value || 0)));
+const inspectorNgRate = (inspector) => {
+    if (inspector?.defectRate !== undefined && inspector?.defectRate !== null) {
+        return clampPercent(inspector.defectRate);
+    }
+
+    const total = Number(inspector?.total || 0);
+    return total > 0 ? clampPercent(Number(inspector?.ng || 0) / total * 100) : 0;
+};
+const inspectorOkRate = (inspector) => clampPercent(inspector?.yield);
 const monthShortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const formatReadableDateLabel = (rawLabel) => {
     const text = String(rawLabel ?? '').trim();
@@ -712,7 +722,7 @@ const monthlyInsights = computed(() => {
         },
     ];
 });
-const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
+const topInspectors = computed(() => props.inspectorData || []);
 </script>
 
 <template>
@@ -878,12 +888,19 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
                                 <div class="lb-name">{{ ins.name }}</div>
                                 <div class="lb-meta">{{ fmt(ins.total) }} tests | {{ fmt(ins.ok) }} OK | {{ fmt(ins.ng) }} NG</div>
                             </div>
-                            <div class="lb-yield">
-                                <div class="lb-yield__value">{{ pct(ins.yield) }}</div>
-                                <div class="lb-yield__label">OK %</div>
+                            <div class="lb-rates">
+                                <div class="lb-rate lb-rate--ok">
+                                    <div class="lb-rate__value">{{ pct(ins.yield) }}</div>
+                                    <div class="lb-rate__label">OK %</div>
+                                </div>
+                                <div class="lb-rate lb-rate--ng">
+                                    <div class="lb-rate__value">{{ pct(inspectorNgRate(ins)) }}</div>
+                                    <div class="lb-rate__label">NG %</div>
+                                </div>
                             </div>
-                            <div class="lb-bar">
-                                <div class="lb-bar__fill" :style="{ width: `${ins.yield}%` }"></div>
+                            <div class="lb-stacked-bar">
+                                <div class="lb-stacked-bar__ok" :style="{ width: `${inspectorOkRate(ins)}%` }"></div>
+                                <div class="lb-stacked-bar__ng" :style="{ width: `${inspectorNgRate(ins)}%` }"></div>
                             </div>
                         </div>
                 </div>
@@ -1301,7 +1318,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 .lb-list { display: grid; gap: 0.5rem; }
 .lb-row {
     display: grid;
-    grid-template-columns: 2.2rem 1fr auto 120px;
+    grid-template-columns: 2.2rem 1fr minmax(8.25rem, auto) 120px;
     gap: 0.85rem;
     align-items: center;
     padding: 0.75rem 0.85rem;
@@ -1338,14 +1355,21 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     font-size: 0.78rem;
     color: #a8a29e;
 }
-.lb-yield { text-align: right; }
-.lb-yield__value {
+.lb-rates {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(3.6rem, auto));
+    gap: 0.7rem;
+    align-items: center;
+    text-align: right;
+}
+.lb-rate__value {
     font-size: 1.15rem;
     font-weight: 700;
-    color: #4ade80;
     line-height: 1;
 }
-.lb-yield__label {
+.lb-rate--ok .lb-rate__value { color: #4ade80; }
+.lb-rate--ng .lb-rate__value { color: #fb7185; }
+.lb-rate__label {
     font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -1353,17 +1377,22 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     color: rgba(255,255,255,0.4);
     margin-top: 0.15rem;
 }
-.lb-bar {
+.lb-stacked-bar {
+    display: flex;
     height: 6px;
     border-radius: 999px;
     background: rgba(255,255,255,0.06);
     overflow: hidden;
 }
-.lb-bar__fill {
+.lb-stacked-bar__ok,
+.lb-stacked-bar__ng {
     height: 100%;
-    border-radius: 999px;
+    min-width: 0;
     background: linear-gradient(90deg, #22c55e, #16a34a);
     transition: width 400ms ease;
+}
+.lb-stacked-bar__ng {
+    background: linear-gradient(90deg, #fb7185, #e11d48);
 }
 .lb-empty {
     text-align: center;
@@ -1377,7 +1406,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     .chart-row, .chart-row--bottom { grid-template-columns: 1fr; }
     .kpi-strip { grid-template-columns: repeat(3, 1fr); }
     .lb-row { grid-template-columns: 2.2rem 1fr auto; }
-    .lb-bar { display: none; }
+    .lb-stacked-bar { display: none; }
 }
 
 :global(.theme-shell[data-theme='light'] .db-header__title),
@@ -1496,7 +1525,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
 :global(.theme-shell[data-theme='light'] .kpi__label),
 :global(.theme-shell[data-theme='light'] .monthly-insight__label),
 :global(.theme-shell[data-theme='light'] .fc__label),
-:global(.theme-shell[data-theme='light'] .lb-yield__label) {
+:global(.theme-shell[data-theme='light'] .lb-rate__label) {
     color: #334155;
 }
 
@@ -1524,7 +1553,7 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     color: #0f172a;
 }
 
-:global(.theme-shell[data-theme='light'] .lb-bar) {
+:global(.theme-shell[data-theme='light'] .lb-stacked-bar) {
     background: rgba(148, 163, 184, 0.28);
 }
 
@@ -1601,12 +1630,20 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     color: #1d4ed8;
 }
 
-:global(.theme-shell[data-theme='light'] .lb-yield__value) {
+:global(.theme-shell[data-theme='light'] .lb-rate--ok .lb-rate__value) {
     color: #15803d;
 }
 
-:global(.theme-shell[data-theme='light'] .lb-bar__fill) {
+:global(.theme-shell[data-theme='light'] .lb-rate--ng .lb-rate__value) {
+    color: #be123c;
+}
+
+:global(.theme-shell[data-theme='light'] .lb-stacked-bar__ok) {
     background: linear-gradient(90deg, #16a34a, #4ade80);
+}
+
+:global(.theme-shell[data-theme='light'] .lb-stacked-bar__ng) {
+    background: linear-gradient(90deg, #fb7185, #e11d48);
 }
 
 :global(.theme-shell[data-theme='light'] .card__head) {
@@ -1647,6 +1684,6 @@ const topInspectors = computed(() => (props.inspectorData || []).slice(0, 5));
     .forecast-grid { grid-template-columns: 1fr; }
     .monthly-insights { grid-template-columns: 1fr; }
     .lb-row { grid-template-columns: 2rem 1fr; gap: 0.5rem; }
-    .lb-yield { display: none; }
+    .lb-rates { grid-column: 2; justify-content: start; text-align: left; }
 }
 </style>
