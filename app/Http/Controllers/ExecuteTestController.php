@@ -432,26 +432,35 @@ class ExecuteTestController extends Controller
 
             if ($term !== '') {
                 return $query->where(function ($subQuery) use ($term, $search) {
+                    $applyLikeSearch = static function ($likeQuery) use ($search): void {
+                        SearchTerm::applyTokenizedLike($likeQuery, [
+                            'Transaction_Header.dmc',
+                            'Transaction_Header.line',
+                            'Transaction_Header.model',
+                            'Transaction_Header.detail',
+                            'EU.external_name',
+                            'Transaction_Header.sender_leader',
+                        ], $search);
+                    };
+
                     $subQuery
                         ->whereRaw("MATCH(Transaction_Header.detail, Transaction_Header.dmc, Transaction_Header.line) AGAINST (? IN BOOLEAN MODE)", [$term])
-                        ->orWhere('Transaction_Header.dmc', 'like', "%{$search}%")
-                        ->orWhere('Transaction_Header.line', 'like', "%{$search}%")
-                        ->orWhere('Transaction_Header.model', 'like', "%{$search}%")
-                        ->orWhere('Transaction_Header.detail', 'like', "%{$search}%")
-                        ->orWhere('EU.external_name', 'like', "%{$search}%")
-                        ->orWhere('Transaction_Header.sender_leader', 'like', "%{$search}%");
+                        ->orWhere(function ($likeQuery) use ($applyLikeSearch) {
+                            $applyLikeSearch($likeQuery);
+                        });
                 });
             }
         }
 
         return $query->where(function ($subQuery) use ($search) {
-            $subQuery
-                ->where('Transaction_Header.dmc', 'like', "%{$search}%")
-                ->orWhere('Transaction_Header.line', 'like', "%{$search}%")
-                ->orWhere('Transaction_Header.model', 'like', "%{$search}%")
-                ->orWhere('Transaction_Header.detail', 'like', "%{$search}%")
-                ->orWhere('EU.external_name', 'like', "%{$search}%")
-                ->orWhere('Transaction_Header.sender_leader', 'like', "%{$search}%");
+            SearchTerm::applyTokenizedLike($subQuery, [
+                'Transaction_Header.dmc',
+                'Transaction_Header.line',
+                'Transaction_Header.model',
+                'Transaction_Header.detail',
+                'EU.external_name',
+                'Transaction_Header.sender_leader',
+            ], $search);
         });
     }
 
@@ -506,17 +515,19 @@ class ExecuteTestController extends Controller
                 $search = $filters['search'];
                 $query->where(function ($subQuery) use ($search) {
                     $applyLikeSearch = static function ($likeQuery) use ($search): void {
-                        $likeQuery->where('Transaction_Detail.detail_id', 'like', "%{$search}%")
-                            ->orWhere('Transaction_Detail.transaction_id', 'like', "%{$search}%")
-                            ->orWhere('Transaction_Detail.remark', 'like', "%{$search}%")
-                            ->orWhere('Transaction_Detail.max_value', 'like', "%{$search}%")
-                            ->orWhere('Transaction_Detail.min_value', 'like', "%{$search}%")
-                            ->orWhere('TM.method_name', 'like', "%{$search}%")
-                            ->orWhere('EQ.equipment_name', 'like', "%{$search}%")
-                            ->orWhere('IU.name', 'like', "%{$search}%")
-                            ->orWhere('TH.detail', 'like', "%{$search}%")
-                            ->orWhere('TH.dmc', 'like', "%{$search}%")
-                            ->orWhere('TH.line', 'like', "%{$search}%");
+                        SearchTerm::applyTokenizedLike($likeQuery, [
+                            'Transaction_Detail.detail_id',
+                            'Transaction_Detail.transaction_id',
+                            'Transaction_Detail.remark',
+                            'Transaction_Detail.max_value',
+                            'Transaction_Detail.min_value',
+                            'TM.method_name',
+                            'EQ.equipment_name',
+                            'IU.name',
+                            'TH.detail',
+                            'TH.dmc',
+                            'TH.line',
+                        ], $search);
                     };
 
                     if (SearchTerm::canUseFullText($search)) {

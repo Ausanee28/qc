@@ -246,6 +246,69 @@ class WorkflowCrudTest extends TestCase
         $badDateResponse->assertSessionHasErrors(['start_date', 'end_date']);
     }
 
+    public function test_receive_job_history_search_matches_full_name_tokens_in_sender_leader(): void
+    {
+        [$user, $externalUser] = $this->workflowActors();
+
+        $job = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $user->user_id,
+            'detail' => 'Tokenized sender search',
+            'dmc' => 'DMC-SENDER-SEARCH',
+            'line' => 'Line 8',
+            'sender_leader' => 'Suda Quality Prasert',
+            'receive_date' => now(),
+            'return_date' => null,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('receive-job.create', [
+            'search' => 'Suda Prasert',
+        ]));
+
+        $response->assertOk();
+
+        $jobs = collect(data_get($response->viewData('page'), 'props.jobs.data', []));
+
+        $this->assertTrue($jobs->contains('transaction_id', $job->transaction_id));
+    }
+
+    public function test_execute_test_history_search_matches_full_name_tokens_in_inspector_name(): void
+    {
+        [$user, $externalUser] = $this->workflowActors();
+        $user->update(['name' => 'Arun QA Prasert']);
+
+        $job = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $user->user_id,
+            'detail' => 'Tokenized inspector search',
+            'dmc' => 'DMC-INSPECTOR-SEARCH',
+            'line' => 'Line 9',
+            'receive_date' => now(),
+            'return_date' => null,
+        ]);
+
+        $detail = TransactionDetail::create([
+            'transaction_id' => $job->transaction_id,
+            'method_id' => TestMethod::first()->method_id,
+            'internal_id' => $user->user_id,
+            'start_time' => now()->subHour(),
+            'end_time' => now(),
+            'duration_sec' => 3600,
+            'judgement' => TransactionDetail::JUDGEMENT_OK,
+            'remark' => 'searchable inspector',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('execute-test.create', [
+            'search' => 'Arun Prasert',
+        ]));
+
+        $response->assertOk();
+
+        $results = collect(data_get($response->viewData('page'), 'props.results.data', []));
+
+        $this->assertTrue($results->contains('detail_id', $detail->detail_id));
+    }
+
     public function test_admin_can_restore_deleted_job_and_related_details(): void
     {
         [$admin, $externalUser] = $this->workflowActors();

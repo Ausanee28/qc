@@ -64,13 +64,16 @@ class ReceiveJobController extends Controller
 
                 $query->where(function ($subQuery) use ($search) {
                     $applyLikeSearch = static function ($likeQuery) use ($search): void {
-                        $likeQuery->where('detail', 'like', "%{$search}%")
-                            ->orWhere('dmc', 'like', "%{$search}%")
-                            ->orWhere('cell', 'like', "%{$search}%")
-                            ->orWhere('line', 'like', "%{$search}%")
-                            ->orWhere('transaction_id', 'like', "%{$search}%")
-                            ->orWhere('EU.external_name', 'like', "%{$search}%")
-                            ->orWhere('IU.name', 'like', "%{$search}%");
+                        SearchTerm::applyTokenizedLike($likeQuery, [
+                            'detail',
+                            'dmc',
+                            'cell',
+                            'line',
+                            'transaction_id',
+                            'EU.external_name',
+                            'Transaction_Header.sender_leader',
+                            'IU.name',
+                        ], $search);
                     };
 
                     if (SearchTerm::canUseFullText($search)) {
