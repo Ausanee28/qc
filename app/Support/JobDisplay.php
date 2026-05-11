@@ -80,6 +80,65 @@ class JobDisplay
         );
     }
 
+    public static function transactionIdsForSearch(string $search, ?Carbon $from = null, ?Carbon $to = null): ?array
+    {
+        $sequence = self::sequenceFromSearch($search);
+
+        if ($sequence === null) {
+            return null;
+        }
+
+        $query = TransactionHeader::query();
+
+        if (TransactionHeader::supportsSoftDeletes()) {
+            $query->withTrashed();
+        }
+
+        if ($from !== null) {
+            $query->where('receive_date', '>=', $from);
+        }
+
+        if ($to !== null) {
+            $query->where('receive_date', '<=', $to);
+        }
+
+        $matches = [];
+        $currentDate = null;
+        $currentSequence = 0;
+
+        foreach ($query->select(['transaction_id', 'receive_date'])->orderBy('receive_date')->orderBy('transaction_id')->cursor() as $job) {
+            $dateKey = self::dateKey($job->receive_date);
+
+            if ($dateKey === null) {
+                continue;
+            }
+
+            if ($dateKey !== $currentDate) {
+                $currentDate = $dateKey;
+                $currentSequence = 0;
+            }
+
+            $currentSequence++;
+
+            if ($currentSequence === $sequence) {
+                $matches[] = (int) $job->transaction_id;
+            }
+        }
+
+        return $matches;
+    }
+
+    private static function sequenceFromSearch(string $search): ?int
+    {
+        if (!preg_match('/^\s*(?:job\s*#?\s*)?0*(\d+)\s*$/i', $search, $matches)) {
+            return null;
+        }
+
+        $sequence = (int) $matches[1];
+
+        return $sequence > 0 ? $sequence : null;
+    }
+
     private static function headersForDisplayDate(string $dateKey)
     {
         $storageTimezone = config('app.timezone', self::DISPLAY_TIMEZONE);

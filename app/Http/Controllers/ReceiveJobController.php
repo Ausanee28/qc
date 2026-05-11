@@ -52,6 +52,14 @@ class ReceiveJobController extends Controller
             $filters['status'] = 'all';
         }
 
+        $jobDisplaySearchIds = $filters['search'] !== ''
+            ? JobDisplay::transactionIdsForSearch(
+                $filters['search'],
+                $this->filterStartDate($filters['date_from']),
+                $this->filterEndDate($filters['date_to'])
+            )
+            : null;
+
         $jobsQuery = TransactionHeader::query()
             ->leftJoin('External_Users as EU', 'Transaction_Header.external_id', '=', 'EU.external_id')
             ->leftJoin('Internal_Users as IU', 'Transaction_Header.internal_id', '=', 'IU.user_id')
@@ -59,21 +67,25 @@ class ReceiveJobController extends Controller
             ->selectRaw('EU.external_name as external_name')
             ->selectRaw('IU.name as internal_name')
             ->withCount('details')
-            ->when($filters['search'] !== '', function ($query) use ($filters) {
+            ->when($filters['search'] !== '', function ($query) use ($filters, $jobDisplaySearchIds) {
                 $search = $filters['search'];
 
-                $query->where(function ($subQuery) use ($search) {
+                $query->where(function ($subQuery) use ($search, $jobDisplaySearchIds) {
                     $applyLikeSearch = static function ($likeQuery) use ($search): void {
                         SearchTerm::applyTokenizedLike($likeQuery, [
                             'detail',
                             'dmc',
                             'cell',
                             'line',
-                            'transaction_id',
                             'EU.external_name',
                             'Transaction_Header.sender_leader',
                             'IU.name',
                         ], $search);
+                    };
+                    $applyDisplaySearch = static function ($displayQuery) use ($jobDisplaySearchIds): void {
+                        if (!empty($jobDisplaySearchIds)) {
+                            $displayQuery->orWhereIn('Transaction_Header.transaction_id', $jobDisplaySearchIds);
+                        }
                     };
 
                     if (SearchTerm::canUseFullText($search)) {
@@ -88,12 +100,14 @@ class ReceiveJobController extends Controller
                             $subQuery->orWhere(function ($likeQuery) use ($applyLikeSearch) {
                                 $applyLikeSearch($likeQuery);
                             });
+                            $applyDisplaySearch($subQuery);
 
                             return;
                         }
                     }
 
                     $applyLikeSearch($subQuery);
+                    $applyDisplaySearch($subQuery);
                 });
             })
             ->when($supportsHeaderSoftDeletes && $filters['status'] === 'deleted', fn ($query) => $query->onlyTrashed())
@@ -354,6 +368,16 @@ class ReceiveJobController extends Controller
     private function canUseJobActions(): bool
     {
         return in_array(strtolower((string) auth()->user()?->role), self::JOB_ACTION_ROLES, true);
+    }
+
+    private function filterStartDate(string $value): ?Carbon
+    {
+        return $value !== '' ? Carbon::parse($value)->startOfDay() : null;
+    }
+
+    private function filterEndDate(string $value): ?Carbon
+    {
+        return $value !== '' ? Carbon::parse($value)->endOfDay() : null;
     }
 
     private function forgetExecuteTestPendingJobsCaches(): void

@@ -439,7 +439,7 @@ const toggleJobStatus = (job) => {
                     </div>
 
                     <form @submit.prevent="applyFilters" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-                        <input v-model="filterForm.search" type="text" placeholder="Search job, sender, DMC..." class="lg:col-span-2 rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
+                        <input v-model="filterForm.search" type="text" placeholder="Search Job 001, sender, DMC..." class="lg:col-span-2 rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10" />
                         <select v-model="filterForm.status" class="rounded-xl border border-gray-300 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                             <option value="all">All status</option>
                             <option value="open">Open</option>
