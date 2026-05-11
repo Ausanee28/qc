@@ -10,6 +10,7 @@ use App\Models\TransactionDetail;
 use App\Models\TransactionHeader;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class WorkflowCrudTest extends TestCase
@@ -244,6 +245,195 @@ class WorkflowCrudTest extends TestCase
 
         $badDateResponse->assertRedirect(route('execute-test.create'));
         $badDateResponse->assertSessionHasErrors(['start_date', 'end_date']);
+    }
+
+    public function test_receive_job_history_search_matches_full_name_tokens_in_sender_leader(): void
+    {
+        [$user, $externalUser] = $this->workflowActors();
+
+        $job = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $user->user_id,
+            'detail' => 'Tokenized sender search',
+            'dmc' => 'DMC-SENDER-SEARCH',
+            'line' => 'Line 8',
+            'sender_leader' => 'Suda Quality Prasert',
+            'receive_date' => now(),
+            'return_date' => null,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('receive-job.create', [
+            'search' => 'Suda Prasert',
+        ]));
+
+        $response->assertOk();
+
+        $jobs = collect(data_get($response->viewData('page'), 'props.jobs.data', []));
+
+        $this->assertTrue($jobs->contains('transaction_id', $job->transaction_id));
+    }
+
+    public function test_execute_test_history_search_matches_full_name_tokens_in_inspector_name(): void
+    {
+        [$user, $externalUser] = $this->workflowActors();
+        $user->update(['name' => 'Arun QA Prasert']);
+
+        $job = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $user->user_id,
+            'detail' => 'Tokenized inspector search',
+            'dmc' => 'DMC-INSPECTOR-SEARCH',
+            'line' => 'Line 9',
+            'receive_date' => now(),
+            'return_date' => null,
+        ]);
+
+        $detail = TransactionDetail::create([
+            'transaction_id' => $job->transaction_id,
+            'method_id' => TestMethod::first()->method_id,
+            'internal_id' => $user->user_id,
+            'start_time' => now()->subHour(),
+            'end_time' => now(),
+            'duration_sec' => 3600,
+            'judgement' => TransactionDetail::JUDGEMENT_OK,
+            'remark' => 'searchable inspector',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('execute-test.create', [
+            'search' => 'Arun Prasert',
+        ]));
+
+        $response->assertOk();
+
+        $results = collect(data_get($response->viewData('page'), 'props.results.data', []));
+
+        $this->assertTrue($results->contains('detail_id', $detail->detail_id));
+    }
+
+    public function test_receive_job_history_search_matches_display_job_number_with_date_filter(): void
+    {
+        [$user, $externalUser] = $this->workflowActors();
+
+        TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $user->user_id,
+            'detail' => 'Previous day first job',
+            'dmc' => 'DMC-PREVIOUS',
+            'line' => 'Line 1',
+            'receive_date' => Carbon::parse('2026-05-10 08:00:00'),
+            'return_date' => null,
+        ]);
+
+        $firstJob = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $user->user_id,
+            'detail' => 'Current day first job',
+            'dmc' => 'DMC-FIRST',
+            'line' => 'Line 2',
+            'receive_date' => Carbon::parse('2026-05-11 08:00:00'),
+            'return_date' => null,
+        ]);
+
+        $secondJob = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $user->user_id,
+            'detail' => 'Current day second job',
+            'dmc' => 'DMC-SECOND',
+            'line' => 'Line 3',
+            'receive_date' => Carbon::parse('2026-05-11 09:00:00'),
+            'return_date' => null,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('receive-job.create', [
+            'search' => 'Job001',
+            'date_from' => '2026-05-11',
+            'date_to' => '2026-05-11',
+        ]));
+
+        $response->assertOk();
+
+        $jobs = collect(data_get($response->viewData('page'), 'props.jobs.data', []));
+
+        $this->assertTrue($jobs->contains('transaction_id', $firstJob->transaction_id));
+        $this->assertFalse($jobs->contains('transaction_id', $secondJob->transaction_id));
+    }
+
+    public function test_execute_test_history_search_matches_display_result_and_job_numbers(): void
+    {
+        [$user, $externalUser] = $this->workflowActors();
+
+        $job = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $user->user_id,
+            'detail' => 'Display job search',
+            'dmc' => 'DMC-DISPLAY-JOB',
+            'line' => 'Line 4',
+            'receive_date' => Carbon::parse('2026-05-11 08:00:00'),
+            'return_date' => null,
+        ]);
+
+        $otherJob = TransactionHeader::create([
+            'external_id' => $externalUser->external_id,
+            'internal_id' => $user->user_id,
+            'detail' => 'Display second job',
+            'dmc' => 'DMC-DISPLAY-OTHER',
+            'line' => 'Line 5',
+            'receive_date' => Carbon::parse('2026-05-11 09:00:00'),
+            'return_date' => null,
+        ]);
+
+        $firstResult = TransactionDetail::create([
+            'transaction_id' => $job->transaction_id,
+            'method_id' => TestMethod::first()->method_id,
+            'internal_id' => $user->user_id,
+            'start_time' => Carbon::parse('2026-05-11 10:00:00'),
+            'end_time' => Carbon::parse('2026-05-11 10:30:00'),
+            'duration_sec' => 1800,
+            'judgement' => TransactionDetail::JUDGEMENT_OK,
+            'remark' => 'first display result',
+        ]);
+
+        $secondResult = TransactionDetail::create([
+            'transaction_id' => $otherJob->transaction_id,
+            'method_id' => TestMethod::first()->method_id,
+            'internal_id' => $user->user_id,
+            'start_time' => Carbon::parse('2026-05-11 11:00:00'),
+            'end_time' => Carbon::parse('2026-05-11 11:30:00'),
+            'duration_sec' => 1800,
+            'judgement' => TransactionDetail::JUDGEMENT_OK,
+            'remark' => 'second display result',
+        ]);
+
+        $resultResponse = $this->actingAs($user)->get(route('execute-test.create', [
+            'search' => 'Result 001',
+            'date_from' => '2026-05-11',
+            'date_to' => '2026-05-11',
+        ]));
+
+        $resultResponse->assertOk();
+        $resultRows = collect(data_get($resultResponse->viewData('page'), 'props.results.data', []));
+        $this->assertTrue($resultRows->contains('detail_id', $firstResult->detail_id));
+        $this->assertFalse($resultRows->contains('detail_id', $secondResult->detail_id));
+
+        $jobResponse = $this->actingAs($user)->get(route('execute-test.create', [
+            'search' => 'Job 001',
+            'date_from' => '2026-05-11',
+            'date_to' => '2026-05-11',
+        ]));
+
+        $jobResponse->assertOk();
+        $jobRows = collect(data_get($jobResponse->viewData('page'), 'props.results.data', []));
+        $this->assertTrue($jobRows->contains('detail_id', $firstResult->detail_id));
+        $this->assertFalse($jobRows->contains('detail_id', $secondResult->detail_id));
+
+        $pendingResponse = $this->actingAs($user)->getJson(route('execute-test.pending-jobs', [
+            'search' => 'Job001',
+        ]));
+
+        $pendingResponse->assertOk();
+        $pendingJobs = collect($pendingResponse->json('items'));
+        $this->assertTrue($pendingJobs->contains('transaction_id', $job->transaction_id));
+        $this->assertFalse($pendingJobs->contains('transaction_id', $otherJob->transaction_id));
     }
 
     public function test_admin_can_restore_deleted_job_and_related_details(): void

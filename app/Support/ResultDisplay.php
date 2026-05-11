@@ -71,6 +71,65 @@ class ResultDisplay
         );
     }
 
+    public static function detailIdsForSearch(string $search, ?Carbon $from = null, ?Carbon $to = null): ?array
+    {
+        $sequence = self::sequenceFromSearch($search);
+
+        if ($sequence === null) {
+            return null;
+        }
+
+        $query = TransactionDetail::query();
+
+        if (TransactionDetail::supportsSoftDeletes()) {
+            $query->withTrashed();
+        }
+
+        if ($from !== null) {
+            $query->where('start_time', '>=', $from);
+        }
+
+        if ($to !== null) {
+            $query->where('start_time', '<=', $to);
+        }
+
+        $matches = [];
+        $currentDate = null;
+        $currentSequence = 0;
+
+        foreach ($query->select(['detail_id', 'start_time'])->orderBy('start_time')->orderBy('detail_id')->cursor() as $detail) {
+            $dateKey = self::dateKey($detail->start_time);
+
+            if ($dateKey === null) {
+                continue;
+            }
+
+            if ($dateKey !== $currentDate) {
+                $currentDate = $dateKey;
+                $currentSequence = 0;
+            }
+
+            $currentSequence++;
+
+            if ($currentSequence === $sequence) {
+                $matches[] = (int) $detail->detail_id;
+            }
+        }
+
+        return $matches;
+    }
+
+    private static function sequenceFromSearch(string $search): ?int
+    {
+        if (!preg_match('/^\s*(?:result\s*#?\s*)?0*(\d+)\s*$/i', $search, $matches)) {
+            return null;
+        }
+
+        $sequence = (int) $matches[1];
+
+        return $sequence > 0 ? $sequence : null;
+    }
+
     private static function detailsForDisplayDate(string $dateKey)
     {
         $storageTimezone = config('app.timezone', self::DISPLAY_TIMEZONE);

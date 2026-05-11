@@ -412,6 +412,16 @@ class ExecuteTestController extends Controller
         return in_array(strtolower((string) auth()->user()?->role), self::RESULT_ACTION_ROLES, true);
     }
 
+    private function filterStartDate(string $value): ?Carbon
+    {
+        return $value !== '' ? Carbon::parse($value)->startOfDay() : null;
+    }
+
+    private function filterEndDate(string $value): ?Carbon
+    {
+        return $value !== '' ? Carbon::parse($value)->endOfDay() : null;
+    }
+
     private function pendingJobsQuery(string $search)
     {
         $query = TransactionHeader::query()
@@ -423,35 +433,52 @@ class ExecuteTestController extends Controller
             return $query;
         }
 
-        if (ctype_digit($search)) {
-            return $query->where('Transaction_Header.transaction_id', (int) $search);
-        }
+        $jobDisplaySearchIds = JobDisplay::transactionIdsForSearch($search);
 
         if (SearchTerm::canUseFullText($search)) {
             $term = SearchTerm::toBooleanTerm($search);
 
             if ($term !== '') {
-                return $query->where(function ($subQuery) use ($term, $search) {
+                return $query->where(function ($subQuery) use ($term, $search, $jobDisplaySearchIds) {
+                    $applyLikeSearch = static function ($likeQuery) use ($search): void {
+                        SearchTerm::applyTokenizedLike($likeQuery, [
+                            'Transaction_Header.dmc',
+                            'Transaction_Header.line',
+                            'Transaction_Header.model',
+                            'Transaction_Header.detail',
+                            'EU.external_name',
+                            'Transaction_Header.sender_leader',
+                        ], $search);
+                    };
+                    $applyDisplaySearch = static function ($displayQuery) use ($jobDisplaySearchIds): void {
+                        if (!empty($jobDisplaySearchIds)) {
+                            $displayQuery->orWhereIn('Transaction_Header.transaction_id', $jobDisplaySearchIds);
+                        }
+                    };
+
                     $subQuery
                         ->whereRaw("MATCH(Transaction_Header.detail, Transaction_Header.dmc, Transaction_Header.line) AGAINST (? IN BOOLEAN MODE)", [$term])
-                        ->orWhere('Transaction_Header.dmc', 'like', "%{$search}%")
-                        ->orWhere('Transaction_Header.line', 'like', "%{$search}%")
-                        ->orWhere('Transaction_Header.model', 'like', "%{$search}%")
-                        ->orWhere('Transaction_Header.detail', 'like', "%{$search}%")
-                        ->orWhere('EU.external_name', 'like', "%{$search}%")
-                        ->orWhere('Transaction_Header.sender_leader', 'like', "%{$search}%");
+                        ->orWhere(function ($likeQuery) use ($applyLikeSearch) {
+                            $applyLikeSearch($likeQuery);
+                        });
+                    $applyDisplaySearch($subQuery);
                 });
             }
         }
 
-        return $query->where(function ($subQuery) use ($search) {
-            $subQuery
-                ->where('Transaction_Header.dmc', 'like', "%{$search}%")
-                ->orWhere('Transaction_Header.line', 'like', "%{$search}%")
-                ->orWhere('Transaction_Header.model', 'like', "%{$search}%")
-                ->orWhere('Transaction_Header.detail', 'like', "%{$search}%")
-                ->orWhere('EU.external_name', 'like', "%{$search}%")
-                ->orWhere('Transaction_Header.sender_leader', 'like', "%{$search}%");
+        return $query->where(function ($subQuery) use ($search, $jobDisplaySearchIds) {
+            SearchTerm::applyTokenizedLike($subQuery, [
+                'Transaction_Header.dmc',
+                'Transaction_Header.line',
+                'Transaction_Header.model',
+                'Transaction_Header.detail',
+                'EU.external_name',
+                'Transaction_Header.sender_leader',
+            ], $search);
+
+            if (!empty($jobDisplaySearchIds)) {
+                $subQuery->orWhereIn('Transaction_Header.transaction_id', $jobDisplaySearchIds);
+            }
         });
     }
 
@@ -490,6 +517,15 @@ class ExecuteTestController extends Controller
 
     private function buildResultsPayload(array $filters, bool $supportsDetailSoftDeletes)
     {
+        $resultSearchFrom = $this->filterStartDate($filters['date_from']);
+        $resultSearchTo = $this->filterEndDate($filters['date_to']);
+        $jobDisplaySearchIds = $filters['search'] !== ''
+            ? JobDisplay::transactionIdsForSearch($filters['search'], $resultSearchFrom, $resultSearchTo)
+            : null;
+        $resultDisplaySearchIds = $filters['search'] !== ''
+            ? ResultDisplay::detailIdsForSearch($filters['search'], $resultSearchFrom, $resultSearchTo)
+            : null;
+
         $paginator = TransactionDetail::query()
             ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'all', fn ($query) => $query->withTrashed())
             ->when($supportsDetailSoftDeletes && $filters['record_state'] === 'deleted', fn ($query) => $query->onlyTrashed())
@@ -502,21 +538,30 @@ class ExecuteTestController extends Controller
             ->selectRaw('TM.method_name as joined_method_name')
             ->selectRaw('EQ.equipment_name as joined_equipment_name')
             ->selectRaw('IU.name as joined_inspector_name')
-            ->when($filters['search'] !== '', function ($query) use ($filters) {
+            ->when($filters['search'] !== '', function ($query) use ($filters, $jobDisplaySearchIds, $resultDisplaySearchIds) {
                 $search = $filters['search'];
-                $query->where(function ($subQuery) use ($search) {
+                $query->where(function ($subQuery) use ($search, $jobDisplaySearchIds, $resultDisplaySearchIds) {
                     $applyLikeSearch = static function ($likeQuery) use ($search): void {
-                        $likeQuery->where('Transaction_Detail.detail_id', 'like', "%{$search}%")
-                            ->orWhere('Transaction_Detail.transaction_id', 'like', "%{$search}%")
-                            ->orWhere('Transaction_Detail.remark', 'like', "%{$search}%")
-                            ->orWhere('Transaction_Detail.max_value', 'like', "%{$search}%")
-                            ->orWhere('Transaction_Detail.min_value', 'like', "%{$search}%")
-                            ->orWhere('TM.method_name', 'like', "%{$search}%")
-                            ->orWhere('EQ.equipment_name', 'like', "%{$search}%")
-                            ->orWhere('IU.name', 'like', "%{$search}%")
-                            ->orWhere('TH.detail', 'like', "%{$search}%")
-                            ->orWhere('TH.dmc', 'like', "%{$search}%")
-                            ->orWhere('TH.line', 'like', "%{$search}%");
+                        SearchTerm::applyTokenizedLike($likeQuery, [
+                            'Transaction_Detail.remark',
+                            'Transaction_Detail.max_value',
+                            'Transaction_Detail.min_value',
+                            'TM.method_name',
+                            'EQ.equipment_name',
+                            'IU.name',
+                            'TH.detail',
+                            'TH.dmc',
+                            'TH.line',
+                        ], $search);
+                    };
+                    $applyDisplaySearch = static function ($displayQuery) use ($jobDisplaySearchIds, $resultDisplaySearchIds): void {
+                        if (!empty($jobDisplaySearchIds)) {
+                            $displayQuery->orWhereIn('Transaction_Detail.transaction_id', $jobDisplaySearchIds);
+                        }
+
+                        if (!empty($resultDisplaySearchIds)) {
+                            $displayQuery->orWhereIn('Transaction_Detail.detail_id', $resultDisplaySearchIds);
+                        }
                     };
 
                     if (SearchTerm::canUseFullText($search)) {
@@ -532,12 +577,14 @@ class ExecuteTestController extends Controller
                             $subQuery->orWhere(function ($likeQuery) use ($applyLikeSearch) {
                                 $applyLikeSearch($likeQuery);
                             });
+                            $applyDisplaySearch($subQuery);
 
                             return;
                         }
                     }
 
                     $applyLikeSearch($subQuery);
+                    $applyDisplaySearch($subQuery);
                 });
             })
             ->when(

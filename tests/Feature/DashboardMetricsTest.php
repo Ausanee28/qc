@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Services\DashboardMetricsService;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -114,6 +114,43 @@ class DashboardMetricsTest extends TestCase
         }
     }
 
+    public function test_monthly_trend_returns_all_months_for_selected_year(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-05-05 10:00:00'));
+
+        try {
+            $user = User::factory()->create();
+            $methodId = $this->seedMethod();
+
+            $previousYearJobId = $this->seedJob($user->user_id, Carbon::parse('2025-12-15 08:00:00'));
+            $aprilJobId = $this->seedJob($user->user_id, Carbon::parse('2026-04-10 08:00:00'));
+            $mayJobId = $this->seedJob($user->user_id, Carbon::parse('2026-05-10 08:00:00'));
+            $nextYearJobId = $this->seedJob($user->user_id, Carbon::parse('2027-01-10 08:00:00'));
+
+            $this->seedDetail($previousYearJobId, $methodId, $user->user_id, 'NG');
+            $this->seedDetail($aprilJobId, $methodId, $user->user_id, 'OK');
+            $this->seedDetail($aprilJobId, $methodId, $user->user_id, 'OK');
+            $this->seedDetail($aprilJobId, $methodId, $user->user_id, 'NG');
+            $this->seedDetail($mayJobId, $methodId, $user->user_id, 'OK');
+            $this->seedDetail($mayJobId, $methodId, $user->user_id, 'OK');
+            $this->seedDetail($nextYearJobId, $methodId, $user->user_id, 'OK');
+
+            $monthlyTrend = app(DashboardMetricsService::class)
+                ->getMonthlyTrend(Carbon::parse('2026-05-01'));
+
+            $this->assertCount(12, $monthlyTrend);
+            $this->assertSame('Jan', $monthlyTrend[0]['label']);
+            $this->assertSame('Dec', $monthlyTrend[11]['label']);
+            $this->assertSame(['ok' => 0, 'ng' => 0, 'total' => 0, 'yield' => 0], array_intersect_key($monthlyTrend[0], array_flip(['ok', 'ng', 'total', 'yield'])));
+            $this->assertSame(['ok' => 2, 'ng' => 1, 'total' => 3, 'yield' => 66.7], array_intersect_key($monthlyTrend[3], array_flip(['ok', 'ng', 'total', 'yield'])));
+            $this->assertSame(['ok' => 2, 'ng' => 0, 'total' => 2, 'yield' => 100.0], array_intersect_key($monthlyTrend[4], array_flip(['ok', 'ng', 'total', 'yield'])));
+            $this->assertSame(33.3, $monthlyTrend[4]['mom']);
+            $this->assertNull($monthlyTrend[5]['mom']);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     private function seedMethod(): int
     {
         $equipmentId = DB::table('Equipments')->insertGetId([
@@ -148,6 +185,20 @@ class DashboardMetricsTest extends TestCase
             'line' => 'L1',
             'receive_date' => $receiveDate,
             'return_date' => null,
+            'deleted_at' => null,
+        ]);
+    }
+
+    private function seedDetail(int $jobId, int $methodId, int $internalUserId, string $judgement): void
+    {
+        DB::table('Transaction_Detail')->insert([
+            'transaction_id' => $jobId,
+            'method_id' => $methodId,
+            'internal_id' => $internalUserId,
+            'start_time' => now()->subHour(),
+            'end_time' => now(),
+            'duration_sec' => 3600,
+            'judgement' => $judgement,
             'deleted_at' => null,
         ]);
     }

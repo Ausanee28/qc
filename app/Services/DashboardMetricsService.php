@@ -346,10 +346,11 @@ class DashboardMetricsService
         return $days;
     }
 
-    public function getMonthlyTrend(): array
+    public function getMonthlyTrend(?Carbon $anchorDate = null): array
     {
-        $from = now()->subMonths(5)->startOfMonth();
-        $to = now()->endOfMonth();
+        $year = ($anchorDate ?? now())->copy();
+        $from = $year->copy()->startOfYear();
+        $to = $year->copy()->endOfYear();
         $countsByMonth = $this->getJudgementCountsByBucket(
             $from,
             $to,
@@ -357,8 +358,8 @@ class DashboardMetricsService
         );
 
         $monthlyRaw = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $m = now()->subMonths($i);
+        for ($i = 0; $i < 12; $i++) {
+            $m = $from->copy()->addMonths($i);
             $monthCounts = $countsByMonth[$m->format('Y-m')] ?? ['ok' => 0, 'ng' => 0];
             $ok = $monthCounts['ok'];
             $ng = $monthCounts['ng'];
@@ -381,7 +382,7 @@ class DashboardMetricsService
         $monthlyData = [];
         for ($i = 0; $i < count($monthlyRaw); $i++) {
             $mom = null;
-            if ($i > 0 && $monthlyRaw[$i - 1]['yield'] > 0) {
+            if ($i > 0 && $monthlyRaw[$i]['total'] > 0 && $monthlyRaw[$i - 1]['total'] > 0) {
                 $mom = round($monthlyRaw[$i]['yield'] - $monthlyRaw[$i - 1]['yield'], 1);
             }
             $monthlyData[] = array_merge($monthlyRaw[$i], ['mom' => $mom]);
