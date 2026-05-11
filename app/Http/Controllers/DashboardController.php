@@ -22,6 +22,7 @@ class DashboardController extends Controller
         $period = $request->get('period', 'month');
 
         [$from, $to] = $this->getDateRange($period);
+        $monthlyAnchor = $this->getMonthlyAnchorDate($period);
         $payload = DashboardCache::store()->remember(DashboardCache::pageKey($period), now()->addMinutes(10), function () use ($period, $from, $to) {
             return [
                 'currentPeriod' => $period,
@@ -49,7 +50,7 @@ class DashboardController extends Controller
             'monthlyData' => Inertia::defer(fn () => DashboardCache::store()->remember(
                 DashboardCache::simpleMonthlyKey($period),
                 now()->addMinutes(10),
-                fn () => $this->metricsService->getMonthlyTrend()
+                fn () => $this->metricsService->getMonthlyTrend($monthlyAnchor)
             ), 'dashboard-secondary'),
             'inspectorData' => Inertia::defer(fn () => DashboardCache::store()->remember(
                 DashboardCache::simpleInspectorsKey($period),
@@ -79,5 +80,18 @@ class DashboardController extends Controller
             'quarter' => [Carbon::now()->startOfQuarter(), Carbon::now()->endOfDay()],
             default => [Carbon::now()->startOfMonth(), Carbon::now()->endOfDay()],
         };
+    }
+
+    private function getMonthlyAnchorDate(string $period): Carbon
+    {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $period)) {
+            return Carbon::parse($period);
+        }
+
+        if (preg_match('/^\d{4}-\d{2}$/', $period)) {
+            return Carbon::parse($period . '-01');
+        }
+
+        return Carbon::now();
     }
 }

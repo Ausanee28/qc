@@ -592,6 +592,8 @@ const monthlyTrendOpts = computed(() => ({
 }));
 
 /* โ”€โ”€ Weekly bar โ”€โ”€ */
+const monthlyMonthsWithData = computed(() => monthlySeries.value.filter((m) => m.total > 0));
+
 const hasFourWeekData = computed(() => Array.isArray(props.fourWeekData) && props.fourWeekData.length > 0);
 const weeklyCardTitle = computed(() => (hiddenWeekCount.value > 0 ? 'Recent Active Weeks OK / NG' : hasFourWeekData.value ? 'Last 4 Weeks OK / NG' : 'Weekly OK / NG'));
 
@@ -679,23 +681,27 @@ const regressionForecast = (series, clamp = null) => {
 };
 
 const forecast = computed(() => {
-    const totals = monthlySeries.value.map((m) => m.total);
-    const yields = monthlySeries.value.map((m) => m.yield);
+    const reportedMonths = monthlyMonthsWithData.value;
+    const forecastSeries = reportedMonths.length ? reportedMonths : monthlySeries.value;
+    const totals = forecastSeries.map((m) => m.total);
+    const yields = forecastSeries.map((m) => m.yield);
     const nextTotal = Math.max(0, Math.round(regressionForecast(totals)));
     const nextYield = Number(regressionForecast(yields, { min: 0, max: 100 }).toFixed(1));
-    const latest = monthlySeries.value.at(-1);
+    const latest = forecastSeries.at(-1);
     const delta = latest ? Number((nextYield - latest.yield).toFixed(1)) : 0;
-    const best = monthlySeries.value.reduce((b, m) => m.yield > b.yield ? m : b, { label: '-', yield: 0 });
-    const worst = monthlySeries.value.reduce((w, m) => {
-        if (w.label === '-') return m;
-        return m.yield < w.yield ? m : w;
-    }, { label: '-', yield: 0 });
+    const best = reportedMonths.length
+        ? reportedMonths.reduce((b, m) => m.yield > b.yield ? m : b, reportedMonths[0])
+        : { label: '-', yield: 0 };
+    const worst = reportedMonths.length
+        ? reportedMonths.reduce((w, m) => m.yield < w.yield ? m : w, reportedMonths[0])
+        : { label: '-', yield: 0 };
     return { nextTotal, nextYield, delta, latestLabel: latest?.label || '-', best, worst };
 });
 
 const monthlyInsights = computed(() => {
-    const latest = monthlySeries.value.at(-1) || { label: '-', total: 0, yield: 0, ngRate: 0 };
-    const previous = monthlySeries.value.at(-2);
+    const reportedMonths = monthlyMonthsWithData.value;
+    const latest = reportedMonths.at(-1) || { label: '-', total: 0, yield: 0, ngRate: 0 };
+    const previous = reportedMonths.at(-2);
     const totalHistory = monthlySeries.value.reduce((sum, month) => sum + month.total, 0);
     const delta = previous ? latest.yield - previous.yield : 0;
 
