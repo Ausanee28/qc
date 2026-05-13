@@ -4,7 +4,7 @@ import DateInput from '@/Components/DateInput.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 
-const props = defineProps({ externals: Array, jobs: Object, filters: Object, returningOutsiders: Array, otherExternalId: [String, Number] });
+const props = defineProps({ externals: Array, jobs: Object, filters: Object, returningOutsiders: Array, otherExternalId: [String, Number], lines: Array });
 const flash = usePage().props.flash || {};
 const currentUserRole = usePage().props.auth?.user?.role ?? '';
 const canDelete = ['admin', 'inspector'].includes(String(currentUserRole).toLowerCase());
@@ -73,15 +73,16 @@ watch(selectedReturningOutsider, (newLeader) => {
 });
 
 // Removing watch on external_id for isOtherSender since we use senderMode now
-const lineOptions = [
-    ...Array.from({ length: 11 }, (_, i) => `Line ${i + 1}`),
-    'P4#1',
-    'P4#2',
-    'P4#3',
-    'MTA 1',
-    'MTA 2',
-    'ITT',
-];
+const lineOptions = computed(() => props.lines?.map(line => line.line_name) ?? []);
+const visibleLineOptions = computed(() => {
+    const options = [...lineOptions.value];
+
+    if (isEditing.value && form.line && !options.includes(form.line)) {
+        options.push(form.line);
+    }
+
+    return options;
+});
 const externalOptionsReady = computed(() => Array.isArray(props.externals));
 
 const jobPaginator = computed(() => props.jobs ?? null);
@@ -389,7 +390,7 @@ const toggleJobStatus = (job) => {
                             <label class="form-lbl">Line</label>
                             <select v-model="form.line" class="form-inp" style="padding:10px 12px">
                                 <option value="">-- Select Line --</option>
-                                <option v-for="lineOption in lineOptions" :key="lineOption" :value="lineOption">{{ lineOption }}</option>
+                                <option v-for="lineOption in visibleLineOptions" :key="lineOption" :value="lineOption">{{ lineOption }}</option>
                             </select>
                             <div v-if="form.errors.line" class="mt-1 text-xs text-red-600">{{ form.errors.line }}</div>
                         </div>

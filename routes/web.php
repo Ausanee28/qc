@@ -72,6 +72,9 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('test-methods', \App\Http\Controllers\TestMethodController::class)->except(['create', 'show', 'edit', 'destroy']);
         Route::patch('test-methods/{test_method}/active', [\App\Http\Controllers\TestMethodController::class, 'setActive'])->name('test-methods.set-active');
 
+        Route::resource('lines', \App\Http\Controllers\ProductionLineController::class)->except(['create', 'show', 'edit', 'destroy']);
+        Route::patch('lines/{line}/active', [\App\Http\Controllers\ProductionLineController::class, 'setActive'])->name('lines.set-active');
+
         Route::resource('users', \App\Http\Controllers\UserController::class)->except(['create', 'show', 'edit', 'destroy']);
         Route::patch('users/{user}/active', [\App\Http\Controllers\UserController::class, 'setActive'])->name('users.set-active');
         Route::post('users/{user}/reset-password', [\App\Http\Controllers\UserController::class, 'resetPassword'])->name('users.reset-password');
