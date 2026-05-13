@@ -1,7 +1,7 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 defineProps({
@@ -18,7 +18,14 @@ const form = useForm({
 const showPassword = ref(false);
 
 const submit = () => {
+    router.flushAll();
+    router.clearHistory();
+
     form.post(route('login'), {
+        onSuccess: () => {
+            router.flushAll();
+            router.clearHistory();
+        },
         onFinish: () => form.reset('password'),
     });
 };

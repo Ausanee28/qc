@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserIsAdmin
@@ -13,6 +14,12 @@ class EnsureUserIsAdmin
         $user = $request->user();
 
         if (!$user || $user->role !== 'admin') {
+            if ($request->inertia()) {
+                return Inertia::render('Errors/Forbidden')
+                    ->toResponse($request)
+                    ->setStatusCode(403);
+            }
+
             return response('Forbidden.', 403);
         }
 

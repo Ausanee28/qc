@@ -75,9 +75,16 @@ const dateFormatter = new Intl.DateTimeFormat('en-GB', {
 const currentDate = dateFormatter.format(new Date());
 const isActiveRoute = (routeName) => route().current(routeName);
 const logout = () => {
+    router.flushAll();
+    router.clearHistory();
+
     router.post(route('logout'), { _token: csrfToken.value }, {
         preserveState: false,
         preserveScroll: false,
+        onSuccess: () => {
+            router.flushAll();
+            router.clearHistory();
+        },
         onError: () => {
             window.location.assign(route('login'));
         },
@@ -263,6 +270,7 @@ onMounted(() => {
                                 preserve-scroll
                                 prefetch="hover"
                                 :cache-for="navCacheFor(item.route)"
+                                :cache-tags="navCacheTags(item.route)"
                                 :view-transition="false"
                                 @mousedown="warmNavRoute(item.route)"
                                 @focus="warmNavRoute(item.route)"
@@ -391,6 +399,7 @@ onMounted(() => {
                                  preserve-scroll
                                  prefetch="hover"
                                  :cache-for="navCacheFor(item.route)"
+                                 :cache-tags="navCacheTags(item.route)"
                                  :view-transition="false"
                                  @mousedown="warmNavRoute(item.route)"
                                  @focus="warmNavRoute(item.route)"
