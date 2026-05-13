@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\DashboardDataChanged;
 use App\Models\TransactionHeader;
 use App\Models\ExternalUser;
+use App\Models\ProductionLine;
 use App\Models\TransactionDetail;
 use App\Support\PendingJobsVersion;
 use App\Support\DashboardCache;
@@ -130,6 +131,7 @@ class ReceiveJobController extends Controller
                 ->orderBy('sender_leader')
                 ->get(),
             'otherExternalId' => fn () => ExternalUser::where('external_name', 'อื่นๆ (Other)')->value('external_id'),
+            'lines' => fn () => $this->activeLineOptions(),
             'jobs' => fn () => $this->resolveJobsPayload($jobsQuery, $filters, $supportsHeaderSoftDeletes, $currentPage),
             'filters' => $filters,
         ]);
@@ -171,7 +173,7 @@ class ReceiveJobController extends Controller
             return redirect()->back()->with('error', 'Cannot edit a job after test results have been recorded.');
         }
 
-        $validated = $this->validatePayload($request);
+        $validated = $this->validatePayload($request, $job->line);
         $job->update($validated);
         $job->refresh();
         AuditLogger::log(
@@ -318,7 +320,7 @@ class ReceiveJobController extends Controller
             ->with('success', "{$this->jobDisplayLabel($job)} reopened successfully!");
     }
 
-    private function validatePayload(Request $request): array
+    private function validatePayload(Request $request, ?string $existingLine = null): array
     {
         $isOther = \App\Models\ExternalUser::where('external_id', $request->input('external_id'))
             ->where('external_name', 'อื่นๆ (Other)')
@@ -330,7 +332,7 @@ class ReceiveJobController extends Controller
             'detail' => 'nullable|string|max:255',
             'dmc' => 'nullable|string',
             'cell' => 'nullable|string|max:255',
-            'line' => 'nullable|string',
+            'line' => 'nullable|string|max:255',
             'shift' => 'nullable|in:Day Shift,Night Shift',
             'model' => 'nullable|string',
             'sender_leader' => $isOther ? 'required|string|max:255' : 'nullable|string|max:255',
@@ -362,6 +364,25 @@ class ReceiveJobController extends Controller
             }
         }
 
+        $line = trim((string) ($validated['line'] ?? ''));
+
+        if ($line !== '' && SchemaCapabilities::hasTable('Production_Lines')) {
+            try {
+                $isActiveLine = ProductionLine::query()
+                    ->where('line_name', $line)
+                    ->where('is_active', true)
+                    ->exists();
+            } catch (\Throwable) {
+                $isActiveLine = true;
+            }
+
+            if (!$isActiveLine && $line !== (string) $existingLine) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'line' => 'Selected line is inactive or unavailable.',
+                ]);
+            }
+        }
+
         return $validated;
     }
 
@@ -389,6 +410,27 @@ class ReceiveJobController extends Controller
     private function forgetReceiveJobHistoryCaches(): void
     {
         Cache::forget(self::RECEIVE_JOB_DEFAULT_HISTORY_CACHE_KEY);
+    }
+
+    private function activeLineOptions()
+    {
+        if (!SchemaCapabilities::hasTable('Production_Lines')) {
+            return ProductionLine::defaultOptions();
+        }
+
+        try {
+            return Cache::remember(ProductionLineController::RECEIVE_JOB_ACTIVE_LINES_CACHE_KEY, now()->addMinutes(10), function () {
+                return ProductionLine::query()
+                    ->where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->orderBy('line_name')
+                    ->get(['line_id', 'line_name']);
+            });
+        } catch (\Throwable) {
+            Cache::forget(ProductionLineController::RECEIVE_JOB_ACTIVE_LINES_CACHE_KEY);
+
+            return ProductionLine::defaultOptions();
+        }
     }
 
     public static function warmDefaultHistoryCache(): void

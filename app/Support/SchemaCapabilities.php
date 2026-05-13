@@ -55,6 +55,11 @@ class SchemaCapabilities
                 now()->addSeconds(self::CACHE_TTL_SECONDS),
                 static fn () => Schema::hasTable($table)
             );
+
+            if (!self::$tableExistsCache[$table] && Schema::hasTable($table)) {
+                self::$tableExistsCache[$table] = true;
+                Cache::put($persistentKey, true, now()->addSeconds(self::CACHE_TTL_SECONDS));
+            }
         } catch (\Throwable) {
             self::$tableExistsCache[$table] = false;
         }
